@@ -28,6 +28,21 @@ CHECKLIST = (
 )
 
 
+UNITS = (("_inr_per_kg", " (INR per kg)"), ("_inr", " (INR)"), ("_kg", " (kg)"), ("_c", " (°C)"))
+ACRONYMS = {"hs": "HS", "nppo": "NPPO", "iec": "IEC", "id": "ID", "eta": "ETA"}
+
+
+def label(key: str) -> str:
+    """'total_value_inr' -> 'Total value (INR)', 'hs_code' -> 'HS code'."""
+    unit = ""
+    for suffix, text in UNITS:
+        if key.endswith(suffix):
+            key, unit = key[: -len(suffix)], text
+            break
+    words = " ".join(ACRONYMS.get(w, w) for w in key.split("_"))
+    return words[:1].upper() + words[1:] + unit
+
+
 def pdf_available() -> bool:
     try:
         import reportlab  # noqa: F401
@@ -63,7 +78,8 @@ def render_pdf(doc: dict[str, Any], pack: dict[str, Any]) -> bytes:
         return Paragraph(text, cell)
 
     meta = [
-        [p("<b>Standard</b>"), p(_plain(doc["standard"])), p("<b>Status</b>"), p(_plain(doc["status"]))],
+        [p("<b>Standard</b>"), p(_plain(doc["standard"])),
+         p("<b>Status</b>"), p(_plain(doc["status"].replace("_", " ")))],
         [p("<b>Plan / container</b>"), p(_plain(f"{pack['plan_id']} / {pack['container_id']}")),
          p("<b>Prepared</b>"), p(_plain(pack["prepared_at"][:16].replace("T", " ") + " UTC"))],
         [p("<b>Destination</b>"), p(_plain(pack["to"])), p("<b>Reason</b>"), p(_plain(doc["why"]))],
@@ -72,7 +88,7 @@ def render_pdf(doc: dict[str, Any], pack: dict[str, Any]) -> bytes:
     for key, value in doc["fields"].items():
         missing = isinstance(value, str) and value.startswith(MISSING)
         shown = "<font color='#C53030'><b>MISSING: to be filled by a human</b></font>" if missing else _plain(value)
-        rows.append([p(f"<b>{_plain(key.replace('_', ' ').capitalize())}</b>"), p(shown)])
+        rows.append([p(f"<b>{_plain(label(key))}</b>"), p(shown)])
     story = [
         Paragraph(_plain(f"ROUTERA: {doc['title'].upper()}"), title),
         Paragraph("DRAFT FOR HUMAN REVIEW. To be checked, signed and filed by an authorised person on the "
