@@ -156,6 +156,10 @@ class NewsFeed:
         self.fetch, self.queries = fetch, queries
         self.seen: set[str] = set()
 
+    def reset(self) -> None:
+        """A new live run has a new Sentinel: send it every current headline again."""
+        self.seen.clear()
+
     def poll(self, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         events, items, errors = [], [], []
         for query in self.queries:
@@ -223,6 +227,10 @@ class AisFeed:
         self.error = ""
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
+
+    def reset(self) -> None:
+        """A new live run: signal congestion again (the ships seen so far are still counted)."""
+        self.sent.clear()
 
     def record(self, message: Mapping[str, Any]) -> None:
         meta = message.get("MetaData") or {}

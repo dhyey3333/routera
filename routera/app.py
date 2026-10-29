@@ -89,6 +89,9 @@ class RouteraService(SentinelService):
         stop = threading.Event()
         now = datetime.now(UTC).replace(microsecond=0)
         books = live_books(now)
+        for feed in self.feeds:  # the new Sentinel has seen nothing yet
+            if hasattr(feed, "reset"):
+                feed.reset()
         with self._lock:
             rig = make_rig(None, now, books=books, llm=self.llm, config=self.config)
             self._install(live_scenario(now), rig)

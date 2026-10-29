@@ -79,6 +79,8 @@ def test_news_feed_reads_google_news_rss_and_skips_seen_articles() -> None:
     assert state["ok"]
     again, _ = feed.poll(NOW)
     assert again == []
+    feed.reset()  # live restarted: the new Sentinel gets today's headlines again
+    assert len(feed.poll(NOW)[0]) == 2
 
 
 def ais_message(mmsi: int, lat: float, lon: float, status: int, sog: float) -> str:
