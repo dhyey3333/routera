@@ -1,0 +1,11 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "ANN"]
+# ANN401: Any is part of the contract (payload: dict[str, Any]).
+# RUF001-003: the UI and rationale text use typographic characters on purpose.
+ignore = ["ANN401", "RUF001", "RUF002", "RUF003"]
+
+[lint.isort]
+known-first-party = ["agents"]

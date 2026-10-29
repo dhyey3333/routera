@@ -1,0 +1,127 @@
+{
+  "name": "gulf_closure",
+  "title": "Gulf closure: Jebel Ali halts operations",
+  "simulated": true,
+  "disclaimer": "SIMULATED FEEDS. Illustrative data inspired by reported 2026 Gulf port halts; not real events.",
+  "start": "2026-03-02T06:00:00Z",
+  "container_ids": [
+    "GRP-01", "GRP-02", "GRP-03", "GRP-04", "GRP-05", "GRP-06",
+    "GRP-07", "GRP-08", "GRP-09", "GRP-10", "GRP-11", "GRP-12",
+    "GRP-13", "GRP-14", "POM-01", "ONI-01", "SHR-01", "BAN-01"
+  ],
+  "steps": [
+    {
+      "t_min": 0,
+      "note": "Vague news about unrest near Gulf ports",
+      "event": {
+        "event_id": "GC-01",
+        "source": "news",
+        "kind_hint": null,
+        "payload": {
+          "headline": "Reports of unrest near Gulf ports",
+          "body": "Unverified posts describe unrest near several Gulf ports. No official statement yet.",
+          "outlet": "Gulf Wire (SIM)"
+        }
+      }
+    },
+    {
+      "t_min": 2,
+      "note": "Routine congestion at Nhava Sheva (normal noise)",
+      "event": {
+        "event_id": "GC-02",
+        "source": "port_authority",
+        "kind_hint": "PORT_STATUS",
+        "payload": {
+          "port_code": "INNSA",
+          "status": "congested",
+          "reason": "Yard utilisation 92%, berthing delays",
+          "effective_from": "2026-03-02T06:02:00Z",
+          "expected_reopen": null
+        }
+      }
+    },
+    {
+      "t_min": 5,
+      "note": "Carrier delays the INNSA-AEJEA lane for both Arabian vessels",
+      "event": {
+        "event_id": "GC-03",
+        "source": "carrier_advisory",
+        "kind_hint": "SCHEDULE_CHANGE",
+        "payload": {
+          "carrier": "Oceanic Line (SIM)",
+          "affected_lane": "INNSA-AEJEA",
+          "action": "delay",
+          "via": null,
+          "added_transit_days": 6,
+          "vessel_ids": ["MV-ARABIAN-01", "MV-ARABIAN-02"]
+        }
+      }
+    },
+    {
+      "t_min": 8,
+      "note": "Port authority closes Jebel Ali, reopening unknown",
+      "event": {
+        "event_id": "GC-04",
+        "source": "port_authority",
+        "kind_hint": "PORT_STATUS",
+        "payload": {
+          "port_code": "AEJEA",
+          "status": "closed",
+          "reason": "All vessel operations suspended: regional security situation",
+          "effective_from": "2026-03-02T06:08:00Z",
+          "expected_reopen": null
+        }
+      }
+    },
+    {
+      "t_min": 9,
+      "note": "Same closure reported by a different outlet",
+      "event": {
+        "event_id": "GC-05",
+        "source": "news",
+        "kind_hint": null,
+        "payload": {
+          "headline": "Jebel Ali port closed as Gulf tensions escalate",
+          "body": "Port authority confirms suspension of all vessel operations at Jebel Ali until further notice.",
+          "outlet": "Khaleej Shipping News (SIM)"
+        }
+      }
+    },
+    {
+      "t_min": 12,
+      "note": "AIS: MV-ARABIAN-02 slows, ETA +3 days",
+      "event": {
+        "event_id": "GC-06",
+        "source": "ais",
+        "kind_hint": "ETA_UPDATE",
+        "payload": {
+          "vessel_id": "MV-ARABIAN-02",
+          "expected_eta": "2026-03-05T02:00:00Z",
+          "new_eta": "2026-03-08T02:00:00Z",
+          "position": {"lat": 25.1, "lon": 57.4},
+          "speed_knots": 4.5,
+          "deviation_flag": true
+        }
+      }
+    },
+    {
+      "t_min": 30,
+      "note": "False rumour: Singapore port shut",
+      "event": {
+        "event_id": "GC-07",
+        "source": "news",
+        "kind_hint": null,
+        "payload": {
+          "headline": "Singapore port shut",
+          "body": "A viral post claims all Singapore terminals have shut down. The port operator has not commented.",
+          "outlet": "ViralTrade Feed (SIM)"
+        }
+      }
+    },
+    {
+      "t_min": 1470,
+      "tick": true,
+      "note": "Fast-forward 24 h: the uncorroborated rumour expires"
+    }
+  ]
+}

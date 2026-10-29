@@ -1,0 +1,5 @@
+# Optional LLM providers for SENTINEL_LLM (news classification + summaries only).
+# Install only what you use; with none installed the Sentinel runs on rules and templates.
+sap-ai-sdk-gen   # SAP Generative AI Hub; replaces the deprecated generative-ai-hub-sdk (both import as gen_ai_hub)
+anthropic>=1.4
+openai>=1.40

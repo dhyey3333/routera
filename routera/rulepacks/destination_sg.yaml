@@ -1,0 +1,46 @@
+# Ported from the team's governance module (github.com/kokilacg30/routera_compliance, rulepacks/).
+# Fitted to ROUTERA: residue rules name the lab standard ROUTERA reads (pass/fail per lot) instead of
+# blueberry limits; mango treatment and Malaysia permit rules added. Verify before relying on them.
+pack_id: destination_sg
+version: 1.0.0
+scope:
+  origin: '*'
+  destination:
+  - SG
+  - SGP
+  commodity_groups:
+  - fresh_fruit
+  - fresh_vegetables
+  modes:
+  - sea
+  - air
+rules:
+- rule_id: SG-SFA-001
+  title: Singapore SFA Phytosanitary Certificate Mandate
+  type: required_document
+  parameters:
+    document: phytosanitary_certificate_application_data
+    destination_specific: true
+  effect_on_failure: needs_docs
+  source:
+    title: Singapore Food Agency (SFA) - Control of Plants Act (Chapter 57)
+    url: https://www.sfa.gov.sg/food-import-exporting/commercial-food-imports
+    citation: Control of Plants (Plant Importation) Rules Rule 4
+  effective_date: '2022-01-01'
+  last_verified: '2026-06-15'
+  verification_status: verified
+  notes: Consignment must be accompanied by a phytosanitary certificate issued by the competent authority of origin.
+- rule_id: SG-MRL-001
+  title: Singapore Food Regulations Ninth Schedule (Pesticides Residues)
+  type: max_residue
+  parameters:
+    standard: SG
+  effect_on_failure: warn
+  source:
+    title: Singapore Statutes Online - Food Regulations (Cap. 283, Rg 1)
+    url: https://sso.agc.gov.sg/SL/FA1973-RG1
+    citation: Ninth Schedule - Maximum Permitted Pesticide Residues
+  effective_date: '2024-01-01'
+  last_verified: null
+  verification_status: TODO_VERIFY
+  notes: 'PLACEHOLDER: Verify Ninth Schedule commodity subcategory limits with SFA official portal.'

@@ -1,0 +1,187 @@
+{
+  "name": "nashik_corridor_strike",
+  "title": "India-inside: truck strike and rain on the Nashik to JNPT corridor",
+  "simulated": true,
+  "layer": "india",
+  "disclaimer": "SIMULATED FEEDS. Illustrative India-inside scenario: transit times, cut-offs, capacities, prices and costs are assumptions to validate with a real exporter.",
+  "start": "2026-03-02T06:00:00Z",
+  "containers_file": "containers_india.json",
+  "container_ids": [
+    "NSK-01", "NSK-02", "NSK-03", "NSK-04", "NSK-05", "NSK-06",
+    "NSK-07", "NSK-08", "NSK-09", "NSK-10", "NSK-11", "NSK-12",
+    "DOM-01", "DOM-02", "DOM-03", "DOM-04", "DOM-05"
+  ],
+  "steps": [
+    {
+      "t_min": 0,
+      "note": "Rumour: transporters threaten a strike from tonight",
+      "event": {
+        "event_id": "NC-01",
+        "source": "news",
+        "kind_hint": null,
+        "payload": {
+          "headline": "Transporters threaten strike on Nashik routes from tonight",
+          "body": "Unverified messages say the district transporters' association may stop reefer trucks from 10 pm.",
+          "outlet": "Nashik Varta (SIM)"
+        }
+      }
+    },
+    {
+      "t_min": 3,
+      "note": "IMD: unseasonal rain and hail over Nashik",
+      "event": {
+        "event_id": "NC-02",
+        "source": "weather",
+        "kind_hint": "WEATHER_ALERT",
+        "payload": {
+          "region": "Nashik",
+          "port_code": null,
+          "alert_level": "orange",
+          "hazard": "unseasonal rain and hail",
+          "valid_from": "2026-03-02T06:03:00Z",
+          "valid_to": "2026-03-03T06:03:00Z"
+        }
+      }
+    },
+    {
+      "t_min": 6,
+      "note": "Union notice: strike from 22:00 IST tonight, no end date",
+      "event": {
+        "event_id": "NC-03",
+        "source": "transport_union",
+        "kind_hint": "STRIKE_NOTICE",
+        "payload": {
+          "union": "NSK-TRANSPORTERS",
+          "region": "Nashik",
+          "action": "strike",
+          "effective_from": "2026-03-02T16:30:00Z",
+          "expected_end": null,
+          "carrier_ids": []
+        }
+      }
+    },
+    {
+      "t_min": 9,
+      "note": "Landslide closes the Kasara ghat",
+      "event": {
+        "event_id": "NC-04",
+        "source": "road_authority",
+        "kind_hint": "ROAD_STATUS",
+        "payload": {
+          "segment": "Kasara ghat",
+          "status": "closed",
+          "reason": "landslide after heavy rain",
+          "effective_from": "2026-03-02T06:09:00Z",
+          "expected_reopen": null
+        }
+      }
+    },
+    {
+      "t_min": 12,
+      "note": "Same closure in the news",
+      "event": {
+        "event_id": "NC-05",
+        "source": "news",
+        "kind_hint": null,
+        "payload": {
+          "headline": "Landslide shuts Kasara ghat; Nashik-Mumbai trucks stranded",
+          "body": "Traffic police say the ghat section stays shut until the debris is cleared.",
+          "outlet": "Maharashtra Highway News (SIM)"
+        }
+      }
+    },
+    {
+      "t_min": 15,
+      "note": "Reefer on a Vashi-bound truck stuck at the ghat: 12 C for 3 h",
+      "event": {
+        "event_id": "NC-06",
+        "source": "reefer_telemetry",
+        "kind_hint": "TEMP_LOG",
+        "payload": {
+          "truck_id": "TRK-MH15-2201",
+          "setpoint_c": 2,
+          "temp_c": 12,
+          "minutes_above": 180,
+          "status": "excursion"
+        }
+      }
+    },
+    {
+      "t_min": 20,
+      "note": "Nashik cold store full: everyone is holding at once",
+      "event": {
+        "event_id": "NC-07",
+        "source": "facility_status",
+        "kind_hint": "CAPACITY",
+        "payload": {
+          "facility_id": "CS-NSK",
+          "status": "full",
+          "free_capacity_t": 0,
+          "expected_restore": null
+        }
+      }
+    },
+    {
+      "t_min": 25,
+      "note": "Vashi APMC: grape prices crash as diverted lots arrive",
+      "event": {
+        "event_id": "NC-08",
+        "source": "mandi_prices",
+        "kind_hint": "PRICE",
+        "payload": {
+          "market_id": "Vashi",
+          "commodity": "grapes",
+          "modal_price_inr_per_kg": 38,
+          "baseline_price_inr_per_kg": 62,
+          "arrivals_t": 940
+        }
+      }
+    },
+    {
+      "t_min": 640,
+      "tick": true,
+      "note": "22:10 IST: the strike begins"
+    },
+    {
+      "t_min": 1080,
+      "note": "Kasara ghat reopens",
+      "event": {
+        "event_id": "NC-10",
+        "source": "road_authority",
+        "kind_hint": "ROAD_STATUS",
+        "payload": {
+          "segment": "KASARA_GHAT",
+          "status": "open",
+          "reason": "debris cleared",
+          "effective_from": "2026-03-03T00:00:00Z",
+          "expected_reopen": null
+        }
+      }
+    },
+    {
+      "t_min": 1140,
+      "note": "Strike called off after talks",
+      "event": {
+        "event_id": "NC-11",
+        "source": "transport_union",
+        "kind_hint": "STRIKE_NOTICE",
+        "payload": {
+          "union": "NSK-TRANSPORTERS",
+          "region": "NASHIK",
+          "action": "called_off",
+          "effective_from": "2026-03-03T01:00:00Z"
+        }
+      }
+    },
+    {
+      "t_min": 1500,
+      "tick": true,
+      "note": "The rain alert window has ended"
+    },
+    {
+      "t_min": 1860,
+      "tick": true,
+      "note": "12 h with no new trouble: strike and closure resolved"
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+# Ported from the team's governance module (github.com/kokilacg30/routera_compliance, rulepacks/).
+# Fitted to ROUTERA: residue rules name the lab standard ROUTERA reads (pass/fail per lot) instead of
+# blueberry limits; mango treatment and Malaysia permit rules added. Verify before relying on them.
+pack_id: core_generic
+version: 1.0.0
+scope:
+  origin: '*'
+  destination: '*'
+  commodity_groups: '*'
+  modes: '*'
+rules:
+- rule_id: GEN-SHELF-001
+  title: Minimum Arrival Shelf-Life Clearance Buffer
+  type: shelf_life_clearance
+  parameters:
+    min_buffer_days: 3.0
+    clearance_days: 2.0
+  effect_on_failure: block
+  source:
+    title: Commercial Perishables Logistics Best Practice Standard
+    url: https://www.wto.org/english/tratop_e/tbt_e/tbt_e.htm
+    citation: WTO TBT Agreement Art 2.2 / Codex Stan 1-1985 Sec 4.7
+  effective_date: '2026-01-01'
+  last_verified: '2026-10-01'
+  verification_status: verified
+  notes: 'Physics/commercial rule: goods arriving with remaining shelf life less than clearance plus min buffer
+    cannot be marketed commercially.'
+- rule_id: GEN-DOC-001
+  title: Cross-Document Core Consistency Declaration
+  type: doc_consistency
+  parameters:
+    fields:
+    - commodity_code
+    - net_weight_kg
+    - quantity
+    - consignee
+  effect_on_failure: needs_docs
+  source:
+    title: UN/CEFACT Recommendation No. 1 - United Nations Layout Key for Trade Documents
+    url: https://unece.org/trade/uncefact/tf_recommendations
+    citation: ECE/TRADE/137 Rev.2
+  effective_date: '2026-01-01'
+  last_verified: '2026-10-01'
+  verification_status: verified
+  notes: Trade documents must match on critical customs identifiers.
+- rule_id: GEN-FLOOR-001
+  title: Export Floor Price Protective Threshold
+  type: floor_price
+  parameters:
+    enforce_human_only_tier: true
+  effect_on_failure: warn
+  source:
+    title: Corporate Governance & Supplier Fair Payment Policy
+    url: https://routera.internal/governance/policies/floor-price
+    citation: ROUTERA Policy Manual 2026 § 4.3
+  effective_date: '2026-01-01'
+  last_verified: '2026-10-15'
+  verification_status: assumption
+  notes: 'Illustrative operational rule: sales below floor price trigger human-only sign-off.'
+- rule_id: GEN-DOWNGRADE-001
+  title: Channel Downgrade Quality Alert
+  type: domestic_or_downgrade_channel
+  parameters:
+    notify_grower: true
+  effect_on_failure: warn
+  source:
+    title: Fresh Fruit Export Quality Assurance Protocol
+    url: https://routera.internal/governance/policies/channel-grades
+    citation: ROUTERA QA Standard § 8.1
+  effective_date: '2026-01-01'
+  last_verified: '2026-10-15'
+  verification_status: assumption
+  notes: Warns when diverting an export premium lot to domestic or salvage channels.
+- rule_id: GEN-MRL-CODEX
+  title: Codex Alimentarius pesticide MRLs (reference standard)
+  type: max_residue
+  parameters:
+    standard: CODEX
+  effect_on_failure: warn
+  source:
+    title: Codex Alimentarius Pesticide Index (FAO/WHO)
+    url: https://www.fao.org/fao-who-codexalimentarius/codex-texts/dbs/pestres/en/
+    citation: Codex MRLs for the commodity and active ingredient
+  effective_date: '2026-01-01'
+  last_verified: null
+  verification_status: assumption
+  notes: Codex limits are a reference, not the importing country's law. A failure goes to a human.

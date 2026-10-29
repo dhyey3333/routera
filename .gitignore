@@ -1,0 +1,15 @@
+# local environments and caches
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# machine-specific (pinned local Python path)
+.claude/
+
+# build output for SAP BAS uploads
+*.zip
+
+# never commit keys
+.env
+.env.*

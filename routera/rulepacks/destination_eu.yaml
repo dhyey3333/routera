@@ -1,0 +1,95 @@
+# Ported from the team's governance module (github.com/kokilacg30/routera_compliance, rulepacks/).
+# Fitted to ROUTERA: residue rules name the lab standard ROUTERA reads (pass/fail per lot) instead of
+# blueberry limits; mango treatment and Malaysia permit rules added. Verify before relying on them.
+pack_id: destination_eu
+version: 1.0.0
+scope:
+  origin: '*'
+  destination:
+  - EU
+  - NL
+  - DE
+  - FR
+  - ES
+  - IT
+  - BE
+  commodity_groups:
+  - fresh_fruit
+  - fresh_vegetables
+  modes:
+  - sea
+  - air
+  - road
+rules:
+- rule_id: EU-PHYTO-001
+  title: EU Official Phytosanitary Certificate Mandate
+  type: required_document
+  parameters:
+    document: phytosanitary_certificate_application_data
+    destination_specific: true
+  effect_on_failure: needs_docs
+  source:
+    title: Regulation (EU) 2016/2031 of the European Parliament on protective measures against pests of plants
+    url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R2031
+    citation: Article 72(1) and Annex XI Part A
+  effective_date: '2019-12-14'
+  last_verified: '2026-08-10'
+  verification_status: verified
+  notes: Requires official phytosanitary certificate for all fresh fruits imported into the Union territory.
+- rule_id: EU-MRL-001
+  title: EU Maximum Residue Limits (MRL) for Pesticides
+  type: max_residue
+  parameters:
+    standard: EU
+  effect_on_failure: block
+  source:
+    title: Regulation (EC) No 396/2005 on maximum residue levels of pesticides in or on food and feed
+    url: https://ec.europa.eu/food/plants/pesticides/eu-pesticides-database_en
+    citation: Article 18(1)(b) compliance threshold
+  effective_date: '2008-09-01'
+  last_verified: '2026-08-10'
+  verification_status: verified
+  notes: 'Hard legal block under EU food law: foodstuffs exceeding MRLs cannot be placed on the EU market.'
+- rule_id: EU-TRACE-001
+  title: EU General Food Law One-Step-Back One-Step-Forward Traceability
+  type: traceability_requirement
+  parameters:
+    required_keys:
+    - packhouse_code
+  effect_on_failure: needs_docs
+  source:
+    title: Regulation (EC) No 178/2002 laying down the general principles and requirements of food law
+    url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32002R0178
+    citation: Article 18 Traceability
+  effective_date: '2005-01-01'
+  last_verified: '2026-08-10'
+  verification_status: verified
+  notes: Food business operators must be able to identify from whom and to whom food has been supplied.
+- rule_id: EU-TARIFF-001
+  title: EU Common Customs Tariff Import Duty Notice
+  type: tariff_notice
+  parameters: {}
+  effect_on_failure: warn
+  source:
+    title: Council Regulation (EEC) No 2658/87 on the tariff and statistical nomenclature
+    url: https://taxation-customs.ec.europa.eu/customs-4/calculation-customs-duties/customs-tariff/taric_en
+    citation: CN 0806 10 (fresh grapes), CN 0804 50 (mangoes)
+  effective_date: '2026-01-01'
+  last_verified: null
+  verification_status: TODO_VERIFY
+  notes: 'PLACEHOLDER: look up the seasonal rate for CN 0806 10 and 0804 50 in TARIC.'
+- rule_id: EU-MANGO-HWT-001
+  title: 'Mangoes: treatment against non-European fruit flies (hot water treatment)'
+  type: required_treatment
+  parameters:
+    crop: mangoes
+    treatment: hot water treatment
+  effect_on_failure: needs_docs
+  source:
+    title: Commission Implementing Regulation (EU) 2019/2072
+    url: https://eur-lex.europa.eu/eli/reg_impl/2019/2072/oj
+    citation: 'Annex VII: special requirements for fruits of Mangifera L. from third countries'
+  effective_date: '2019-12-14'
+  last_verified: null
+  verification_status: TODO_VERIFY
+  notes: 'PLACEHOLDER: confirm the accepted treatment and official statement for Indian mangoes.'

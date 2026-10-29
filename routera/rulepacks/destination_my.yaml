@@ -1,0 +1,31 @@
+# Ported from the team's governance module (github.com/kokilacg30/routera_compliance, rulepacks/).
+# Fitted to ROUTERA: residue rules name the lab standard ROUTERA reads (pass/fail per lot) instead of
+# blueberry limits; mango treatment and Malaysia permit rules added. Verify before relying on them.
+pack_id: destination_my
+version: 1.0.0
+scope:
+  origin: '*'
+  destination:
+  - MY
+  - MYS
+  commodity_groups:
+  - fresh_fruit
+  - fresh_vegetables
+  modes:
+  - sea
+  - air
+rules:
+- rule_id: MY-PERMIT-001
+  title: Malaysia DOA import permit for fresh fruit
+  type: required_certificate
+  parameters:
+    certificate: import_permit
+  effect_on_failure: block
+  source:
+    title: Plant Quarantine Act 1976 and Plant Quarantine Regulations 1981 (Malaysia)
+    url: https://www.doa.gov.my
+    citation: Permit to import plants and plant products
+  effective_date: '1981-01-01'
+  last_verified: null
+  verification_status: TODO_VERIFY
+  notes: 'PLACEHOLDER: confirm which fresh fruit from India needs a DOA import permit.'

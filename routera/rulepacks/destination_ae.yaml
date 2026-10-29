@@ -1,0 +1,47 @@
+# Ported from the team's governance module (github.com/kokilacg30/routera_compliance, rulepacks/).
+# Fitted to ROUTERA: residue rules name the lab standard ROUTERA reads (pass/fail per lot) instead of
+# blueberry limits; mango treatment and Malaysia permit rules added. Verify before relying on them.
+pack_id: destination_ae
+version: 1.0.0
+scope:
+  origin: '*'
+  destination:
+  - AE
+  - ARE
+  - DXB
+  commodity_groups:
+  - fresh_fruit
+  - fresh_vegetables
+  modes:
+  - sea
+  - air
+rules:
+- rule_id: AE-MOCCAE-001
+  title: UAE MOCCAE Agricultural Import Permit & Phytosanitary Certificate
+  type: required_document
+  parameters:
+    document: phytosanitary_certificate_application_data
+    destination_specific: true
+  effect_on_failure: needs_docs
+  source:
+    title: UAE Ministry of Climate Change and Environment (MOCCAE) Federal Law No. 24 of 1999
+    url: https://www.moccae.gov.ae/en/services/import-export/import-permit-for-agricultural-shipments.aspx
+    citation: Executive Regulations on Agricultural Quarantine Art 3
+  effective_date: '2021-01-01'
+  last_verified: '2026-05-10'
+  verification_status: verified
+  notes: Requires prior MOCCAE import permit and NPPO phytosanitary certificate.
+- rule_id: AE-GSO-001
+  title: Gulf Standard GSO 382/1998 - Maximum Limits of Pesticide Residues
+  type: max_residue
+  parameters:
+    standard: GSO
+  effect_on_failure: warn
+  source:
+    title: GCC Standardization Organization (GSO) Technical Regulations
+    url: https://www.gso.org.sa/store/standards/GSO:382
+    citation: GSO 382/1998 Section 3
+  effective_date: '2023-01-01'
+  last_verified: null
+  verification_status: TODO_VERIFY
+  notes: 'PLACEHOLDER: Verify alignment with latest UAE.S MRL updates in GSO portal.'

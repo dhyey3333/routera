@@ -1,0 +1,28 @@
+{
+  "simulated": true,
+  "note": "ILLUSTRATIVE India-inside network for the Nashik grape belt. Transit times, distances, capacities and costs are assumptions to validate with a real exporter; names marked (SIM) are fictional.",
+  "corridors": [
+    {"corridor_id": "NSK-JNPT", "name": "Nashik to JNPT by road (NH160 via Kasara ghat)", "mode": "road", "region": "NASHIK", "port": "INNSA", "segments": ["KASARA_GHAT"], "km": 190, "transit_hours": 6},
+    {"corridor_id": "NSK-MUN", "name": "Nashik to Mundra by road (NH48)", "mode": "road", "region": "NASHIK", "port": "INMUN", "segments": [], "km": 760, "transit_hours": 17},
+    {"corridor_id": "NSK-JNPT-RAIL", "name": "Nashik ICD to JNPT by container rail", "mode": "rail", "region": "NASHIK", "port": "INNSA", "segments": [], "km": 210, "transit_hours": 10}
+  ],
+  "carriers": [
+    {"carrier_id": "TRK-GODAVARI", "name": "Godavari Reefer Lines (SIM)", "mode": "road", "union": "NSK-TRANSPORTERS", "region": "NASHIK"},
+    {"carrier_id": "TRK-SAHYADRI", "name": "Sahyadri Cold Logistics (SIM)", "mode": "road", "union": "NSK-TRANSPORTERS", "region": "NASHIK"},
+    {"carrier_id": "TRK-WESTERN", "name": "Western Reefer Carriers (SIM)", "mode": "road", "union": null, "region": "PUNE"},
+    {"carrier_id": "RAIL-NSK-ICD", "name": "Container rail from Nashik ICD (SIM)", "mode": "rail", "union": null, "region": "NASHIK"}
+  ],
+  "facilities": [
+    {"facility_id": "PH-PMP", "name": "Pimpalgaon FPO pack house (SIM)", "kind": "packhouse", "region": "NASHIK", "capacity_t": 300},
+    {"facility_id": "PH-NPD", "name": "Niphad pack house (SIM)", "kind": "packhouse", "region": "NASHIK", "capacity_t": 200},
+    {"facility_id": "CS-NSK", "name": "Nashik cold store (SIM)", "kind": "cold_store", "region": "NASHIK", "capacity_t": 600, "cost_inr_per_t_day": 45},
+    {"facility_id": "CS-JNPT", "name": "JNPT reefer CFS cold store (SIM)", "kind": "cold_store", "region": "MUMBAI", "capacity_t": 400, "cost_inr_per_t_day": 70}
+  ],
+  "markets": [
+    {"market_id": "MKT-VASHI", "name": "Vashi APMC", "city": "Navi Mumbai"},
+    {"market_id": "MKT-PUNE", "name": "Gultekdi market yard", "city": "Pune"},
+    {"market_id": "MKT-BLR", "name": "Bengaluru fruit market", "city": "Bengaluru"},
+    {"market_id": "MKT-HYD", "name": "Gaddiannaram fruit market", "city": "Hyderabad"},
+    {"market_id": "MKT-AZADPUR", "name": "Azadpur mandi", "city": "Delhi"}
+  ]
+}

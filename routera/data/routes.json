@@ -1,0 +1,33 @@
+{
+  "note": "ILLUSTRATIVE routes and vessel/truck slots. origin is where the container is now: GULF_SEA (at sea, Gulf-bound), INNSA (at JNPT), NASHIK (pack house, cold store or truck in the grape belt). days and cost_inr are per container; capacity is container slots.",
+  "routes": [
+    {"id": "G-SG", "origin": "GULF_SEA", "destination": "SGSIN", "action": "switch_destination", "label": "Divert via Salalah to Singapore", "days": 7, "cost_inr": 185000, "capacity": 8, "via": ["OMSLL"]},
+    {"id": "G-LK", "origin": "GULF_SEA", "destination": "LKCMB", "action": "switch_destination", "label": "Divert to Colombo", "days": 4, "cost_inr": 120000, "capacity": 4, "via": []},
+    {"id": "G-MY", "origin": "GULF_SEA", "destination": "MYPKG", "action": "switch_destination", "label": "Divert via Salalah to Port Klang", "days": 7.5, "cost_inr": 175000, "capacity": 6, "via": ["OMSLL"]},
+    {"id": "G-CAPE", "origin": "GULF_SEA", "destination": "NLRTM", "action": "reroute_vessel", "label": "Around the Cape to Rotterdam", "days": 24, "cost_inr": 340000, "capacity": 10, "via": ["CAPE"]},
+    {"id": "G-HOLD", "origin": "GULF_SEA", "destination": "MKT-AZADPUR", "action": "hold_cold_store", "label": "Back to JNPT, hold in cold store, sell in Delhi once prices recover", "days": 4.6, "cost_inr": 95000, "capacity": 6, "via": ["INNSA", "CS-JNPT"], "hold_days": 7, "hold_facility": "CS-JNPT", "sell_after_recovery": true},
+    {"id": "G-DEL", "origin": "GULF_SEA", "destination": "MKT-AZADPUR", "action": "split_market", "label": "Back to JNPT, truck to Delhi now", "days": 4.6, "cost_inr": 95000, "capacity": 20, "via": ["INNSA"]},
+    {"id": "G-PROC", "origin": "GULF_SEA", "destination": "PROC-NSK", "action": "processor_salvage", "label": "Back to JNPT, sell to Nashik processors", "days": 4.5, "cost_inr": 70000, "capacity": 50, "via": ["INNSA"]},
+
+    {"id": "J-SG", "origin": "INNSA", "destination": "SGSIN", "action": "switch_destination", "label": "Sail JNPT to Singapore", "days": 8, "cost_inr": 160000, "capacity": 8, "via": ["INNSA"]},
+    {"id": "J-LK", "origin": "INNSA", "destination": "LKCMB", "action": "switch_destination", "label": "Sail JNPT to Colombo", "days": 3.5, "cost_inr": 95000, "capacity": 6, "via": ["INNSA"]},
+    {"id": "J-MY", "origin": "INNSA", "destination": "MYPKG", "action": "switch_destination", "label": "Sail JNPT to Port Klang", "days": 8.5, "cost_inr": 165000, "capacity": 6, "via": ["INNSA"]},
+    {"id": "J-HOLD", "origin": "INNSA", "destination": "MKT-AZADPUR", "action": "hold_cold_store", "label": "Hold in JNPT cold store, sell in Delhi once prices recover", "days": 1.6, "cost_inr": 55000, "capacity": 8, "via": ["CS-JNPT"], "hold_days": 7, "hold_facility": "CS-JNPT", "sell_after_recovery": true},
+    {"id": "J-DEL", "origin": "INNSA", "destination": "MKT-AZADPUR", "action": "split_market", "label": "Truck to Delhi now", "days": 1.6, "cost_inr": 55000, "capacity": 20, "via": []},
+    {"id": "J-BLR", "origin": "INNSA", "destination": "MKT-BLR", "action": "split_market", "label": "Truck to Bengaluru", "days": 1.3, "cost_inr": 48000, "capacity": 10, "via": []},
+    {"id": "J-PROC", "origin": "INNSA", "destination": "PROC-NSK", "action": "processor_salvage", "label": "Truck back to Nashik processors", "days": 0.3, "cost_inr": 20000, "capacity": 50, "via": []},
+
+    {"id": "N-JNPT-LK", "origin": "NASHIK", "destination": "LKCMB", "action": "switch_destination", "label": "Truck to JNPT, sail to Colombo", "days": 4, "cost_inr": 140000, "capacity": 30, "via": ["NSK-JNPT", "KASARA_GHAT", "INNSA"], "carrier": "TRK-GODAVARI"},
+    {"id": "N-RAIL-LK", "origin": "NASHIK", "destination": "LKCMB", "action": "alternate_carrier", "label": "Rail from Nashik ICD to JNPT, sail to Colombo", "days": 4.4, "cost_inr": 152000, "capacity": 8, "via": ["NSK-JNPT-RAIL", "INNSA"], "carrier": "RAIL-NSK-ICD"},
+    {"id": "N-MUN-LK", "origin": "NASHIK", "destination": "LKCMB", "action": "alternate_port", "label": "Non-union trucks to Mundra, sail to Colombo", "days": 5.5, "cost_inr": 168000, "capacity": 6, "via": ["NSK-MUN", "INMUN"], "carrier": "TRK-WESTERN"},
+    {"id": "N-HOLD-LK", "origin": "NASHIK", "destination": "LKCMB", "action": "hold_cold_store", "label": "Hold in Nashik cold store 3 d, ship when the road clears", "days": 4, "cost_inr": 140000, "capacity": 10, "via": ["CS-NSK"], "hold_days": 3, "hold_facility": "CS-NSK"},
+    {"id": "N-JNPT-SG", "origin": "NASHIK", "destination": "SGSIN", "action": "switch_destination", "label": "Truck to JNPT, sail to Singapore", "days": 9, "cost_inr": 175000, "capacity": 10, "via": ["NSK-JNPT", "KASARA_GHAT", "INNSA"], "carrier": "TRK-GODAVARI"},
+    {"id": "N-RAIL-SG", "origin": "NASHIK", "destination": "SGSIN", "action": "alternate_carrier", "label": "Rail to JNPT, sail to Singapore", "days": 9.4, "cost_inr": 188000, "capacity": 8, "via": ["NSK-JNPT-RAIL", "INNSA"], "carrier": "RAIL-NSK-ICD"},
+    {"id": "N-VASHI", "origin": "NASHIK", "destination": "MKT-VASHI", "action": "split_market", "label": "Truck to Vashi (Mumbai)", "days": 0.3, "cost_inr": 18000, "capacity": 20, "via": ["NSK-JNPT", "KASARA_GHAT"], "carrier": "TRK-SAHYADRI"},
+    {"id": "N-PUNE", "origin": "NASHIK", "destination": "MKT-PUNE", "action": "split_market", "label": "Truck to Pune", "days": 0.3, "cost_inr": 16000, "capacity": 10, "via": [], "carrier": "TRK-WESTERN"},
+    {"id": "N-BLR", "origin": "NASHIK", "destination": "MKT-BLR", "action": "split_market", "label": "Truck to Bengaluru", "days": 1.2, "cost_inr": 45000, "capacity": 8, "via": [], "carrier": "TRK-WESTERN"},
+    {"id": "N-HYD", "origin": "NASHIK", "destination": "MKT-HYD", "action": "split_market", "label": "Truck to Hyderabad", "days": 0.9, "cost_inr": 38000, "capacity": 8, "via": [], "carrier": "TRK-WESTERN"},
+    {"id": "N-DEL", "origin": "NASHIK", "destination": "MKT-AZADPUR", "action": "split_market", "label": "Truck to Delhi", "days": 1.6, "cost_inr": 55000, "capacity": 10, "via": [], "carrier": "TRK-WESTERN"},
+    {"id": "N-PROC", "origin": "NASHIK", "destination": "PROC-NSK", "action": "processor_salvage", "label": "Sell to Nashik processors", "days": 0.2, "cost_inr": 8000, "capacity": 50, "via": []}
+  ]
+}

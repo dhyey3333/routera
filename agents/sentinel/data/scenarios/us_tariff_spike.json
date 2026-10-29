@@ -1,0 +1,77 @@
+{
+  "name": "us_tariff_spike",
+  "title": "US tariff spike on Indian shrimp",
+  "simulated": true,
+  "disclaimer": "SIMULATED FEEDS. Illustrative data inspired by reported 2025 US tariff changes; not real events.",
+  "start": "2026-03-02T06:00:00Z",
+  "container_ids": [
+    "SHR-01", "SHR-02", "SHR-03", "SHR-04", "SHR-05", "SHR-06",
+    "SHR-07", "SHR-08", "SHR-09", "SHR-10", "SHR-11", "GRP-15"
+  ],
+  "steps": [
+    {
+      "t_min": 0,
+      "note": "Hedged news: US weighs higher shrimp duties",
+      "event": {
+        "event_id": "TS-01",
+        "source": "news",
+        "kind_hint": null,
+        "payload": {
+          "headline": "US weighs steep new duties on Indian shrimp",
+          "body": "Trade officials are reportedly considering higher duties on shrimp imports from India.",
+          "outlet": "Trade Desk Daily (SIM)"
+        }
+      }
+    },
+    {
+      "t_min": 2,
+      "note": "Tariff feed: US HS 0306 from 10% to 50%, effective in two days",
+      "event": {
+        "event_id": "TS-02",
+        "source": "tariff_feed",
+        "kind_hint": "TARIFF_NOTICE",
+        "payload": {
+          "importing_country": "US",
+          "hs_code": "0306",
+          "old_rate_pct": 10,
+          "new_rate_pct": 50,
+          "effective_from": "2026-03-04T04:01:00Z"
+        }
+      }
+    },
+    {
+      "t_min": 3,
+      "note": "Malformed tariff message (new_rate_pct missing) must be rejected",
+      "event": {
+        "event_id": "TS-03",
+        "source": "tariff_feed",
+        "kind_hint": "TARIFF_NOTICE",
+        "payload": {
+          "importing_country": "US",
+          "hs_code": "0306",
+          "old_rate_pct": 10,
+          "effective_from": "2026-03-04T04:01:00Z"
+        }
+      }
+    },
+    {
+      "t_min": 6,
+      "note": "Second outlet reports the confirmed duty",
+      "event": {
+        "event_id": "TS-04",
+        "source": "news",
+        "kind_hint": null,
+        "payload": {
+          "headline": "US slaps 50% duty on Indian shrimp from March 4",
+          "body": "Customs notice confirms the duty on frozen shrimp rises from 10% to 50%.",
+          "outlet": "Seafood Trade Wire (SIM)"
+        }
+      }
+    },
+    {
+      "t_min": 2765,
+      "tick": true,
+      "note": "Fast-forward to the effective date: the tariff becomes active"
+    }
+  ]
+}

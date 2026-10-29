@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disruption Sentinel</title>
+<style>
+  :root {
+    --bg: #f3f4f6; --panel: #ffffff; --ink: #15181e; --muted: #596273; --faint: #8a93a2;
+    --line: #e1e4ea; --chip: #eef0f4; --accent: #2457d6; --accent-ink: #ffffff;
+    --sim-bg: #ffefb8; --sim-ink: #5f4300;
+    --sev-lo: #d08a00; --sev-hi: #c8302c; --sev-off: #e3e6eb;
+    --st-candidate: #6b7280; --st-confirmed: #2457d6; --st-active: #c8302c;
+    --st-resolving: #0f7c86; --st-resolved: #22803b; --st-ignored: #8a93a2;
+    --act-create: #2457d6; --act-merge: #7445c9; --act-escalate: #c8302c;
+    --act-ignore: #7a8291; --act-resolve: #22803b; --act-reject: #4b5260;
+    --r-hi: #22803b; --r-mid: #2457d6; --r-lo: #b26b00;
+    --flash: #fff6d6;
+    --layer-india: #0f766e; --layer-global: #4338ca;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1116; --panel: #161a21; --ink: #e7eaef; --muted: #a2abb9; --faint: #6f7886;
+      --line: #282e38; --chip: #20262f; --accent: #5b8cff; --accent-ink: #0b0e13;
+      --sim-bg: #4a3a0b; --sim-ink: #ffe08a;
+      --sev-lo: #e0a020; --sev-hi: #ff5c55; --sev-off: #2a313c;
+      --st-candidate: #9aa3b1; --st-confirmed: #6f9bff; --st-active: #ff6a63;
+      --st-resolving: #3cc4cf; --st-resolved: #5ccf7d; --st-ignored: #6f7886;
+      --act-create: #6f9bff; --act-merge: #b292ff; --act-escalate: #ff6a63;
+      --act-ignore: #8d96a5; --act-resolve: #5ccf7d; --act-reject: #a2abb9;
+      --r-hi: #5ccf7d; --r-mid: #6f9bff; --r-lo: #f0b44a;
+      --flash: #3a3214;
+      --layer-india: #4fd1c5; --layer-global: #a5b4fc;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 17px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 1rem/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  button, select { font: inherit; color: inherit; }
+
+  /* header */
+  .bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px;
+    padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+  .brand h1 { font-size: 1.35rem; margin: 0; letter-spacing: -0.01em; }
+  .sim {
+    background: var(--sim-bg); color: var(--sim-ink); font-weight: 700; font-size: .8rem;
+    letter-spacing: .06em; padding: 4px 10px; border-radius: 999px;
+  }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .controls label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  select {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 10px; color: var(--ink);
+  }
+  .speed { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .speed button {
+    background: transparent; border: 0; padding: 6px 12px; cursor: pointer; color: var(--muted);
+  }
+  .speed button + button { border-left: 1px solid var(--line); }
+  .speed button[aria-pressed="true"] { background: var(--chip); color: var(--ink); font-weight: 600; }
+  .primary {
+    background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px;
+    padding: 7px 18px; font-weight: 600; cursor: pointer;
+  }
+  .primary:disabled { opacity: .6; cursor: progress; }
+  .status { display: flex; align-items: center; gap: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .clock { font-weight: 600; color: var(--ink); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); display: inline-block; }
+  .dot.live { background: var(--st-resolved); }
+
+  .strip {
+    display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline;
+    padding: 8px 20px; color: var(--muted); font-size: .9rem; border-bottom: 1px solid var(--line);
+  }
+  .now { color: var(--ink); font-weight: 600; font-size: 1rem; }
+  .now:empty { display: none; }
+
+  /* layout */
+  main {
+    flex: 1; display: grid; gap: 16px; padding: 16px 20px 20px;
+    grid-template-columns: minmax(300px, 2fr) 3fr;
+    grid-template-rows: minmax(0, 1fr) minmax(180px, 30vh);
+    grid-template-areas: "signals cards" "audit audit";
+    height: calc(100vh - 118px); min-height: 640px;
+  }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .panel > h2 {
+    font-size: 1rem; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .count { color: var(--faint); font-weight: 400; font-size: .9rem; }
+  .scroll { overflow: auto; flex: 1; min-height: 0; }
+  #signals-panel { grid-area: signals; }
+  #cards-panel { grid-area: cards; }
+  #audit-panel { grid-area: audit; }
+  @media (max-width: 900px) {
+    .controls { width: 100%; }
+    .controls label { flex: 1 1 100%; min-width: 0; }
+    .controls select { flex: 1; min-width: 0; max-width: 100%; }
+    .bar { position: static; }
+    #audit tr { display: grid; grid-template-columns: auto auto 1fr; border-bottom: 1px solid var(--line); }
+    #audit td { border-bottom: 0; width: auto; }
+    #audit td.why { grid-column: 1 / -1; padding-top: 0; }
+    main { display: flex; flex-direction: column; height: auto; min-height: 0; padding: 12px 16px; }
+    .panel .scroll { max-height: none; }
+    .bar, .strip { padding-left: 16px; padding-right: 16px; }
+  }
+  .empty { color: var(--faint); padding: 18px 16px; margin: 0; }
+
+  /* signals */
+  ol.signals { list-style: none; margin: 0; padding: 0; }
+  .signal { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .signal .top { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--muted); }
+  .signal .top .when { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .signal .title { margin: 4px 0 2px; font-weight: 600; }
+  .signal .route { font-size: .9rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+  .signal.muted { opacity: .55; }
+  .signal.muted .title { text-decoration: line-through; text-decoration-thickness: 1px; }
+  .why-not { font-size: .88rem; color: var(--muted); margin-top: 2px; }
+  .icon { display: inline-flex; width: 22px; height: 22px; color: var(--ink); flex: none; }
+  .icon svg { width: 100%; height: 100%; }
+  .badge {
+    font-size: .78rem; font-weight: 700; padding: 1px 8px; border-radius: 999px;
+    border: 1px solid currentColor; white-space: nowrap;
+  }
+  .r-hi { color: var(--r-hi); } .r-mid { color: var(--r-mid); } .r-lo { color: var(--r-lo); }
+  .link {
+    font-weight: 600; color: var(--accent); background: var(--chip); padding: 0 8px; border-radius: 6px;
+  }
+
+  /* disruption cards */
+  .cards { padding: 12px; display: grid; gap: 12px; }
+  .card {
+    border: 1px solid var(--line); border-left: 6px solid var(--st-candidate);
+    border-radius: 10px; padding: 14px 16px; background: var(--panel);
+  }
+  .card.st-confirmed { border-left-color: var(--st-confirmed); }
+  .card.st-active { border-left-color: var(--st-active); }
+  .card.st-resolving { border-left-color: var(--st-resolving); }
+  .card.st-resolved { border-left-color: var(--st-resolved); }
+  .card.st-candidate { border-style: dashed; border-left-style: solid; }
+  .card.st-ignored { opacity: .55; border-left-color: var(--st-ignored); }
+  .card.flash { animation: flash 1.6s ease-out; }
+  @keyframes flash { from { background: var(--flash); } to { background: var(--panel); } }
+  @media (prefers-reduced-motion: reduce) { .card.flash { animation: none; } }
+  .card-head { display: flex; align-items: flex-start; gap: 12px; }
+  .card h3 { margin: 0; font-size: 1.25rem; line-height: 1.25; }
+  .card h3 .loc { color: var(--muted); font-weight: 500; }
+  .chip {
+    margin-left: auto; font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px; color: #fff; background: var(--st-candidate); white-space: nowrap;
+  }
+  .chip.st-confirmed { background: var(--st-confirmed); } .chip.st-active { background: var(--st-active); }
+  .chip.st-resolving { background: var(--st-resolving); } .chip.st-resolved { background: var(--st-resolved); }
+  .chip.st-ignored { background: var(--st-ignored); }
+  .layer {
+    font-size: .74rem; font-weight: 700; letter-spacing: .04em; padding: 2px 9px; border-radius: 999px;
+    border: 1.5px solid currentColor; white-space: nowrap; margin-left: auto;
+  }
+  .layer + .chip { margin-left: 8px; }
+  .layer-india { color: var(--layer-india); }
+  .layer-global { color: var(--layer-global); }
+  .options, .linked { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; font-size: .88rem; }
+  .options .label { color: var(--faint); font-size: .85rem; margin-right: 2px; }
+  .opt { border: 1px dashed var(--line); border-radius: 6px; padding: 1px 8px; cursor: help; }
+  .linked { color: var(--muted); }
+  @media (prefers-color-scheme: dark) { .chip { color: #0b0e13; } }
+  .meta { color: var(--faint); font-size: .85rem; margin: 2px 0 10px; }
+  .sev { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .sev-bar { display: grid; grid-template-columns: repeat(5, 26px); gap: 4px; }
+  .sev-bar i { height: 12px; border-radius: 3px; background: var(--sev-off); }
+  .sev-bar i.on { background: var(--sev-lo); }
+  .sev-bar.hi i.on { background: var(--sev-hi); }
+  .sev-label { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .urgent-tag { color: var(--sev-hi); font-weight: 800; letter-spacing: .06em; font-size: .85rem; }
+  .muted-tag { color: var(--faint); font-size: .85rem; }
+  .metrics { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0 0 10px; }
+  .metrics div { display: flex; flex-direction: column; }
+  .metrics dt { color: var(--faint); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+  .metrics dd { margin: 0; font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  .metrics dd small { font-weight: 500; color: var(--muted); font-size: .8rem; }
+  .flag { color: var(--sev-hi); }
+  .summary { margin: 0 0 10px; }
+  .sources { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
+  .sources .label { color: var(--faint); font-size: .85rem; margin-right: 2px; }
+  .src {
+    display: inline-flex; align-items: center; gap: 4px; background: var(--chip);
+    border-radius: 6px; padding: 2px 8px 2px 4px; font-size: .85rem;
+  }
+  .src .icon { width: 18px; height: 18px; }
+  details { margin-top: 6px; }
+  summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: .92rem; }
+  details ul { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: .9rem; }
+  details li { margin: 3px 0; overflow-wrap: anywhere; }
+  .boxes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .boxes span { background: var(--chip); border-radius: 6px; padding: 1px 8px; font-size: .85rem; font-variant-numeric: tabular-nums; }
+  .pub { margin-top: 10px; font-size: .88rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+  .pub strong { color: var(--ink); }
+
+  /* audit */
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.when { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; width: 1%; }
+  td.act { width: 1%; }
+  td.id { white-space: nowrap; width: 1%; font-weight: 600; }
+  td.why { color: var(--muted); overflow-wrap: anywhere; }
+  .act-chip {
+    font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 6px; border: 1.5px solid currentColor; white-space: nowrap;
+  }
+  .a-create { color: var(--act-create); } .a-merge { color: var(--act-merge); }
+  .a-escalate { color: var(--act-escalate); } .a-ignore { color: var(--act-ignore); }
+  .a-resolve { color: var(--act-resolve); } .a-reject { color: var(--act-reject); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <h1>Disruption Sentinel</h1>
+    <span class="sim" title="Every feed on this page is simulated">SIMULATED FEEDS</span>
+  </div>
+  <div class="controls">
+    <label>Scenario <select id="scenario" aria-label="Scenario"></select></label>
+    <div class="speed" role="group" aria-label="Replay speed">
+      <button type="button" data-speed="1" aria-pressed="false">1×</button>
+      <button type="button" data-speed="10" aria-pressed="false">10×</button>
+      <button type="button" data-speed="60" aria-pressed="true">60×</button>
+    </div>
+    <button type="button" id="replay" class="primary">Replay</button>
+  </div>
+  <div class="status">
+    <span class="clock" id="clock" title="Simulated clock">—</span>
+    <span id="bus" title="Messages published to the orchestrator">bus 0</span>
+    <span id="llm" title="Optional LLM for news classification and summaries (SENTINEL_LLM)">LLM off</span>
+    <span class="dot" id="conn" title="Connecting…"></span>
+  </div>
+</header>
+<div class="strip">
+  <span class="now" id="now" aria-live="polite"></span>
+  <span id="progress"></span>
+  <span id="disclaimer"></span>
+</div>
+<main>
+  <section class="panel" id="signals-panel" aria-labelledby="h-signals">
+    <h2 id="h-signals">Raw signals <span class="count" id="signal-count"></span></h2>
+    <div class="scroll"><ol class="signals" id="signals"></ol></div>
+  </section>
+  <section class="panel" id="cards-panel" aria-labelledby="h-cards">
+    <h2 id="h-cards">Disruptions <span class="count" id="card-count"></span></h2>
+    <div class="scroll"><div class="cards" id="cards"></div></div>
+  </section>
+  <section class="panel" id="audit-panel" aria-labelledby="h-audit">
+    <h2 id="h-audit">Audit trail <span class="count" id="audit-count"></span></h2>
+    <div class="scroll"><table><caption class="sr">Sentinel decisions, newest first</caption><tbody id="audit"></tbody></table></div>
+  </section>
+</main>
+<script>
+"use strict";
+const TYPE_LABEL = {
+  PORT_CLOSURE: "Port closure", PORT_CONGESTION: "Port congestion", LANE_SUSPENSION: "Lane suspension",
+  ROUTE_REROUTE: "Route reroute", VESSEL_DELAY: "Vessel delay", TARIFF_CHANGE: "Tariff change",
+  WEATHER_ALERT: "Weather alert", ROAD_CLOSURE: "Road closure", TRUCK_STRIKE: "Truck strike",
+  REEFER_FAILURE: "Reefer failure", FACILITY_OUTAGE: "Facility outage",
+  COMPLIANCE_HOLD: "Compliance hold", MARKET_PRICE_CRASH: "Mandi price crash",
+};
+const SOURCE_LABEL = {
+  port_authority: "Port authority", carrier_advisory: "Carrier advisory", ais: "AIS",
+  tariff_feed: "Tariff feed", weather: "Weather", news: "News",
+  road_authority: "Road authority", transport_union: "Transport union",
+  reefer_telemetry: "Reefer telemetry", facility_status: "Facility status",
+  compliance_feed: "Compliance", mandi_prices: "Mandi prices",
+};
+const OPTION_LABEL = {
+  alternate_port: "Alternate port", alternate_carrier: "Alternate carrier / rail",
+  hold_cold_store: "Hold in cold store", split_market: "Split markets",
+  processor_salvage: "Processor salvage", resequence_packing: "Re-sequence packing",
+  redo_documents: "Redo documents", switch_destination: "Switch destination",
+  reroute_vessel: "Reroute vessel",
+};
+const ROLE_LABEL = { resolution: "reopen / all-clear signal", noise: "not a disruption" };
+// Our own static icon paths (never feed data).
+const ICONS = {
+  port_authority: '<circle cx="12" cy="5" r="2"/><path d="M12 7v14M8 10h8M4 13a8 8 0 0 0 16 0"/>',
+  carrier_advisory: '<path d="M3 15h18l-2.5 5h-13zM6 15V9h12v6M12 4v5"/>',
+  ais: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l6-6"/>',
+  tariff_feed: '<path d="M18 6L6 18"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
+  weather: '<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 11.5 3.5 3.5 0 0 0 7 18z"/>',
+  news: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/>',
+  road_authority: '<path d="M8 3L5 21M16 3l3 18M12 4v3M12 11v3M12 18v2"/>',
+  transport_union: '<path d="M2 7h11v9H2zM13 10h4l3 3v3h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>',
+  reefer_telemetry: '<path d="M12 3a2 2 0 0 0-2 2v9.5a4 4 0 1 0 4 0V5a2 2 0 0 0-2-2z"/><path d="M12 9v7"/>',
+  facility_status: '<path d="M3 10l9-6 9 6v10H3z"/><path d="M8 20v-6h8v6"/>',
+  compliance_feed: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 13l2 2 4-4"/>',
+  mandi_prices: '<path d="M3 6l6 6 4-4 8 8"/><path d="M21 11v5h-5"/>',
+};
+const STATUS_ORDER = { active: 0, confirmed: 1, resolving: 2, candidate: 3, resolved: 4, ignored: 5 };
+
+const state = {
+  scenario: null, scenarios: [], replay: {}, clock: null, signals: [], audit: [],
+  disruptions: new Map(), published: 0, now: "", llm: "off",
+};
+let speed = 60;
+const openDetails = new Set();
+const seenVersion = new Map();
+
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [key, value] of Object.entries(props || {})) {
+    if (value == null || value === false) continue;
+    if (key === "class") el.className = value;
+    else if (key.startsWith("on")) el.addEventListener(key.slice(2), value);
+    else el.setAttribute(key, value === true ? "" : value);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+function icon(source) {
+  const span = h("span", { class: "icon", "aria-hidden": "true" });
+  span.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+    'stroke-linecap="round" stroke-linejoin="round">' + (ICONS[source] || ICONS.news) + "</svg>";
+  return span;
+}
+
+function tLabel(iso) {
+  if (!iso) return "—";
+  const t = Date.parse(iso);
+  if (state.scenario) {
+    const minutes = Math.round((t - Date.parse(state.scenario.start)) / 60000);
+    const a = Math.abs(minutes);
+    return `T${minutes < 0 ? "−" : "+"}${String(Math.floor(a / 60)).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`;
+  }
+  return new Date(t).toISOString().slice(11, 16) + "Z";
+}
+
+function num(x) { return Number.isInteger(x) ? String(x) : x.toFixed(1); }
+
+function advanceClock(iso) {
+  if (iso && (!state.clock || Date.parse(iso) > Date.parse(state.clock))) state.clock = iso;
+}
+
+// --- rendering ------------------------------------------------------------------------------
+
+function renderHeader() {
+  const select = document.getElementById("scenario");
+  if (!select.options.length && state.scenarios.length) {
+    for (const s of state.scenarios) select.append(h("option", { value: s.name }, s.title));
+  }
+  if (state.scenario) select.value = state.scenario.name;
+  document.getElementById("clock").textContent = state.clock ? `${tLabel(state.clock)} · ${state.clock.slice(0, 16).replace("T", " ")}Z` : "—";
+  document.getElementById("bus").textContent = `bus ${state.published}`;
+  document.getElementById("llm").textContent = `LLM ${state.llm}`;
+  document.getElementById("disclaimer").textContent = state.scenario ? state.scenario.disclaimer : "SIMULATED FEEDS. Choose a scenario and press Replay.";
+  const r = state.replay || {};
+  let progress = "";
+  if (r.running) progress = `Replaying step ${r.step || 0}/${r.steps} at ${r.speed}×`;
+  else if (state.scenario) progress = `Replay finished · ${r.step || 0}/${r.steps} steps`;
+  document.getElementById("progress").textContent = progress;
+  document.getElementById("now").textContent = state.now;
+}
+
+function signalState(s) {
+  if (s.status === "rejected") return { muted: true, text: `Rejected: ${s.reason}` };
+  if (s.status === "ignored") return { muted: true, text: s.status_reason.replace(/^\S+ ignored – /, "Ignored – ") };
+  const linked = s.disruption_id && state.disruptions.get(s.disruption_id);
+  if (linked && linked.ignored) return { muted: true, text: `Ignored – ${linked.closed_reason.replace(/^ignored – /, "")}` };
+  return { muted: false, text: "" };
+}
+
+function renderSignals() {
+  const list = document.getElementById("signals");
+  list.replaceChildren();
+  document.getElementById("signal-count").textContent = state.signals.length ? `${state.signals.length}` : "";
+  if (!state.signals.length) {
+    list.append(h("li", { class: "empty" }, "No signals yet. Press Replay to stream a simulated scenario."));
+    return;
+  }
+  for (const s of [...state.signals].reverse()) {
+    const st = signalState(s);
+    const r = s.reliability;
+    const rClass = r >= 0.9 ? "r-hi" : r >= 0.6 ? "r-mid" : "r-lo";
+    const top = h("div", { class: "top" },
+      icon(s.source || "news"),
+      h("span", null, SOURCE_LABEL[s.source] || s.source || "unknown source"),
+      h("span", null, "·"), h("span", null, s.event_id || "no id"),
+      r != null ? h("span", { class: `badge ${rClass}`, title: "source reliability r (news × classifier confidence)" }, `r ${r.toFixed(2)}`) : null,
+      h("span", { class: "when" }, tLabel(s.received_at)));
+    const title = h("div", { class: "title" }, s.title || "Malformed event");
+    const route = s.status === "rejected" ? null : h("div", { class: "route" },
+      h("span", null, s.type ? `→ ${TYPE_LABEL[s.type] || s.type} @ ${s.location}` : `→ ${ROLE_LABEL[s.role] || s.role}`),
+      h("span", null, `via ${s.classified_by}`),
+      s.disruption_id && !st.muted ? h("span", { class: "link" }, s.disruption_id) : null);
+    const why = st.text ? h("div", { class: "why-not" }, st.text) : null;
+    list.append(h("li", { class: `signal${st.muted ? " muted" : ""}` }, top, title, route, why));
+  }
+}
+
+function sortKey(item) {
+  const label = item.ignored ? "ignored" : item.disruption.status;
+  return [STATUS_ORDER[label], -item.disruption.severity, item.disruption.disruption_id];
+}
+
+function compare(a, b) {
+  const x = sortKey(a), y = sortKey(b);
+  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
+  return 0;
+}
+
+function detailsBlock(key, label, body) {
+  const el = h("details", { open: openDetails.has(key), ontoggle: (e) => {
+    if (e.target.open) openDetails.add(key); else openDetails.delete(key);
+  } }, h("summary", null, label), body);
+  return el;
+}
+
+function card(item) {
+  const d = item.disruption;
+  const label = item.ignored ? "ignored" : d.status;
+  const listed = !item.ignored && d.status !== "candidate";
+  const version = `${d.last_updated}|${label}|${d.severity}`;
+  const changed = seenVersion.has(d.disruption_id) && seenVersion.get(d.disruption_id) !== version;
+  seenVersion.set(d.disruption_id, version);
+
+  const bar = h("div", { class: `sev-bar${d.severity >= 4 ? " hi" : ""}`, "aria-hidden": "true" },
+    [1, 2, 3, 4, 5].map((i) => h("i", { class: i <= d.severity ? "on" : null })));
+  const sev = h("div", { class: "sev" }, bar,
+    h("span", { class: "sev-label" }, `Severity ${d.severity}/5`),
+    listed && d.priority === "urgent" ? h("span", { class: "urgent-tag" }, "URGENT") : null,
+    listed ? null : h("span", { class: "muted-tag" }, "held at 1 until confirmed"));
+
+  const weight = d.affected_weight_kg ? ` · ${num(d.affected_weight_kg / 1000)} t` : "";
+  const metrics = h("dl", { class: "metrics" },
+    h("div", null, h("dt", null, "Confidence"), h("dd", null, `${(d.confidence * 100).toFixed(1)}%`)),
+    h("div", null, h("dt", null, "Expected delay"), h("dd", null, `~${num(d.expected_delay_days)} d `, d.delay_is_estimate ? h("small", null, "est.") : null)),
+    h("div", null, h("dt", null, "Affected"), h("dd", null, `${d.affected_container_ids.length} containers`, h("small", null, weight))),
+    d.cost_impact_pct ? h("div", null, h("dt", null, "Cost impact"), h("dd", null, `+${num(d.cost_impact_pct)} pts`)) : null,
+    d.market_unreachable && listed ? h("div", null, h("dt", null, "Market"), h("dd", { class: "flag" }, "unreachable")) : null);
+
+  const sources = h("div", { class: "sources" }, h("span", { class: "label" }, "Sources"),
+    d.sources.map((s) => h("span", { class: "src", title: SOURCE_LABEL[s.source] || s.source }, icon(s.source), s.event_id)));
+
+  const why = detailsBlock(`${d.disruption_id}:why`, `Why (${d.rationale.length})`,
+    h("ul", null, d.rationale.map((line) => h("li", null, line))));
+  const boxes = d.affected_container_ids.length ? detailsBlock(`${d.disruption_id}:boxes`,
+    `Affected containers (${d.affected_container_ids.length})`,
+    h("div", { class: "boxes" }, d.affected_container_ids.map((id) => h("span", null, id)))) : null;
+
+  let pub;
+  if (item.ignored) pub = h("div", { class: "pub" }, "Never published · ", item.closed_reason);
+  else if (item.last_topic) pub = h("div", { class: "pub" }, "Published to orchestrator · ", h("strong", null, item.last_topic));
+  else pub = h("div", { class: "pub" }, "Not published · candidate awaiting corroboration");
+
+  const options = (item.options || []).length ? h("div", { class: "options" },
+    h("span", { class: "label" }, "Planner options"),
+    item.options.map((o) => h("span", { class: "opt", title: o.label }, OPTION_LABEL[o.id] || o.id))) : null;
+  const linked = (item.linked || []).length ? h("div", { class: "linked" },
+    "Shares containers with ", item.linked.join(", ")) : null;
+  const layer = item.layer === "india" ? "India-inside" : "Global";
+
+  return h("article", { class: `card st-${label}${changed ? " flash" : ""}`, "aria-label": `${d.disruption_id} ${TYPE_LABEL[d.type]}` },
+    h("div", { class: "card-head" },
+      h("h3", null, TYPE_LABEL[d.type] || d.type, " ", h("span", { class: "loc" }, `· ${d.location}`)),
+      h("span", { class: `layer layer-${item.layer || "global"}` }, layer),
+      h("span", { class: `chip st-${label}` }, label)),
+    h("div", { class: "meta" }, `${d.disruption_id} · first seen ${tLabel(d.first_seen)} · updated ${tLabel(d.last_updated)}`),
+    sev, metrics,
+    h("p", { class: "summary" }, d.summary,
+      item.summary_by === "llm" ? h("span", { class: "muted-tag" }, " · LLM-written, checked against the facts") : null),
+    sources, options, linked, why, boxes, pub);
+}
+
+function renderCards() {
+  const root = document.getElementById("cards");
+  const items = [...state.disruptions.values()].sort(compare);
+  const india = items.filter((i) => i.layer === "india").length;
+  document.getElementById("card-count").textContent = items.length
+    ? `${india} India-inside · ${items.length - india} global` : "";
+  root.replaceChildren(...(items.length ? items.map(card)
+    : [h("p", { class: "empty" }, "No disruptions yet.")]));
+}
+
+function renderAudit() {
+  const body = document.getElementById("audit");
+  document.getElementById("audit-count").textContent = state.audit.length ? `${state.audit.length}` : "";
+  body.replaceChildren(...(state.audit.length ? [...state.audit].reverse().map((a) => h("tr", null,
+    h("td", { class: "when" }, tLabel(a.details && a.details.at)),
+    h("td", { class: "act" }, h("span", { class: `act-chip a-${a.action}` }, a.action)),
+    h("td", { class: "id" }, a.disruption_id || a.event_id || ""),
+    h("td", { class: "why" }, a.rationale)))
+    : [h("tr", null, h("td", { class: "empty", colspan: "4" }, "Every create, merge, escalate, ignore and resolve decision appears here."))]));
+}
+
+function renderAll() { renderHeader(); renderSignals(); renderCards(); renderAudit(); }
+
+// --- stream -----------------------------------------------------------------------------------
+
+function load(snapshot, fresh) {
+  if (fresh) { openDetails.clear(); seenVersion.clear(); }
+  state.scenario = snapshot.scenario;
+  state.scenarios = snapshot.scenarios || state.scenarios;
+  state.replay = snapshot.replay || {};
+  state.clock = snapshot.clock;
+  state.signals = snapshot.signals || [];
+  state.audit = snapshot.audit || [];
+  state.published = snapshot.published || 0;
+  state.llm = snapshot.llm || "off";
+  state.disruptions = new Map((snapshot.disruptions || []).map((d) => [d.disruption.disruption_id, d]));
+  for (const item of state.disruptions.values()) {
+    const d = item.disruption;
+    seenVersion.set(d.disruption_id, `${d.last_updated}|${item.ignored ? "ignored" : d.status}|${d.severity}`);
+  }
+  state.now = "";
+  renderAll();
+}
+
+function connect() {
+  const conn = document.getElementById("conn");
+  const source = new EventSource("/sentinel/stream");
+  const on = (kind, fn) => source.addEventListener(kind, (e) => fn(JSON.parse(e.data)));
+  source.onopen = () => { conn.className = "dot live"; conn.title = "Live"; };
+  source.onerror = () => { conn.className = "dot"; conn.title = "Reconnecting…"; };
+  on("snapshot", (s) => load(s, false));
+  on("reset", (s) => load(s, true));
+  on("step", (s) => {
+    Object.assign(state.replay, { step: s.index, steps: s.steps, running: true });
+    advanceClock(s.at);
+    state.now = `▶ ${tLabel(s.at)} ${s.note}`;
+    renderHeader();
+  });
+  on("replay", (r) => { state.replay = r; renderHeader(); });
+  on("signal", (s) => { state.signals.push(s); advanceClock(s.received_at); renderSignals(); renderHeader(); });
+  on("decision", (a) => { state.audit.push(a); advanceClock(a.details && a.details.at); renderAudit(); });
+  on("publish", () => { state.published += 1; renderHeader(); });
+  on("disruption", (d) => { state.disruptions.set(d.disruption.disruption_id, d); renderCards(); renderSignals(); });
+}
+
+// --- controls ---------------------------------------------------------------------------------
+
+for (const button of document.querySelectorAll(".speed button")) {
+  button.addEventListener("click", () => {
+    speed = Number(button.dataset.speed);
+    for (const b of document.querySelectorAll(".speed button")) b.setAttribute("aria-pressed", String(b === button));
+  });
+}
+
+document.getElementById("replay").addEventListener("click", async (e) => {
+  const button = e.currentTarget;
+  const name = document.getElementById("scenario").value || "gulf_closure";
+  button.disabled = true;
+  try {
+    const response = await fetch(`/sentinel/replay/${encodeURIComponent(name)}?speed=${speed}`, { method: "POST" });
+    if (!response.ok) state.now = `Replay failed: HTTP ${response.status}`;
+  } catch (err) {
+    state.now = `Replay failed: ${err.message}`;
+  } finally {
+    button.disabled = false;
+    renderHeader();
+  }
+});
+
+renderAll();
+connect();
+</script>
+</body>
+</html>

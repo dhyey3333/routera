@@ -1,0 +1,115 @@
+{
+  "name": "gulf_ripple",
+  "title": "Chained: the Gulf closure ripples into India",
+  "simulated": true,
+  "layer": "india",
+  "disclaimer": "SIMULATED FEEDS. Illustrative chained scenario inspired by reported 2026 Gulf port halts: a global shock lands as port congestion, cold-store overflow, paperwork and a mandi glut inside India.",
+  "start": "2026-03-02T06:00:00Z",
+  "containers_file": "containers_india.json",
+  "container_ids": [
+    "GLF-21", "GLF-22", "GLF-23", "GLF-24", "GLF-25", "GLF-26",
+    "GLF-27", "GLF-28", "GLF-29", "GLF-30",
+    "NSK-01", "NSK-02", "NSK-03", "NSK-04", "NSK-05", "NSK-06", "NSK-07", "NSK-08",
+    "DOM-05", "DOM-06", "DOM-07"
+  ],
+  "steps": [
+    {
+      "t_min": 0,
+      "note": "Global trigger: Jebel Ali closes, reopening unknown",
+      "event": {
+        "event_id": "GR-01",
+        "source": "port_authority",
+        "kind_hint": "PORT_STATUS",
+        "payload": {
+          "port_code": "AEJEA",
+          "status": "closed",
+          "reason": "All vessel operations suspended: regional security situation",
+          "effective_from": "2026-03-02T06:00:00Z",
+          "expected_reopen": null
+        }
+      }
+    },
+    {
+      "t_min": 5,
+      "note": "Carrier suspends the JNPT to Jebel Ali service",
+      "event": {
+        "event_id": "GR-02",
+        "source": "carrier_advisory",
+        "kind_hint": "SCHEDULE_CHANGE",
+        "payload": {
+          "carrier": "Oceanic Line (SIM)",
+          "affected_lane": "INNSA-AEJEA",
+          "action": "suspend",
+          "via": null,
+          "added_transit_days": 0,
+          "vessel_ids": ["MV-ARABIAN-05"]
+        }
+      }
+    },
+    {
+      "t_min": 10,
+      "note": "Ripple 1: JNPT reefer plug points fill with stranded Gulf boxes",
+      "event": {
+        "event_id": "GR-03",
+        "source": "port_authority",
+        "kind_hint": "PORT_STATUS",
+        "payload": {
+          "port_code": "INNSA",
+          "status": "congested",
+          "reason": "Reefer plug points full: Gulf-bound boxes waiting for sailings",
+          "effective_from": "2026-03-02T06:10:00Z",
+          "expected_reopen": null
+        }
+      }
+    },
+    {
+      "t_min": 15,
+      "note": "Ripple 2: Nashik cold store full of recalled Gulf lots",
+      "event": {
+        "event_id": "GR-04",
+        "source": "facility_status",
+        "kind_hint": "CAPACITY",
+        "payload": {
+          "facility_id": "CS-NSK",
+          "status": "full",
+          "free_capacity_t": 0,
+          "expected_restore": null
+        }
+      }
+    },
+    {
+      "t_min": 20,
+      "note": "Ripple 3: phyto re-inspection backlog for lots switching market",
+      "event": {
+        "event_id": "GR-05",
+        "source": "compliance_feed",
+        "kind_hint": "PHYTO_STATUS",
+        "payload": {
+          "authority": "NPPO Nashik (SIM)",
+          "facility_id": "PH-NPD",
+          "port_code": null,
+          "market_country": null,
+          "status": "delayed",
+          "reason": "phytosanitary re-inspection backlog: lots switching market need new certificates",
+          "expected_clear": null
+        }
+      }
+    },
+    {
+      "t_min": 25,
+      "note": "Ripple 4: Delhi mandi glut as Gulf grapes are dumped at home",
+      "event": {
+        "event_id": "GR-06",
+        "source": "mandi_prices",
+        "kind_hint": "PRICE",
+        "payload": {
+          "market_id": "Azadpur",
+          "commodity": "grapes",
+          "modal_price_inr_per_kg": 41,
+          "baseline_price_inr_per_kg": 66,
+          "arrivals_t": 1620
+        }
+      }
+    }
+  ]
+}

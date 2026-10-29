@@ -1,0 +1,77 @@
+# Ported from the team's governance module (github.com/kokilacg30/routera_compliance, rulepacks/).
+# Fitted to ROUTERA: residue rules name the lab standard ROUTERA reads (pass/fail per lot) instead of
+# blueberry limits; mango treatment and Malaysia permit rules added. Verify before relying on them.
+pack_id: destination_us
+version: 1.0.0
+scope:
+  origin: '*'
+  destination:
+  - US
+  - USA
+  commodity_groups:
+  - fresh_fruit
+  - fresh_vegetables
+  modes:
+  - sea
+  - air
+  - road
+rules:
+- rule_id: US-APHIS-001
+  title: USDA APHIS Phytosanitary Certificate Mandate
+  type: required_document
+  parameters:
+    document: phytosanitary_certificate_application_data
+    destination_specific: true
+  effect_on_failure: needs_docs
+  source:
+    title: Electronic Code of Federal Regulations - 7 CFR Part 319 (Subpart - Fruits and Vegetables)
+    url: https://www.ecfr.gov/current/title-7/subtitle-B/chapter-III/part-319/subpart-fruits-and-vegetables
+    citation: 7 CFR § 319.56-3 General requirements for all imported fruits and vegetables
+  effective_date: '2020-01-01'
+  last_verified: '2026-07-20'
+  verification_status: verified
+  notes: Requires official phytosanitary certificate issued by NPPO of exporting country.
+- rule_id: US-FSMA-001
+  title: FDA FSMA Foreign Supplier Verification Program (FSVP)
+  type: traceability_requirement
+  parameters:
+    required_keys:
+    - fsvp_agent_us
+  effect_on_failure: needs_docs
+  source:
+    title: FDA Food Safety Modernization Act (FSMA) 21 CFR Part 1 Subpart L
+    url: https://www.fda.gov/food/food-safety-modernization-act-fsma/fsma-final-rule-foreign-supplier-verification-programs-fsvp-importers-food-humans-and-animals
+    citation: 21 CFR § 1.500 through § 1.514
+  effective_date: '2017-05-30'
+  last_verified: '2026-07-20'
+  verification_status: verified
+  notes: Requires identified US-based FSVP importer or agent.
+- rule_id: US-EPA-TOL-001
+  title: US EPA pesticide tolerances
+  type: max_residue
+  parameters:
+    standard: US
+  effect_on_failure: warn
+  source:
+    title: e-CFR Title 40 Protection of Environment Part 180 Tolerances
+    url: https://www.ecfr.gov/current/title-40/chapter-I/subchapter-E/part-180
+    citation: 40 CFR Part 180, tolerance for the commodity
+  effective_date: '2024-01-01'
+  last_verified: null
+  verification_status: TODO_VERIFY
+  notes: 'PLACEHOLDER: Verify post-harvest vs pre-harvest tolerances with US EPA CFR.'
+- rule_id: US-MANGO-IRR-001
+  title: 'Mangoes from India: irradiation treatment'
+  type: required_treatment
+  parameters:
+    crop: mangoes
+    treatment: irradiation
+  effect_on_failure: needs_docs
+  source:
+    title: '7 CFR Part 305: Phytosanitary treatments (USDA APHIS)'
+    url: https://www.ecfr.gov/current/title-7/subtitle-B/chapter-III/part-305
+    citation: 7 CFR 305.9 irradiation treatment
+  effective_date: '2020-01-01'
+  last_verified: null
+  verification_status: TODO_VERIFY
+  notes: 'PLACEHOLDER: confirm the dose and pre-clearance arrangement for Indian mangoes.'

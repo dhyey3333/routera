@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTERA Control Room</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237c5cff'/%3E%3Cpath d='M8 22c4-10 12-2 16-12' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='22' r='3' fill='white'/%3E%3Ccircle cx='24' cy='10' r='3' fill='%2334d399'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f4f5fa; --bg-2: #eceef6; --panel: #ffffff; --panel-2: #f7f8fc; --line: #e2e5f0; --line-2: #d3d8e8;
+  --text: #141a2e; --muted: #5d6685; --faint: #8a92ad;
+  --accent: #6d4aff; --accent-soft: #6d4aff1a; --accent-2: #0891b2;
+  --good: #059669; --good-soft: #05966918; --warn: #d97706; --warn-soft: #d977061c; --bad: #dc2626; --bad-soft: #dc26261a;
+  --india: #ea580c; --india-soft: #ea580c18; --global: #0284c7; --global-soft: #0284c718;
+  --shadow: 0 1px 2px #141a2e0d, 0 8px 24px #141a2e0f;
+  --phone: #111827; --bubble: #eef0f7; --bubble-me: #d9fdd3; --bubble-me-text: #0b2e13;
+  --seg-export: #6d4aff; --seg-domestic: #0891b2; --seg-processor: #a16207; --seg-stay: #94a3b8; --seg-hold: #0d9488;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #070b18; --bg-2: #0b1124; --panel: #0f162d; --panel-2: #131c38; --line: #1e2a4d; --line-2: #2a3866;
+    --text: #e7ebf8; --muted: #95a0c2; --faint: #69739a;
+    --accent: #9b85ff; --accent-soft: #9b85ff22; --accent-2: #22d3ee;
+    --good: #34d399; --good-soft: #34d3991f; --warn: #fbbf24; --warn-soft: #fbbf241f; --bad: #f87171; --bad-soft: #f871711f;
+    --india: #fb923c; --india-soft: #fb923c1f; --global: #38bdf8; --global-soft: #38bdf81f;
+    --shadow: 0 1px 2px #0006, 0 12px 32px #0005;
+    --phone: #02040b; --bubble: #1b2442; --bubble-me: #134e3a; --bubble-me-text: #d1fae5;
+    --seg-export: #9b85ff; --seg-domestic: #22d3ee; --seg-processor: #eab308; --seg-stay: #64748b; --seg-hold: #2dd4bf;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #070b18; --bg-2: #0b1124; --panel: #0f162d; --panel-2: #131c38; --line: #1e2a4d; --line-2: #2a3866;
+  --text: #e7ebf8; --muted: #95a0c2; --faint: #69739a;
+  --accent: #9b85ff; --accent-soft: #9b85ff22; --accent-2: #22d3ee;
+  --good: #34d399; --good-soft: #34d3991f; --warn: #fbbf24; --warn-soft: #fbbf241f; --bad: #f87171; --bad-soft: #f871711f;
+  --india: #fb923c; --india-soft: #fb923c1f; --global: #38bdf8; --global-soft: #38bdf81f;
+  --shadow: 0 1px 2px #0006, 0 12px 32px #0005;
+  --phone: #02040b; --bubble: #1b2442; --bubble-me: #134e3a; --bubble-me-text: #d1fae5;
+  --seg-export: #9b85ff; --seg-domestic: #22d3ee; --seg-processor: #eab308; --seg-stay: #64748b; --seg-hold: #2dd4bf;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: radial-gradient(1200px 600px at 10% -10%, var(--accent-soft), transparent 60%), var(--bg);
+  color: var(--text); font: 14px/1.45 "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+button, select, input, textarea { font: inherit; color: inherit; }
+.num, .mono { font-variant-numeric: tabular-nums; }
+.mono { font-family: "JetBrains Mono", "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 12px; }
+a { color: var(--accent); }
+
+/* --- header ---------------------------------------------------------------------------------- */
+.top {
+  position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  padding: 10px 20px; background: color-mix(in srgb, var(--panel) 86%, transparent);
+  backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand b { font-size: 17px; letter-spacing: .14em; }
+.brand small { display: block; color: var(--muted); font-size: 11.5px; letter-spacing: 0; }
+.sim { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; padding: 3px 8px; border-radius: 999px;
+  color: var(--warn); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); }
+.clock { display: flex; align-items: baseline; gap: 8px; padding: 4px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.clock b { font-size: 18px; letter-spacing: .02em; }
+.clock span, .clock small { color: var(--muted); font-size: 12px; }
+.controls { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.btn { border: 1px solid var(--line-2); background: var(--panel); border-radius: 9px; padding: 7px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; text-decoration: none; color: var(--text); }
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.btn.good { background: var(--good); border-color: var(--good); color: #fff; font-weight: 600; }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 4px 9px; font-size: 12.5px; border-radius: 7px; }
+select.btn { padding-right: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; background: var(--panel); padding: 7px 10px; cursor: pointer; font-size: 12.5px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); display: inline-block; }
+.dot.live { background: var(--good); box-shadow: 0 0 0 4px var(--good-soft); animation: pulse 2s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px transparent; } }
+.progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; }
+.progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .4s; }
+
+/* --- story + pipeline ------------------------------------------------------------------------ */
+.wrap { max-width: 1680px; margin: 0 auto; padding: 16px 20px 40px; }
+.story { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 14px; }
+.story h1 { font-size: 18px; margin: 0; font-weight: 650; }
+.layer { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; }
+.layer.india { color: var(--india); background: var(--india-soft); }
+.layer.global { color: var(--global); background: var(--global-soft); }
+.layer.live { color: #fff; background: var(--bad); animation: pulse 2s infinite; }
+.feeds { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.feed { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); min-width: 0; }
+.feed .h { display: flex; align-items: center; gap: 7px; font-weight: 650; font-size: 13px; }
+.feed .h .dot { width: 8px; height: 8px; }
+.feed .h small { margin-left: auto; color: var(--faint); font-weight: 400; font-size: 11.5px; }
+.feed p { margin: 4px 0 6px; color: var(--muted); font-size: 12.5px; }
+.feed ul { margin: 0; padding-left: 16px; font-size: 12px; color: var(--muted); max-height: 92px; overflow: auto; }
+.feed li { margin: 2px 0; }
+.feed a { color: var(--text); text-decoration: none; }
+.feed a:hover { text-decoration: underline; }
+.ticker { flex: 1 1 320px; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ticker b { color: var(--text); font-weight: 600; }
+.pipeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stage { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 12px; box-shadow: var(--shadow); overflow: hidden; }
+.stage::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--c, var(--accent)); }
+.stage:not(:last-child)::after { content: "›"; position: absolute; right: -11px; top: 50%; transform: translateY(-50%); z-index: 2; color: var(--faint); font-size: 22px; }
+.stage .k { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--c, var(--accent)); }
+.stage .who { margin-left: auto; font-size: 10.5px; letter-spacing: 0; text-transform: none; font-weight: 600; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); padding: 1px 7px; border-radius: 999px; }
+.stage .v { font-size: 26px; font-weight: 700; margin: 4px 0 0; letter-spacing: -.01em; }
+.stage .s { color: var(--muted); font-size: 12.5px; }
+.stage.hot { animation: glow 1.2s ease-out; }
+@keyframes glow { from { box-shadow: 0 0 0 3px var(--c, var(--accent)); } }
+
+/* --- layout + panels ------------------------------------------------------------------------- */
+.grid { display: grid; grid-template-columns: minmax(270px, 320px) minmax(0, 1fr) minmax(280px, 320px); gap: 16px; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); min-width: 0; }
+.panel > header { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.panel > header h3 { margin: 0; font-size: 13.5px; font-weight: 650; }
+.panel > header .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.panel > header .right { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.panel .body { padding: 12px 14px; }
+.scroll { max-height: 640px; overflow: auto; }
+.empty { color: var(--muted); text-align: center; padding: 26px 12px; }
+.empty b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.good { color: var(--good); background: var(--good-soft); border-color: transparent; }
+.chip.warn { color: var(--warn); background: var(--warn-soft); border-color: transparent; }
+.chip.bad { color: var(--bad); background: var(--bad-soft); border-color: transparent; }
+.chip.acc { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+.tabs { display: flex; gap: 4px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); padding: 5px 9px; border-radius: 7px; cursor: pointer; font-size: 12.5px; }
+.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.count { font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; margin-left: 3px; }
+
+/* --- disruptions + signals ------------------------------------------------------------------- */
+.dis { border: 1px solid var(--line); border-radius: 12px; padding: 10px 11px; margin-bottom: 9px; background: var(--panel-2); transition: opacity .3s, border-color .3s; }
+.dis.new { animation: slidein .5s ease-out; }
+@keyframes slidein { from { transform: translateY(-6px); opacity: 0; } }
+.dis.candidate { border-style: dashed; }
+.dis.closed { opacity: .55; }
+.dis .row1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dis .type { font-weight: 650; }
+.dis .loc { color: var(--muted); font-size: 12.5px; }
+.dis p { margin: 6px 0; color: var(--muted); font-size: 12.5px; }
+.dis .meta { display: flex; flex-wrap: wrap; gap: 5px; }
+.status { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 2px 7px; border-radius: 6px; margin-left: auto; }
+.status.candidate { color: var(--muted); background: var(--panel); border: 1px dashed var(--line-2); }
+.status.confirmed { color: var(--warn); background: var(--warn-soft); }
+.status.active { color: var(--bad); background: var(--bad-soft); }
+.status.resolving, .status.resolved, .status.ignored { color: var(--good); background: var(--good-soft); }
+.sev { letter-spacing: 1px; color: var(--bad); font-size: 10px; }
+.sev i { color: var(--line-2); font-style: normal; }
+.sig { display: grid; grid-template-columns: 44px 1fr; gap: 2px 8px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px; }
+.sig .t { color: var(--faint); }
+.sig .src { color: var(--muted); font-size: 11.5px; }
+
+/* --- plan ------------------------------------------------------------------------------------ */
+.plantabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.plantab { border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; padding: 6px 10px; cursor: pointer; font-size: 12.5px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.plantab[aria-selected="true"] { border-color: var(--accent); color: var(--text); box-shadow: 0 0 0 3px var(--accent-soft); }
+.plantab .st { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.plantab .st.pending { background: var(--warn); }
+.plantab .st.approved { background: var(--good); }
+.plantab .st.rejected { background: var(--bad); }
+.planhead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; }
+.planhead h2 { margin: 2px 0 4px; font-size: 19px; letter-spacing: -.01em; }
+.planhead .id { color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.planhead .headline { margin: 0; color: var(--muted); }
+.saved { text-align: right; background: linear-gradient(135deg, var(--good-soft), transparent); border: 1px solid color-mix(in srgb, var(--good) 35%, transparent); border-radius: 14px; padding: 10px 14px; min-width: 170px; }
+.saved small { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.saved b { display: block; font-size: 30px; color: var(--good); letter-spacing: -.02em; line-height: 1.15; }
+.saved span { color: var(--muted); font-size: 12px; }
+.compare { display: grid; grid-template-columns: 130px minmax(0, 1fr) 90px; gap: 6px 10px; align-items: center; margin: 16px 0 6px; font-size: 12.5px; }
+.compare .bar { height: 12px; border-radius: 6px; background: var(--bg-2); overflow: hidden; }
+.compare .bar i { display: block; height: 100%; border-radius: 6px; transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.compare .lbl { color: var(--muted); }
+.compare .val { text-align: right; font-weight: 600; }
+.alloc { margin: 14px 0 4px; }
+.alloc .stack { display: flex; height: 30px; border-radius: 9px; overflow: hidden; gap: 2px; }
+.alloc .stack div { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 650; min-width: 22px; transition: flex-grow .5s; white-space: nowrap; overflow: hidden; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend b { color: var(--text); }
+.tablewrap { overflow-x: auto; margin: 14px -14px 0; padding: 0 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: left; color: var(--faint); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr.edited td { background: var(--accent-soft); }
+td .sub { color: var(--muted); font-size: 11.5px; }
+td.r, th.r { text-align: right; }
+.lifecell { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.pick { min-width: 180px; max-width: 260px; width: 100%; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--panel); font-size: 12.5px; }
+.whyrow td { background: var(--panel-2); color: var(--text); font-size: 13px; padding: 10px 12px; }
+.whyrow .by { color: var(--faint); font-size: 11px; margin-left: 6px; }
+.pos { color: var(--good); font-weight: 600; }
+.neg { color: var(--bad); font-weight: 600; }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.box { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--panel-2); }
+.box h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.box ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12.5px; }
+.box li { margin: 3px 0; }
+.box li b { color: var(--text); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.actions .who { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; }
+.actions input { width: 130px; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--panel); }
+.actions .grow { flex: 1; }
+.notice { border-radius: 12px; padding: 10px 12px; margin-top: 14px; font-size: 13px; }
+.notice.good { background: var(--good-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--good) 30%, transparent); }
+.notice.bad { background: var(--bad-soft); border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent); }
+.notice.muted { background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+.bookings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.box summary { cursor: pointer; }
+.draft { white-space: pre-wrap; background: var(--panel); border: 1px dashed var(--line-2); border-radius: 8px; padding: 8px 10px; margin: 6px 0 2px; color: var(--text); font-size: 11.5px; }
+.box .lead { margin: 0 0 6px; color: var(--muted); font-size: 12.5px; }
+.box .lead b { color: var(--text); }
+.packlist { max-height: 210px; overflow: auto; }
+.packlist li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.packlist .btn { margin-left: auto; }
+.notice.warn { background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
+
+/* --- phone ----------------------------------------------------------------------------------- */
+.phone { margin: 14px auto 6px; width: 100%; max-width: 300px; background: var(--phone); border-radius: 34px; padding: 10px; box-shadow: var(--shadow), inset 0 0 0 2px #ffffff14; position: relative; }
+.phone.buzz { animation: buzz .5s 2; }
+@keyframes buzz { 20%, 60% { transform: translateX(-3px) rotate(-1deg); } 40%, 80% { transform: translateX(3px) rotate(1deg); } }
+.phone .notch { width: 90px; height: 18px; background: #000; border-radius: 0 0 12px 12px; margin: -10px auto 0; }
+.screen { background: var(--panel); border-radius: 26px; overflow: hidden; height: 420px; display: flex; flex-direction: column; }
+.appbar { display: flex; align-items: center; gap: 9px; padding: 12px 12px 10px; border-bottom: 1px solid var(--line); }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; flex: none; }
+.appbar b { font-size: 13px; display: block; }
+.appbar small { color: var(--muted); font-size: 11px; }
+.thread { flex: 1; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-2); }
+.msg { max-width: 92%; padding: 8px 10px; border-radius: 12px; font-size: 12.5px; background: var(--panel); border: 1px solid var(--line); align-self: flex-start; animation: slidein .35s ease-out; }
+.msg.me { align-self: flex-end; background: var(--bubble-me); color: var(--bubble-me-text); border-color: transparent; }
+.msg .t { display: block; text-align: right; color: var(--faint); font-size: 10px; margin-top: 3px; }
+.msg.me .t { color: inherit; opacity: .6; }
+.msg b.big { display: block; font-size: 20px; color: var(--good); }
+.msg .btns { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
+.msg .btns button { flex: 1; border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 8px; padding: 5px 6px; font-size: 12px; cursor: pointer; }
+.msg .btns button.go { background: var(--good); color: #fff; border-color: var(--good); font-weight: 600; }
+
+/* --- audit ----------------------------------------------------------------------------------- */
+.verify { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-radius: 10px; margin-bottom: 10px; font-size: 12.5px; }
+.verify.ok { background: var(--good-soft); }
+.verify.broken { background: var(--bad-soft); }
+.entry { position: relative; padding: 0 0 10px 18px; font-size: 12.5px; }
+.entry::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: -4px; width: 1px; background: var(--line-2); }
+.entry::after { content: ""; position: absolute; left: 1px; top: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--panel); border: 2px solid var(--a, var(--faint)); }
+.entry:last-child::before { display: none; }
+.entry.new { animation: slidein .4s ease-out; }
+.entry .h { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.entry .act { font-weight: 600; }
+.entry p { margin: 2px 0; color: var(--muted); }
+.entry .hash { color: var(--faint); font-size: 10.5px; }
+
+/* --- fleet ----------------------------------------------------------------------------------- */
+.fleet { margin-top: 16px; }
+.fleetgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
+.boxcard { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; background: var(--panel-2); }
+.boxcard.risk { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.boxcard.booked { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.boxcard b { font-size: 13px; }
+.boxcard .sub { color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.boxcard .lifetxt { font-weight: 650; font-size: 13px; }
+.boxcard .tags { grid-column: 1 / -1; display: flex; gap: 4px; flex-wrap: wrap; }
+.ring .track { stroke: var(--line); fill: none; }
+.ring .arc { fill: none; stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
+.ring.good .arc { stroke: var(--good); } .ring.warn .arc { stroke: var(--warn); } .ring.bad .arc { stroke: var(--bad); }
+.lifetxt.good { color: var(--good); } .lifetxt.warn { color: var(--warn); } .lifetxt.bad { color: var(--bad); }
+
+/* --- dialog + toasts + footer ---------------------------------------------------------------- */
+dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--text); padding: 0; width: min(520px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+dialog::backdrop { background: #0008; backdrop-filter: blur(2px); }
+dialog header { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+dialog header b { font-size: 15px; }
+dialog header p { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+dialog .body { padding: 14px 16px; display: grid; gap: 10px; }
+dialog textarea { width: 100%; min-height: 70px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel-2); resize: vertical; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 999px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; }
+.presets button:hover { border-color: var(--accent); color: var(--accent); }
+dialog.wide { width: min(760px, calc(100vw - 32px)); }
+dialog.wide .body { max-height: min(68vh, 640px); overflow: auto; }
+.doc { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--panel-2); }
+.doc summary { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; cursor: pointer; font-size: 13px; }
+.doc table { width: 100%; margin-top: 6px; font-size: 12px; border-collapse: collapse; }
+.doc td { padding: 3px 6px; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.doc td:first-child { color: var(--muted); width: 38%; }
+.doc td.miss { color: var(--warn); font-weight: 600; }
+.hash { color: var(--faint); font-size: 11px; overflow-wrap: anywhere; }
+.cites { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.cites a { color: var(--accent); }
+.doc .pdf { margin-left: auto; font-size: 12px; color: var(--accent); }
+.esc { font-size: 12px; margin-top: 6px; color: var(--muted); }
+.esc b { color: var(--text); }
+.packmeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 12.5px; }
+dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
+.toasts { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 36px)); }
+.toast { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--c, var(--accent)); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); font-size: 13px; animation: slidein .3s ease-out; }
+.toast b { display: block; }
+.toast span { color: var(--muted); }
+footer.foot { margin-top: 20px; color: var(--faint); font-size: 12px; text-align: center; }
+
+@media (max-width: 1240px) {
+  .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .grid .decide { grid-column: 1 / -1; order: -1; }
+  .scroll { max-height: 520px; }
+}
+@media (max-width: 860px) {
+  .top { position: relative; }
+  .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .feeds { grid-template-columns: minmax(0, 1fr); }
+  .stage:nth-child(2)::after { display: none; }
+}
+@media (max-width: 720px) {
+  .wrap { padding: 12px 16px 32px; }
+  .top { padding: 10px 16px; }
+  .controls { margin-left: 0; min-width: 0; }
+  .controls select { flex: 1 1 100%; min-width: 0; max-width: 100%; }
+  .stage .who, .panel > header .tag { display: none; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .planhead { grid-template-columns: minmax(0, 1fr); }
+  .saved { text-align: left; }
+  .cols2 { grid-template-columns: minmax(0, 1fr); }
+  .compare { grid-template-columns: 100px minmax(0, 1fr) 76px; }
+  .stage .v { font-size: 21px; }
+  .stage::after { display: none; }
+  .hide-sm { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top" id="top">
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M8 22c4-10 12-2 16-12" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="8" cy="22" r="3" fill="#fff"/><circle cx="24" cy="10" r="3" fill="#34d399"/></svg>
+    <div><b>ROUTERA</b><small>Saves perishable exports when routes, markets or tariffs break</small></div>
+  </div>
+  <span class="sim" id="sim" title="Every feed, price and capacity on this page is simulated or illustrative">SIMULATED FEEDS</span>
+  <div class="clock" title="Simulated time (IST). It runs at the replay speed."><span id="clock-day">–</span><b class="num" id="clock-time">--:--:--</b><small>IST</small></div>
+  <div class="controls">
+    <select class="btn" id="scenario" aria-label="Scenario"></select>
+    <div class="seg" id="speed" role="group" aria-label="Replay speed">
+      <button data-speed="60" aria-pressed="true" title="1 simulated hour per real minute">60×</button>
+      <button data-speed="300" aria-pressed="false" title="5 simulated hours per real minute">300×</button>
+      <button data-speed="0" aria-pressed="false" title="No waiting">Instant</button>
+    </div>
+    <button class="btn primary" id="replay">▶ Replay</button>
+    <button class="btn" id="inject-open" title="Send a live event to the Sentinel">⚡ Feed the Sentinel</button>
+    <a class="btn ghost hide-sm" href="/sentinel" target="_blank" rel="noopener" title="The Sentinel's own console">Sentinel ↗</a>
+    <button class="btn ghost" id="theme" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+    <span class="dot" id="conn" title="Connecting…"></span>
+  </div>
+  <div class="progress"><i id="progress"></i></div>
+</header>
+
+<div class="wrap">
+  <section class="story">
+    <span class="layer india" id="layer">India-inside</span>
+    <h1 id="title">Connecting to the control room…</h1>
+    <div class="ticker" id="ticker"></div>
+  </section>
+
+  <section class="feeds" id="feeds" aria-label="Live feeds" hidden></section>
+
+  <section class="pipeline" aria-label="Pipeline">
+    <div class="stage" id="st-sense" style="--c: var(--india)">
+      <div class="k">① Sense <span class="who" id="llm-who">Disruption Sentinel · LLM agent</span></div>
+      <div class="v num" id="kv-sense">0</div><div class="s" id="ks-sense">open disruptions</div>
+    </div>
+    <div class="stage" id="st-life" style="--c: var(--bad)">
+      <div class="k">② Shelf-life clock <span class="who">Q10 decay model</span></div>
+      <div class="v num" id="kv-life">0</div><div class="s" id="ks-life">containers at risk</div>
+    </div>
+    <div class="stage" id="st-decide" style="--c: var(--accent)">
+      <div class="k">③ Decide <span class="who">Planner · Reroute · Market · Compliance</span></div>
+      <div class="v num" id="kv-decide">₹0</div><div class="s" id="ks-decide">value on the table</div>
+    </div>
+    <div class="stage" id="st-approve" style="--c: var(--good)">
+      <div class="k">④ Approve &amp; log <span class="who">Human + hash chain</span></div>
+      <div class="v num" id="kv-approve">₹0</div><div class="s" id="ks-approve">value protected</div>
+    </div>
+  </section>
+
+  <main class="grid">
+    <section class="panel sense">
+      <header>
+        <h3>Sense</h3>
+        <div class="right tabs" role="tablist">
+          <button role="tab" data-tab="dis" aria-selected="true">Disruptions<span class="count" id="c-dis">0</span></button>
+          <button role="tab" data-tab="sig" aria-selected="false">Signals<span class="count" id="c-sig">0</span></button>
+        </div>
+      </header>
+      <div class="body scroll" id="sense"></div>
+    </section>
+
+    <section class="panel decide">
+      <header>
+        <h3>Decide</h3><span class="tag">one plan per situation · re-planned live</span>
+        <div class="right plantabs" id="plantabs"></div>
+      </header>
+      <div class="body" id="plan"></div>
+    </section>
+
+    <aside class="panel approve">
+      <header>
+        <h3>Approve &amp; log</h3>
+        <div class="right tabs" role="tablist">
+          <button role="tab" data-atab="phone" aria-selected="true" title="The approver's phone">📱 Sunil</button>
+          <button role="tab" data-atab="chain" aria-selected="false" title="Hash-chained audit log">⛓ Audit<span class="count" id="c-chain">0</span></button>
+        </div>
+      </header>
+      <div class="body" id="approve-phone">
+        <div class="phone" id="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="appbar"><div class="avatar">R</div><div><b>ROUTERA</b><small>to Sunil P. · export manager</small></div></div>
+            <div class="thread" id="thread"></div>
+          </div>
+        </div>
+      </div>
+      <div class="body scroll" id="approve-chain" hidden></div>
+    </aside>
+  </main>
+
+  <section class="panel fleet">
+    <header>
+      <h3>Shelf-life clocks</h3><span class="tag">ticking at sim speed · Q10 model, excursions included</span>
+      <div class="right tabs" role="tablist">
+        <button role="tab" data-fleet="risk" aria-selected="true">At risk<span class="count" id="c-risk">0</span></button>
+        <button role="tab" data-fleet="all" aria-selected="false">All<span class="count" id="c-all">0</span></button>
+      </div>
+    </header>
+    <div class="body"><div class="fleetgrid" id="fleet"></div></div>
+  </section>
+
+  <footer class="foot">
+    ROUTERA · all feeds, prices, capacities and bookings are SIMULATED or ILLUSTRATIVE ·
+    the Sentinel is the only LLM agent; planning, compliance and audit are deterministic ·
+    <a href="/docs" target="_blank" rel="noopener">API</a> ·
+    <a href="/api/rules/to-verify" target="_blank" rel="noopener">Rules to verify</a>
+  </footer>
+</div>
+
+<dialog id="inject">
+  <form method="dialog">
+    <header><b>⚡ Feed the Sentinel a live event</b><p>It is classified, merged and scored like any feed. The planner re-plans if containers are hit.</p></header>
+    <div class="body">
+      <div class="presets" id="presets"></div>
+      <textarea id="headline" placeholder="Or type a news headline, e.g. “JNPT berthing delays of 3 days after crane breakdown”"></textarea>
+    </div>
+    <footer><button class="btn" value="cancel">Cancel</button><button class="btn primary" id="send-news" value="default">Send as news</button></footer>
+  </form>
+</dialog>
+
+<dialog id="pack" class="wide">
+  <form method="dialog">
+    <header><b id="pack-title">Filing pack</b><p id="pack-sub"></p></header>
+    <div class="body" id="pack-body"></div>
+    <footer><a class="btn" id="pack-zip" href="#" download>⬇ Filing pack (.zip)</a><button class="btn" type="button" id="pack-dl">.txt</button><button class="btn primary" value="close">Close</button></footer>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+"use strict";
+// --- helpers ----------------------------------------------------------------------------------
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function inr(v) {
+  const s = v < 0 ? "-" : ""; v = Math.abs(v || 0);
+  if (v >= 1e7) return `${s}₹${(v / 1e7).toFixed(2)} Cr`;
+  if (v >= 1e5) return `${s}₹${(v / 1e5).toFixed(1)} L`;
+  return `${s}₹${Math.round(v).toLocaleString("en-IN")}`;
+}
+const IST = { timeZone: "Asia/Kolkata", hour12: false };
+const fDay = new Intl.DateTimeFormat("en-IN", { ...IST, weekday: "short", day: "2-digit", month: "short" });
+const fTime = new Intl.DateTimeFormat("en-GB", { ...IST, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const fHM = new Intl.DateTimeFormat("en-GB", { ...IST, hour: "2-digit", minute: "2-digit" });
+const hm = (iso) => (iso ? fHM.format(new Date(iso)) : "");
+function life(d) {
+  if (d == null) return "–";
+  if (d <= 0) return "spoiled";
+  const m = Math.floor(d * 1440), D = Math.floor(m / 1440), H = Math.floor((m % 1440) / 60), M = m % 60;
+  const p = (n) => String(n).padStart(2, "0");
+  return D ? `${D}d ${p(H)}h ${p(M)}m` : `${H}h ${p(M)}m`;
+}
+const lifeClass = (d) => (d < 3 ? "bad" : d < 6 ? "warn" : "good");
+const FULL_LIFE = 14;
+function ring(cid, d, size = 44) {
+  const r = (size - 7) / 2, c = 2 * Math.PI * r, f = Math.max(0, Math.min(1, (d || 0) / FULL_LIFE));
+  return `<svg class="ring ${lifeClass(d)}" data-ring="${esc(cid)}" data-c="${c}" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">
+    <circle class="track" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="5"/>
+    <circle class="arc" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="5" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - f)}" transform="rotate(-90 ${size / 2} ${size / 2})"/></svg>`;
+}
+const TYPE = {
+  PORT_CLOSURE: ["⚓", "Port closure"], PORT_CONGESTION: ["🚢", "Port congestion"], LANE_SUSPENSION: ["⛔", "Lane suspension"],
+  ROUTE_REROUTE: ["🧭", "Route reroute"], VESSEL_DELAY: ["⏱", "Vessel delay"], TARIFF_CHANGE: ["💲", "Tariff change"],
+  WEATHER_ALERT: ["🌧", "Weather alert"], ROAD_CLOSURE: ["⛰", "Road closure"], TRUCK_STRIKE: ["🚚", "Truck strike"],
+  REEFER_FAILURE: ["❄", "Reefer failure"], FACILITY_OUTAGE: ["🏭", "Facility outage"], COMPLIANCE_HOLD: ["🧾", "Compliance hold"],
+  MARKET_PRICE_CRASH: ["📉", "Mandi price crash"],
+};
+const SEG = { export: "var(--seg-export)", domestic: "var(--seg-domestic)", processor: "var(--seg-processor)", stay: "var(--seg-stay)", hold: "var(--seg-hold)" };
+const ACTOR = { sentinel: "var(--india)", reroute: "var(--accent-2)", compliance: "var(--warn)", approval_audit: "var(--good)" };
+const OPEN = new Set(["candidate", "confirmed", "active", "resolving"]);
+function store(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* storage off */ } }
+function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+
+// --- state ------------------------------------------------------------------------------------
+const S = {
+  scenario: null, scenarios: [], replay: { running: false, speed: null, step: 0, steps: 0 }, llm: "off",
+  signals: [], disruptions: new Map(), published: 0, r: null, fleet: new Map(), asOf: 0,
+  chain: [], chainOk: null, plan: null, overrides: {}, why: {}, phoneWhy: {}, phoneSeen: new Set(),
+  live: { on: false, feeds: {} }, senseTab: "dis", approveTab: "phone", fleetTab: "risk", speed: 60, note: "", fresh: new Set(), planKey: "",
+};
+
+// Sim clock: anchored to server times, interpolated at the replay speed between events.
+let anchorSim = 0, anchorReal = performance.now();
+const rate = () => (S.replay.running ? S.replay.speed || 0 : 0);
+const simNow = () => anchorSim + (performance.now() - anchorReal) * rate();
+function anchor(iso, hard = false) {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return;
+  anchorSim = hard ? t : Math.max(simNow(), t);
+  anchorReal = performance.now();
+}
+function lifeNow(cid) {
+  const f = S.fleet.get(cid);
+  if (!f) return null;
+  const dt = Math.max(0, (simNow() - S.asOf) / 864e5);
+  return Math.max(0, f.days_left - f.rate * dt);
+}
+
+// --- rendering --------------------------------------------------------------------------------
+const dirty = new Set();
+let frame = 0;
+function mark(...parts) {
+  parts.forEach((p) => dirty.add(p));
+  if (!frame) frame = setTimeout(flush, 16);  // not rAF: keeps rendering in a background tab
+}
+function flush() {
+  frame = 0;
+  const parts = [...dirty]; dirty.clear();
+  for (const p of parts) {
+    try { RENDER[p](); } catch (e) { console.error(`render ${p}`, e); }
+  }
+}
+const RENDER = {
+  header() {
+    const sc = S.scenario;
+    const live = S.live.on, india = !sc || sc.name.startsWith("nashik");
+    $("#layer").className = `layer ${live ? "live" : india ? "india" : "global"}`;
+    $("#layer").textContent = live ? "● Live" : sc ? (india ? "India-inside" : "Global shock · same engine") : "Idle";
+    $("#sim").textContent = live ? "REAL FEEDS · SIMULATED FLEET" : "SIMULATED FEEDS";
+    $("#feeds").hidden = !live;
+    $("#title").textContent = sc ? sc.title : "Idle: pick a scenario and press Replay";
+    const r = S.replay;
+    $("#ticker").innerHTML = S.note ? S.note : (sc ? esc(sc.disclaimer || "") : "Both container books are loaded; POSTed events match either layer.");
+    $("#progress").style.width = r.steps ? `${(100 * r.step) / r.steps}%` : "0";
+    const sel = $("#scenario");
+    const options = [{ name: "live", title: "🔴 LIVE: real weather, news and ships (grapes + mangoes)" }, ...S.scenarios];
+    if (sel.options.length !== options.length) {
+      sel.innerHTML = options.map((s) => `<option value="${esc(s.name)}">${esc(s.title)}</option>`).join("");
+    }
+    if (sc && document.activeElement !== sel) sel.value = sc.name;
+    $("#replay").textContent = live ? "↻ Restart live" : r.running ? `■ Restart (${r.step}/${r.steps})` : "▶ Replay";
+    $("#llm-who").textContent = `Disruption Sentinel · LLM ${S.llm === "off" ? "off (rules)" : esc(S.llm)}`;
+  },
+  pipeline() {
+    const open = [...S.disruptions.values()].filter((d) => !d.ignored && OPEN.has(d.disruption.status));
+    set("#kv-sense", open.length);
+    set("#ks-sense", `open disruptions · ${S.signals.length} signals · ${S.published} published`);
+    const k = S.r?.kpis || {};
+    set("#kv-life", k.at_risk ?? 0);
+    set("#kv-decide", inr(k.on_table_inr || 0));
+    set("#ks-decide", k.pending_plans ? `${k.pending_plans} plan${k.pending_plans > 1 ? "s" : ""} waiting for a human` : "value on the table · nothing pending");
+    set("#kv-approve", inr(k.protected_inr || 0));
+    const ch = S.r?.chain;
+    set("#ks-approve", `protected · ${k.rebooked || 0} moves booked · chain ${ch ? (ch.ok ? "✓" : "✗") : ""} ${S.chain.length}`);
+  },
+  sense() {
+    $("#c-dis").textContent = [...S.disruptions.values()].filter((d) => !d.ignored).length;
+    $("#c-sig").textContent = S.signals.length;
+    const el = $("#sense");
+    if (S.senseTab === "sig") {
+      el.innerHTML = S.signals.length ? S.signals.slice().reverse().map(sigHTML).join("") : `<div class="empty"><b>No signals yet</b>Feeds arrive here as the replay plays.</div>`;
+      return;
+    }
+    const items = [...S.disruptions.values()].sort((a, b) => {
+      const oa = !a.ignored && OPEN.has(a.disruption.status), ob = !b.ignored && OPEN.has(b.disruption.status);
+      return ob - oa || b.disruption.severity - a.disruption.severity || b.disruption.last_updated.localeCompare(a.disruption.last_updated);
+    });
+    el.innerHTML = items.length ? items.map(disHTML).join("") : `<div class="empty"><b>All quiet</b>No disruptions. The Sentinel is listening to news, ports, unions, roads, reefers and mandis.</div>`;
+    S.fresh.clear();
+  },
+  plans() {
+    const plans = S.r?.plans || [];
+    const tabs = $("#plantabs");
+    if (S.plan && !plans.some((p) => p.plan_id === S.plan)) S.plan = null;
+    if (!S.plan && plans.length) S.plan = plans[0].plan_id;
+    tabs.innerHTML = plans.slice(0, 6).map((p) => `<button class="plantab" data-plan="${esc(p.plan_id)}" aria-selected="${p.plan_id === S.plan}">
+      <span class="st ${esc(p.status)}"></span>${esc(p.plan_id)}<span class="sub">${esc(p.status)}</span></button>`).join("");
+    const plan = plans.find((p) => p.plan_id === S.plan);
+    const key = plan ? `${plan.plan_id}|${plan.version}|${plan.status}|${JSON.stringify(plan.escalation || {})}|${JSON.stringify(S.overrides[plan.plan_id] || {})}|${JSON.stringify(S.why)}` : "none";
+    if (key === S.planKey && plan) return;
+    S.planKey = key;
+    $("#plan").innerHTML = plan ? planHTML(plan) : emptyPlanHTML();
+    tick();
+  },
+  feeds() {
+    const feeds = Object.values(S.live.feeds || {});
+    $("#feeds").innerHTML = feeds.length ? feeds.map((f) => `<div class="feed">
+      <div class="h"><span class="dot ${f.ok ? "live" : ""}"></span>${esc(f.label)}<small>polled ${hm(f.polled_at)} IST</small></div>
+      <p>${esc(f.summary)}${f.error ? ` <span class="chip bad" title="${esc(f.error)}">error</span>` : ""}</p>
+      ${f.items.length ? `<ul>${f.items.map((i) => `<li>${i.link ? `<a href="${esc(i.link)}" target="_blank" rel="noopener">${esc(i.title)}</a>${i.outlet ? ` · ${esc(i.outlet)}` : ""}` : esc(i.title)}</li>`).join("")}</ul>` : ""}
+    </div>`).join("") : `<div class="feed"><div class="h"><span class="dot live"></span>Connecting to the real feeds…</div><p>Open-Meteo weather, Google News and AIS ships.</p></div>`;
+  },
+  phone() { $("#thread").innerHTML = phoneHTML(); const t = $("#thread"); t.scrollTop = t.scrollHeight; },
+  chain() {
+    $("#c-chain").textContent = S.chain.length;
+    if (S.approveTab !== "chain") return;
+    const v = S.chainOk;
+    const head = v ? `<div class="verify ${v.ok ? "ok" : "broken"}">${v.ok ? "✓" : "✗"} <span>${v.ok ? `Chain intact · ${v.length} entries · head <span class="mono">${esc((v.head || "").slice(0, 12))}…</span>` : `Broken at entry ${v.broken_at}`}</span><button class="btn small" data-verify style="margin-left:auto">Re-verify</button></div>`
+      : `<div class="verify"><span>Every decision, booking and payout is sha256-chained to the one before.</span><button class="btn small" data-verify style="margin-left:auto">Verify</button></div>`;
+    const rows = S.chain.slice(-60).reverse().map((e) => `<div class="entry${S.fresh.has("a" + e.seq) ? " new" : ""}" style="--a:${ACTOR[e.actor] || "var(--accent)"}">
+      <div class="h"><span class="mono">#${e.seq}</span><span class="act">${esc(e.action)}</span><span class="chip">${esc(e.actor)}</span><span class="sub mono" style="margin-left:auto">${hm(e.at)}</span></div>
+      <p>${esc(e.rationale)}</p><div class="hash mono">${esc(e.hash.slice(0, 10))}… ← ${esc(String(e.prev).slice(0, 10))}…</div></div>`).join("");
+    $("#approve-chain").innerHTML = head + (rows || `<div class="empty">No entries yet.</div>`);
+  },
+  fleet() {
+    const all = S.r?.fleet || [];
+    const risk = all.filter((f) => f.affected_by.length || f.booking);
+    $("#c-risk").textContent = risk.length; $("#c-all").textContent = all.length;
+    const list = S.fleetTab === "risk" ? risk : all;
+    $("#fleet").innerHTML = list.length ? list.map(boxHTML).join("") : `<div class="empty" style="grid-column:1/-1"><b>No container at risk</b>${all.length} containers on watch; their clocks are under “All”.</div>`;
+    tick();
+  },
+};
+function set(sel, text) { const el = $(sel); if (el.textContent !== String(text)) el.textContent = text; }
+
+function sevHTML(n) { return `<span class="sev" title="severity ${n}/5">${"●".repeat(n)}<i>${"●".repeat(5 - n)}</i></span>`; }
+function disHTML(item) {
+  const d = item.disruption, [icon, label] = TYPE[d.type] || ["•", d.type];
+  const status = item.ignored ? "ignored" : d.status;
+  const closed = !OPEN.has(status) ? " closed" : "";
+  const layer = item.layer === "india" ? `<span class="layer india">India</span>` : `<span class="layer global">Global</span>`;
+  const n = d.affected_container_ids.length;
+  return `<article class="dis ${esc(status)}${closed}${S.fresh.has(d.disruption_id) ? " new" : ""}">
+    <div class="row1"><span>${icon}</span><span class="type">${esc(label)}</span>${layer}<span class="status ${esc(status)}">${esc(status)}</span></div>
+    <div class="loc mono">${esc(d.location)} · ${esc(d.disruption_id)}</div>
+    <p>${esc(d.summary)}</p>
+    <div class="meta">${sevHTML(d.severity)}<span class="chip">${Math.round(d.confidence * 100)}% sure</span>
+      ${d.expected_delay_days ? `<span class="chip warn">+${d.expected_delay_days} d</span>` : ""}
+      ${n ? `<span class="chip acc">${n} container${n > 1 ? "s" : ""} · ${Math.round(d.affected_weight_kg / 1000)} t</span>` : ""}
+      ${(item.linked || []).length ? `<span class="chip" title="Shares containers with ${esc(item.linked.join(", "))}">🔗 ${item.linked.length} linked</span>` : ""}
+      ${item.summary_by && item.summary_by !== "template" ? `<span class="chip">summary: ${esc(item.summary_by)}</span>` : ""}</div>
+  </article>`;
+}
+function sigHTML(s) {
+  const st = s.status === "accepted" ? "good" : s.status === "ignored" ? "" : "bad";
+  return `<div class="sig"><span class="t mono">${hm(s.received_at)}</span><div><b>${esc(s.title || s.event_id)}</b>
+    <div class="src">${esc(s.source)} → ${esc(s.type || "?")} ${s.location ? "@ " + esc(s.location) : ""} · by ${esc(s.classified_by || "rules")}
+    <span class="chip ${st}">${esc(s.status)}${s.disruption_id ? " → " + esc(s.disruption_id) : ""}</span></div></div></div>`;
+}
+
+function chosen(plan, row) {
+  const pick = (S.overrides[plan.plan_id] || {})[row.container_id];
+  return (pick && row.options.find((o) => o.route_id === pick)) || row.choice;
+}
+function compChip(c) {
+  if (!c) return "";
+  const by = c.rules && c.rules.length ? ` · ${c.rules.join(", ")}` : "";
+  if (c.status === "block") return `<span class="chip bad" title="${esc(c.note + by)}">⛔ blocked</span>`;
+  if (c.status === "review") return `<span class="chip warn" title="${esc(c.note + by)}">⚠ human review</span>`;
+  if (c.status === "docs") return `<span class="chip warn" title="${esc(c.note + by)}">📝 docs drafted</span>`;
+  return `<span class="chip good" title="${esc((c.note || "") + by)}">✓ clear</span>`;
+}
+const human = (s) => String(s).replaceAll("_", " ");
+function paperChip(p) {
+  if (!p) return "";
+  const list = (a) => a.map(human).join(", ") || "none";
+  const t = `Redo: ${list(p.regenerate)}\nNew: ${list(p.new)}\nKept: ${list(p.keep)}\nSuperseded: ${list(p.obsolete)}`;
+  return ` <span class="chip" title="${esc(t)}">📄 ${p.regenerate.length + p.new.length} docs · ${p.hours} h</span>`;
+}
+function optLabel(o) {
+  if (o.compliance.status === "block") return `🔒 ${o.destination_name}: compliance block`;
+  if (!o.feasible) return `✗ ${o.destination_name}: ${o.reason}`;
+  if (o.compliance.status === "review") return `⚠ ${o.label} · ${inr(o.value_inr)} · human review: unverified rule`;
+  return `${o.label} · ${inr(o.value_inr)}`;
+}
+function emptyPlanHTML() {
+  const n = S.r?.kpis?.containers ?? 0;
+  return `<div class="empty" style="padding:56px 12px"><b>No decision needed</b>Watching ${n} containers. When the Sentinel confirms a disruption that hits them, a plan appears here within the same second.</div>`;
+}
+function escHTML(plan) {
+  const e = plan.escalation;
+  if (plan.status !== "pending" || !e) return "";
+  if (e.breached) return `<div class="esc">🚨 <b>SLA breached</b>: waited ${e.elapsed_h.toFixed(1)} h, still waiting on <b>${esc(e.role)}</b>. Nothing moves until someone approves.</div>`;
+  const next = e.next ? ` · escalates to ${esc(e.next)} at ${hm(e.due_at)} IST` : ` · SLA ends ${hm(e.due_at)} IST`;
+  return `<div class="esc">${e.level ? "⏫ Escalated: waiting on" : "⏳ Waiting on"} <b>${esc(e.role)}</b>${next}. Silence is never consent.</div>`;
+}
+function planHTML(plan) {
+  const mine = S.overrides[plan.plan_id] || {};
+  const rows = plan.rows.map((r) => ({ r, c: chosen(plan, r) }));
+  const value = rows.reduce((s, x) => s + (x.c ? x.c.value_inr : 0), 0);
+  const base = rows.reduce((s, x) => s + x.r.baseline.value_inr, 0);
+  const saved = value - base, edited = Object.keys(mine).length;
+  const max = Math.max(value, base, 1);
+  const split = {};
+  for (const { r, c } of rows) {
+    if (!c) continue;
+    const stay = c.route_id === "STAY", k = stay ? "STAY" : c.destination;
+    const kind = stay ? "stay" : c.action && c.action.includes("hold") ? "hold" : c.kind;
+    split[k] = split[k] || { name: stay ? "Keep booking" : c.destination_name, kind, count: 0, t: 0 };
+    split[k].count += 1; split[k].t += r.weight_kg / 1000;
+  }
+  const segs = Object.values(split).sort((a, b) => b.count - a.count);
+  const pending = plan.status === "pending";
+  const status = { pending: "chip warn", approved: "chip good", rejected: "chip bad", closed: "chip" }[plan.status] || "chip";
+  const moves = rows.filter((x) => x.c && x.c.route_id !== "STAY").length;
+  const table = rows.map(({ r, c }) => {
+    const why = S.why[`${plan.plan_id}|${r.container_id}`];
+    const s = c ? c.value_inr - r.baseline.value_inr : 0;
+    const opts = r.options.map((o) => `<option value="${esc(o.route_id)}" ${c && o.route_id === c.route_id ? "selected" : ""} ${o.feasible && o.compliance.status !== "block" ? "" : "disabled"}>${esc(optLabel(o))}</option>`).join("");
+    return `<tr class="${mine[r.container_id] ? "edited" : ""}">
+      <td><b class="mono">${esc(r.container_id)}</b><div class="sub">${esc(r.crop)} · ${(r.weight_kg / 1000).toFixed(0)} t · booked ${esc(r.booked_name)}</div></td>
+      <td><div class="lifecell">${ring(r.container_id, lifeNow(r.container_id) ?? r.days_left_now, 30)}<span class="lifetxt num" data-life="${esc(r.container_id)}">${life(r.days_left_now)}</span></div></td>
+      <td>${pending ? `<select class="pick" data-pick="${esc(r.container_id)}" aria-label="Route for ${esc(r.container_id)}">${opts}</select>` : `<b>${esc(c ? c.label : "–")}</b>`}
+        <div class="sub">${c && c.route_id !== "STAY" ? `arrives with ${c.arrival_days_left.toFixed(1)} d · ₹${c.price_inr_per_kg}/kg` : esc(r.baseline.label)}
+        ${compChip(c && c.compliance)}${paperChip(c && c.paperwork)}${c && c.human_only ? ` <span class="chip warn" title="Below the floor price: a human must choose">human only</span>` : ""}</div></td>
+      <td class="r num"><b>${c ? inr(c.value_inr) : "–"}</b><div class="sub ${s > 0 ? "pos" : s < 0 ? "neg" : ""}">${s > 0 ? "+" : ""}${inr(s)}</div></td>
+      <td class="r"><button class="btn small" data-why="${esc(r.container_id)}">${why ? "Hide" : "Why?"}</button></td></tr>
+      ${why ? `<tr class="whyrow"><td colspan="5">💬 ${esc(why.text)}<span class="by">${why.by === "template" ? "explained from plan data" : "phrased by " + esc(why.by)}</span></td></tr>` : ""}`;
+  }).join("");
+  const docs = plan.docs || [];
+  const moved = rows.filter((x) => x.c && x.c.paperwork);
+  const P = { regenerate: 0, new: 0, obsolete: 0, keep: 0, hours: 0 };
+  for (const { c } of moved) {
+    for (const k of ["regenerate", "new", "obsolete", "keep"]) P[k] += c.paperwork[k].length;
+    P.hours = Math.max(P.hours, c.paperwork.hours);
+  }
+  const bookings = (S.r?.bookings || []).filter((b) => b.plan_id === plan.plan_id);
+  let footer;
+  if (pending) {
+    footer = `<div class="actions">
+      <label class="who">Approver <input id="approver" value="${esc(load("routera.approver") || "Sunil P.")}" aria-label="Approver name"></label>
+      ${edited ? `<span class="chip acc">${edited} change${edited > 1 ? "s" : ""} by you</span><button class="btn small ghost" data-reset>Undo changes</button>` : ""}
+      <span class="grow"></span>
+      <button class="btn" data-reject>Reject</button>
+      <button class="btn good" data-approve>${plan.needs_approval || edited ? `Approve plan · ${moves} move${moves === 1 ? "" : "s"}` : "Acknowledge & log"}</button></div>`;
+  } else if (plan.status === "approved") {
+    footer = `<div class="notice good">✅ Approved by <b>${esc(plan.approved_by)}</b> at ${hm(plan.approved_at)} IST. ${bookings.length} move${bookings.length === 1 ? "" : "s"} booked in SAP TM (simulated), paperwork drafted, ${inr(plan.saved_inr)} credited to the grower FPOs (SIM).
+      <div class="bookings">${bookings.map((b) => `<span class="chip good mono" title="${esc(b.label)}">${esc(b.booking_id)} · ${esc(b.container_id)} → ${esc(b.destination_name)}</span>`).join("")}</div></div>`;
+  } else if (plan.status === "rejected") {
+    footer = `<div class="notice bad">Rejected by <b>${esc(plan.rejected_by)}</b>: ${esc(plan.reject_reason)}. Logged to the audit chain; the containers stay on their bookings.</div>`;
+  } else {
+    footer = `<div class="notice muted">Closed: ${esc(plan.closed_reason || "")}.</div>`;
+  }
+  return `<div class="planhead"><div>
+      <div class="id"><span class="mono">${esc(plan.plan_id)}</span><span class="chip">v${plan.version}${pending ? " · updates live" : ""}</span><span class="${status}">${esc(plan.status)}</span>
+        ${plan.disruption_ids.map((d) => `<span class="chip mono">${esc(d)}</span>`).join("")}</div>
+      <h2>${esc(plan.title)}</h2><p class="headline">${esc(plan.headline)}</p>${escHTML(plan)}</div>
+    <div class="saved"><small>Value saved</small><b class="num">${inr(saved)}</b><span>vs doing nothing${edited ? " · with your changes" : ""}</span></div></div>
+    <div class="compare">
+      <span class="lbl">Without ROUTERA</span><div class="bar"><i style="width:${(100 * base) / max}%;background:var(--faint)"></i></div><span class="val num">${inr(base)}</span>
+      <span class="lbl"><b>With ROUTERA</b></span><div class="bar"><i style="width:${(100 * value) / max}%;background:linear-gradient(90deg,var(--accent),var(--good))"></i></div><span class="val num">${inr(value)}</span>
+    </div>
+    <div class="alloc"><div class="stack">${segs.map((g) => `<div style="flex-grow:${g.count};background:${SEG[g.kind] || "var(--accent)"}" title="${esc(g.name)}: ${g.count}">${g.count}</div>`).join("")}</div>
+      <div class="legend">${segs.map((g) => `<span><i style="background:${SEG[g.kind] || "var(--accent)"}"></i><b>${g.count}</b> → ${esc(g.name)} · ${g.t.toFixed(0)} t</span>`).join("")}</div></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Container</th><th>Shelf life</th><th>${pending ? "Plan (change it)" : "Decision"}</th><th class="r">Value · saved</th><th></th></tr></thead>
+      <tbody>${table}</tbody></table></div>
+    <div class="cols2">
+      <div class="box"><h4>Paperwork ${pending ? "to draft" : "drafted"}</h4>${moved.length ? `<p class="lead"><b>${P.regenerate + P.new} documents</b> for ${moved.length} move${moved.length === 1 ? "" : "s"}: ${P.regenerate} regenerated, ${P.new} new, ${P.obsolete} superseded, ${P.keep} kept. Ready in about <b>${P.hours} h</b>, all prepared in parallel.</p>
+        <ul class="packlist">${moved.map(({ r, c }) => `<li><b class="mono">${esc(r.container_id)}</b> → ${esc(c.destination_name)} · ${c.paperwork.regenerate.length + c.paperwork.new.length} docs<button class="btn small ghost" data-pack="${esc(r.container_id)}|${esc(c.route_id)}">Open pack</button></li>`).join("")}</ul>` : `<ul><li>No new documents needed.</li></ul>`}
+        ${docs.length ? `<details style="margin-top:6px"><summary>Compliance drafts (${docs.length})</summary><ul>${docs.map((d) => `<li><details><summary><b>${esc(d.container_id)}</b> → ${esc(d.to)}: phyto / treatment request</summary><pre class="draft mono">${esc(d.draft)}</pre></details></li>`).join("")}</ul></details>` : ""}</div>
+      <div class="box"><h4>Guardrails</h4><ul>${(plan.guardrails.length ? plan.guardrails : ["Nothing moves until a human approves"]).map((g) => `<li>${esc(g)}</li>`).join("")}<li>Compliance blocks cannot be overridden, even by the approver</li></ul></div>
+    </div>${footer}`;
+}
+function boxHTML(f) {
+  const d = lifeNow(f.container_id) ?? f.days_left;
+  const cls = f.booking ? "booked" : f.affected_by.length ? "risk" : "";
+  return `<div class="boxcard ${cls}">${ring(f.container_id, d)}
+    <div><b class="mono">${esc(f.container_id)}</b> <span class="sub">${esc(f.crop)} · ${(f.weight_kg / 1000).toFixed(0)} t</span>
+      <div class="lifetxt num ${lifeClass(d)}" data-life="${esc(f.container_id)}">${life(d)}</div>
+      <div class="sub">${esc(f.status.replace("_", " "))} → ${esc(f.booking ? f.booking.destination_name : f.destination_name)}${f.rate > 1.05 ? ` · ${f.rate.toFixed(1)}× decay` : ""}</div></div>
+    ${f.affected_by.length || f.booking ? `<div class="tags">${f.booking ? `<span class="chip good mono">${esc(f.booking.booking_id)}</span>` : ""}${f.affected_by.map((id) => `<span class="chip bad mono">${esc(id)}</span>`).join("")}${f.estimated ? `<span class="chip">estimated</span>` : ""}</div>` : ""}
+  </div>`;
+}
+function phoneHTML() {
+  const plans = (S.r?.plans || []).slice().sort((a, b) => a.plan_id.localeCompare(b.plan_id)).slice(-4);
+  const n = S.r?.kpis?.containers ?? 0;
+  const out = [`<div class="msg">👋 Morning Sunil. I'm watching <b>${n}</b> containers across pack house, road, port and sea. I'll only message you when a decision is needed.<span class="t">ROUTERA</span></div>`];
+  for (const p of plans) {
+    const top = p.rows.slice().sort((a, b) => b.value_saved_inr - a.value_saved_inr)[0];
+    out.push(`<div class="msg">⚠️ <b>${esc(p.title)}</b><br>${esc(p.headline)}${p.saved_inr > 0 ? `<b class="big num">${inr(p.saved_inr)}</b><span class="sub">saved vs doing nothing</span>` : ""}
+      ${p.status === "pending" ? `<div class="btns"><button class="go" data-papprove="${esc(p.plan_id)}">${p.needs_approval ? "Approve" : "Acknowledge"}</button><button data-pwhy="${esc(p.plan_id)}|${esc(top ? top.container_id : "")}">Ask why</button><button data-open="${esc(p.plan_id)}">Review</button></div>` : ""}
+      <span class="t">${hm(p.updated_at || p.created_at)} · ${esc(p.plan_id)} v${p.version}</span></div>`);
+    const w = S.phoneWhy[p.plan_id];
+    if (w) out.push(`<div class="msg me">Why?<span class="t">Sunil</span></div><div class="msg">💬 ${esc(w)}<span class="t">explained from plan data</span></div>`);
+    if (p.status === "approved") {
+      const b = (S.r?.bookings || []).filter((x) => x.plan_id === p.plan_id).length;
+      out.push(`<div class="msg me">Approve ✅<span class="t">${esc(p.approved_by)} · ${hm(p.approved_at)}</span></div>`);
+      out.push(`<div class="msg">Done. ${b} move${b === 1 ? "" : "s"} booked in SAP TM (sim), paperwork drafted, <b>${inr(p.saved_inr)}</b> logged to the FPO payout. Every step is on the audit chain.<span class="t">${hm(p.approved_at)}</span></div>`);
+    } else if (p.status === "rejected") {
+      out.push(`<div class="msg me">Reject ✋<span class="t">${esc(p.rejected_by)}</span></div><div class="msg">Logged. Bookings stay as they are; I'll keep watching.<span class="t">audit</span></div>`);
+    } else if (p.status === "closed") {
+      out.push(`<div class="msg">✅ Update: ${esc(p.closed_reason)}. No action needed.<span class="t">${esc(p.plan_id)}</span></div>`);
+    }
+  }
+  return out.join("");
+}
+
+// Live tick: the clock and every shelf-life countdown, between server events.
+function tick() {
+  const now = simNow();
+  if (anchorSim) {
+    const d = new Date(now);
+    set("#clock-day", fDay.format(d));
+    set("#clock-time", fTime.format(d));
+  }
+  for (const el of $$("[data-life]")) {
+    const v = lifeNow(el.dataset.life);
+    if (v == null) continue;
+    const t = life(v);
+    if (el.textContent !== t) el.textContent = t;
+    if (el.closest(".boxcard")) el.className = `lifetxt num ${lifeClass(v)}`;
+  }
+  for (const el of $$("[data-ring]")) {
+    const v = lifeNow(el.dataset.ring);
+    if (v == null) continue;
+    const c = Number(el.dataset.c), f = Math.max(0, Math.min(1, v / FULL_LIFE));
+    el.lastElementChild.setAttribute("stroke-dashoffset", c * (1 - f));
+    el.setAttribute("class", `ring ${lifeClass(v)}`);
+  }
+  const k = S.r?.kpis;
+  if (k) {
+    const risk = (S.r.fleet || []).filter((f) => f.affected_by.length && !f.booking).map((f) => lifeNow(f.container_id));
+    set("#ks-life", risk.length ? `at risk · lowest ${life(Math.min(...risk))} left` : `at risk · ${k.containers} on watch`);
+  }
+}
+setInterval(tick, 250);
+
+// --- live stream ------------------------------------------------------------------------------
+function toast(title, text, color = "var(--accent)") {
+  const el = document.createElement("div");
+  el.className = "toast"; el.style.setProperty("--c", color);
+  el.innerHTML = `<b>${esc(title)}</b><span>${esc(text)}</span>`;
+  $("#toasts").prepend(el);
+  setTimeout(() => el.remove(), 5000);
+  while ($("#toasts").children.length > 3) $("#toasts").lastChild.remove();
+}
+function flash(id) { const el = $(id); el.classList.remove("hot"); void el.offsetWidth; el.classList.add("hot"); }
+
+function applyRoutera(r, quiet = false) {
+  const before = new Map((S.r?.plans || []).map((p) => [p.plan_id, p]));
+  S.r = r;
+  S.fleet = new Map(r.fleet.map((f) => [f.container_id, f]));
+  S.asOf = Date.parse(r.as_of);
+  anchor(r.as_of);
+  if (!S.chain.length || (r.chain.tail.length && r.chain.tail[r.chain.tail.length - 1].seq > S.chain[S.chain.length - 1].seq)) S.chain = r.chain.tail.slice();
+  for (const p of r.plans) {
+    const old = before.get(p.plan_id);
+    for (const cid of Object.keys(S.overrides[p.plan_id] || {})) {
+      if (!p.rows.some((x) => x.container_id === cid)) delete S.overrides[p.plan_id][cid];
+    }
+    if (quiet) continue;
+    if (!old && p.status === "pending") {
+      toast(`New plan ${p.plan_id} · saves ${inr(p.saved_inr)}`, p.headline, "var(--accent)");
+      flash("#st-decide");
+      if (!S.plan || before.get(S.plan)?.status !== "pending") S.plan = p.plan_id;
+      const ph = $("#phone"); ph.classList.remove("buzz"); void ph.offsetWidth; ph.classList.add("buzz");
+    } else if (old && old.status === "pending" && p.status === "closed") {
+      toast(`${p.plan_id} closed`, p.closed_reason, "var(--good)");
+    } else if (old && old.status === "pending" && p.status === "pending" && old.version !== p.version) {
+      flash("#st-decide");
+    }
+  }
+  mark("plans", "fleet", "pipeline", "phone", "chain");
+}
+function loadSnapshot(s, reset) {
+  S.scenario = s.scenario; S.scenarios = s.scenarios; S.replay = s.replay; S.llm = s.llm;
+  S.signals = s.signals.slice(); S.published = s.published; S.live = s.live || { on: false, feeds: {} };
+  S.disruptions = new Map(s.disruptions.map((d) => [d.disruption.disruption_id, d]));
+  if (reset) { S.overrides = {}; S.why = {}; S.phoneWhy = {}; S.plan = null; S.chain = []; S.chainOk = null; S.note = ""; S.r = null; }
+  anchor(s.clock, true);
+  applyRoutera(s.routera, true);
+  S.chain = s.routera.chain.tail.slice();
+  S.planKey = "";
+  if (S.live.on) S.note = `<b>● LIVE since ${hm(s.clock)} IST</b> · weather every 10 min, news and ships every 5 min (ships need a free key)`;
+  mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet", "feeds");
+}
+function connect() {
+  const conn = $("#conn");
+  const src = new EventSource("/sentinel/stream");
+  const on = (kind, fn) => src.addEventListener(kind, (e) => fn(JSON.parse(e.data)));
+  src.onopen = () => { conn.className = "dot live"; conn.title = "Live"; };
+  src.onerror = () => { conn.className = "dot"; conn.title = "Reconnecting…"; };
+  on("snapshot", (s) => loadSnapshot(s, false));
+  on("reset", (s) => { loadSnapshot(s, true); toast(S.live.on ? "● Live mode on" : "Replay started", s.scenario ? s.scenario.title : "", S.live.on ? "var(--bad)" : "var(--accent-2)"); });
+  on("feeds", (l) => { S.live = l; mark("feeds", "header"); });
+  on("step", (s) => {
+    Object.assign(S.replay, { step: s.index, steps: s.steps, running: true });
+    anchor(s.at);
+    S.note = `<b>▶ ${hm(s.at)} IST</b> · ${esc(s.note)}`;
+    mark("header");
+  });
+  on("replay", (r) => { S.replay = r; anchor(new Date(simNow()).toISOString(), true); mark("header"); if (!r.running && !S.live.on) S.note = `<b>■ Replay finished</b> · ${esc(S.scenario ? S.scenario.disclaimer || "" : "")}`; });
+  on("signal", (s) => { S.signals.push(s); anchor(s.received_at); flash("#st-sense"); mark("sense", "pipeline"); });
+  on("publish", () => { S.published += 1; mark("pipeline"); });
+  on("disruption", (d) => {
+    const id = d.disruption.disruption_id, old = S.disruptions.get(id);
+    S.disruptions.set(id, d);
+    if (!old) S.fresh.add(id);
+    const st = d.disruption.status;
+    if (old && old.disruption.status !== st && (st === "confirmed" || st === "active")) {
+      const [icon, label] = TYPE[d.disruption.type] || ["•", d.disruption.type];
+      toast(`${icon} ${label} ${st}`, `${d.disruption.location}: ${d.disruption.affected_container_ids.length} containers affected`, "var(--india)");
+    }
+    mark("sense", "pipeline");
+  });
+  on("routera", (r) => applyRoutera(r));
+  on("audit", (e) => {
+    if (S.chain.length && S.chain[S.chain.length - 1].seq >= e.seq) return;
+    S.chain.push(e); S.fresh.add("a" + e.seq);
+    if (e.actor !== "sentinel") flash("#st-approve");
+    if (e.action === "plan.escalated") toast(`⏫ ${e.details.plan_id} escalated`, e.rationale, "var(--warn)");
+    mark("chain", "pipeline");
+  });
+}
+
+// --- actions ----------------------------------------------------------------------------------
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+  return data;
+}
+async function approve(planId) {
+  const approver = ($("#approver")?.value || load("routera.approver") || "Sunil P.").trim() || "Sunil P.";
+  store("routera.approver", approver);
+  try {
+    const r = await api(`/api/plans/${planId}/approve`, { approver, overrides: S.overrides[planId] || {} });
+    delete S.overrides[planId];
+    toast(`✅ ${planId} approved`, `${inr(r.saved_inr)} protected · bookings and payout logged to the chain`, "var(--good)");
+  } catch (e) { toast("Not approved", e.message, "var(--bad)"); }
+}
+async function why(planId, cid) {
+  const k = `${planId}|${cid}`;
+  if (S.why[k]) { delete S.why[k]; mark("plans"); return; }
+  try { S.why[k] = await api(`/api/plans/${planId}/why?container=${encodeURIComponent(cid)}`); mark("plans"); }
+  catch (e) { toast("Why failed", e.message, "var(--bad)"); }
+}
+async function openPack(planId, cid, routeId) {
+  try {
+    const plan = (S.r?.plans || []).find((p) => p.plan_id === planId);
+    const q = new URLSearchParams({ container: cid });
+    if (plan && plan.status === "pending" && routeId) q.set("route", routeId);
+    const p = await api(`/api/plans/${planId}/paperwork?${q}`);
+    S.pack = p;
+    $("#pack-zip").href = `/api/plans/${planId}/filing-pack.zip?${q}`;
+    const pdf = (d) => `/api/plans/${planId}/paperwork/${d.doc_type}.pdf?${q}`;
+    const list = (a) => a.map(human).join(", ") || "none";
+    const miss = (v) => typeof v === "string" && v.startsWith("MISSING:");
+    $("#pack-title").textContent = `📄 Filing pack · ${p.container_id} → ${p.to}`;
+    $("#pack-sub").textContent = `${p.route} · ${p.documents.length} drafts, ready in about ${p.change.hours} h · nothing is filed until a human signs`;
+    const chain = p.on_chain
+      ? (p.on_chain === p.sha256 ? `<span class="chip good">✓ matches the hash on the audit chain</span>` : `<span class="chip bad">✗ differs from the audit chain</span>`)
+      : `<span class="chip warn">preview · hashed onto the chain at approval</span>`;
+    $("#pack-body").innerHTML = `
+      <div class="notice ${p.to_fill.length ? "warn" : "good"}" style="margin:0">${p.to_fill.length
+        ? `✍️ A human fills before filing: <b>${esc(list(p.to_fill))}</b>. ROUTERA leaves unknown values blank instead of inventing them.`
+        : "✓ Every field is filled from plan and container data."}</div>
+      <div class="packmeta">${chain}<span class="chip ${p.mismatches.length ? "bad" : "good"}">${p.mismatches.length ? `✗ ${p.mismatches.length} cross-document mismatch(es)` : "✓ cross-document checks pass"}</span></div>
+      ${p.mismatches.length ? `<ul>${p.mismatches.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` : ""}
+      <div class="packmeta">Kept: ${esc(list(p.change.keep))} · Superseded: ${esc(list(p.change.obsolete))}</div>
+      ${p.documents.map((d) => `<details class="doc"><summary><b>${esc(d.title)}</b><span class="chip ${d.why === "new" ? "acc" : ""}">${d.why}</span><span class="chip ${d.missing.length ? "warn" : "good"}">${esc(human(d.status))}</span><span class="hash">${esc(d.standard)}</span><a class="pdf" href="${pdf(d)}" target="_blank" rel="noopener">PDF ↗</a></summary>
+        <table>${Object.entries(d.fields).map(([k, v]) => `<tr><td>${esc(human(k))}</td><td class="${miss(v) ? "miss" : ""}">${miss(v) ? "✍️ to fill" : esc(String(v))}</td></tr>`).join("")}</table>
+        <div class="hash mono">sha256 ${esc(d.sha256)}</div></details>`).join("")}
+      <details class="doc"><summary><b>Legal basis</b><span class="chip">${p.citations.length} rules</span><span class="chip ${p.citations.some((r) => r.status !== "verified") ? "warn" : "good"}">${p.citations.filter((r) => r.status !== "verified").length} to verify</span></summary>
+        <div class="cites" style="margin-top:6px">${p.citations.map((r) => `<div><b class="mono">${esc(r.rule_id)}</b> <span class="chip ${r.status === "verified" ? "good" : "warn"}">${esc(r.status)}</span> ${esc(r.title)}. ${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.source)}</a>` : esc(r.source)}, ${esc(r.citation)}</div>`).join("")}
+        <div>Only verified rules may block. <a href="/api/rules/to-verify" target="_blank" rel="noopener">Rules to verify ↗</a></div></div></details>
+      <div class="hash mono">Pack sha256 ${esc(p.sha256)}</div>`;
+    $("#pack").showModal();
+  } catch (e) { toast("Pack failed", e.message, "var(--bad)"); }
+}
+$("#pack-dl").addEventListener("click", () => {
+  if (!S.pack) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([S.pack.text], { type: "text/plain" }));
+  a.download = `${S.pack.plan_id}-${S.pack.container_id}-filing-pack.txt`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+document.addEventListener("click", async (ev) => {
+  const t = ev.target.closest("button, [data-plan]");
+  if (!t) return;
+  const d = t.dataset;
+  if (d.tab) { S.senseTab = d.tab; $$("[data-tab]").forEach((b) => b.setAttribute("aria-selected", b === t)); mark("sense"); }
+  else if (d.atab) {
+    S.approveTab = d.atab; $$("[data-atab]").forEach((b) => b.setAttribute("aria-selected", b === t));
+    $("#approve-phone").hidden = d.atab !== "phone"; $("#approve-chain").hidden = d.atab !== "chain"; mark("chain", "phone");
+  }
+  else if (d.fleet) { S.fleetTab = d.fleet; $$("[data-fleet]").forEach((b) => b.setAttribute("aria-selected", b === t)); mark("fleet"); }
+  else if (d.plan) { S.plan = d.plan; mark("plans"); }
+  else if (d.why) why(S.plan, d.why);
+  else if (d.pack) { const [cid, rid] = d.pack.split("|"); openPack(S.plan, cid, rid); }
+  else if (d.approve !== undefined) { t.disabled = true; await approve(S.plan); }
+  else if (d.reject !== undefined) {
+    const reason = prompt("Reason for rejecting (logged to the audit chain):", "");
+    if (reason === null) return;
+    try { await api(`/api/plans/${S.plan}/reject`, { approver: $("#approver")?.value || "Sunil P.", reason }); toast(`${S.plan} rejected`, "Logged to the audit chain", "var(--bad)"); }
+    catch (e) { toast("Not rejected", e.message, "var(--bad)"); }
+  }
+  else if (d.reset !== undefined) { delete S.overrides[S.plan]; mark("plans"); }
+  else if (d.papprove) { t.disabled = true; await approve(d.papprove); }
+  else if (d.pwhy) {
+    const [pid, cid] = d.pwhy.split("|");
+    try { S.phoneWhy[pid] = (await api(`/api/plans/${pid}/why?container=${encodeURIComponent(cid)}`)).text; mark("phone"); }
+    catch (e) { toast("Why failed", e.message, "var(--bad)"); }
+  }
+  else if (d.open) { S.plan = d.open; mark("plans"); $(".decide").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  else if (d.verify !== undefined) {
+    try { const v = await api("/api/audit"); S.chainOk = v; S.chain = v.entries.slice(-200); toast(v.ok ? "✓ Audit chain intact" : "✗ Audit chain broken", `${v.length} entries re-hashed`, v.ok ? "var(--good)" : "var(--bad)"); mark("chain"); }
+    catch (e) { toast("Verify failed", e.message, "var(--bad)"); }
+  }
+});
+document.addEventListener("change", (ev) => {
+  const el = ev.target;
+  if (el.dataset.pick) {
+    const plan = S.r.plans.find((p) => p.plan_id === S.plan), row = plan.rows.find((r) => r.container_id === el.dataset.pick);
+    const o = S.overrides[S.plan] = S.overrides[S.plan] || {};
+    if (row.choice && el.value === row.choice.route_id) delete o[row.container_id]; else o[row.container_id] = el.value;
+    mark("plans");
+  }
+});
+
+$$("#speed button").forEach((b) => b.addEventListener("click", () => {
+  S.speed = Number(b.dataset.speed);
+  $$("#speed button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+}));
+$("#replay").addEventListener("click", async () => {
+  const name = $("#scenario").value || "nashik_corridor_strike";
+  try { await api(name === "live" ? "/api/live" : `/sentinel/replay/${encodeURIComponent(name)}?speed=${S.speed}`, {}); }
+  catch (e) { toast("Replay failed", e.message, "var(--bad)"); }
+});
+$("#theme").addEventListener("click", () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next; store("routera.theme", next);
+});
+if (load("routera.theme")) document.documentElement.dataset.theme = load("routera.theme");
+
+// Feed the Sentinel: structured feeds (as the real adapters would send) and free-text news.
+const simIso = () => new Date(simNow() || Date.now()).toISOString();
+const PRESETS = [
+  ["⛰ Kasara ghat closed", () => ({ source: "road_authority", kind_hint: "ROAD_STATUS", payload: { segment: "Kasara ghat", status: "closed", reason: "landslide (control room)", effective_from: simIso(), expected_reopen: null } })],
+  ["🚚 Nashik transporters strike", () => ({ source: "transport_union", kind_hint: "STRIKE_NOTICE", payload: { union: "NSK-TRANSPORTERS", region: "Nashik", action: "strike", effective_from: simIso(), expected_end: null, carrier_ids: [] } })],
+  ["📉 Vashi grape price crash", () => ({ source: "mandi_prices", kind_hint: "PRICE", payload: { market_id: "Vashi", commodity: "grapes", modal_price_inr_per_kg: 36, baseline_price_inr_per_kg: 62, arrivals_t: 1100 } })],
+  ["❄ Reefer alarm on a truck", () => ({ source: "reefer_telemetry", kind_hint: "TEMP_LOG", payload: { truck_id: "TRK-MH15-2201", setpoint_c: 2, temp_c: 11, minutes_above: 150, status: "excursion" } })],
+  ["📰 Jebel Ali shut (news)", () => ({ source: "news", kind_hint: null, payload: { headline: "Jebel Ali port closed to all shipping after Gulf strikes", body: "Port operator suspends berthing until further notice.", outlet: "Control room (SIM)" } })],
+];
+$("#presets").innerHTML = PRESETS.map(([label], i) => `<button type="button" data-preset="${i}">${esc(label)}</button>`).join("");
+async function feed(event, label) {
+  try {
+    const r = await api("/sentinel/events", { event_id: `CR-${Date.now().toString(36).toUpperCase()}`, ...event });
+    const s = r.signal || {};
+    toast(`Sentinel: ${label}`, s.status === "accepted" ? `classified ${s.type || "?"} by ${s.classified_by || "rules"}${s.disruption_id ? " → " + s.disruption_id : ""}` : `${s.status}: ${s.status_reason || s.reason || ""}`, "var(--india)");
+  } catch (e) { toast("Event rejected", e.message, "var(--bad)"); }
+}
+$("#presets").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-preset]"); if (!b) return;
+  const [label, make] = PRESETS[Number(b.dataset.preset)];
+  feed(make(), label); $("#inject").close();
+});
+$("#inject-open").addEventListener("click", () => $("#inject").showModal());
+$("#send-news").addEventListener("click", (e) => {
+  const text = $("#headline").value.trim();
+  if (!text) { e.preventDefault(); $("#headline").focus(); return; }
+  feed({ source: "news", kind_hint: null, payload: { headline: text, body: "", outlet: "Control room (SIM)" } }, "news");
+  $("#headline").value = "";
+});
+
+mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet");
+connect();
+</script>
+</body>
+</html>

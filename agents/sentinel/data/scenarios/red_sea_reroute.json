@@ -1,0 +1,77 @@
+{
+  "name": "red_sea_reroute",
+  "title": "Red Sea reroute via the Cape",
+  "simulated": true,
+  "disclaimer": "SIMULATED FEEDS. Illustrative data inspired by reported 2024 Red Sea rerouting; not real events.",
+  "start": "2026-03-02T06:00:00Z",
+  "container_ids": [
+    "GRP-13", "GRP-14", "GRP-16", "SHR-10", "GRP-17", "SHR-04", "BAN-01", "POM-01"
+  ],
+  "steps": [
+    {
+      "t_min": 0,
+      "note": "News: carriers divert away from the Red Sea",
+      "event": {
+        "event_id": "RS-01",
+        "source": "news",
+        "kind_hint": null,
+        "payload": {
+          "headline": "Carriers divert ships away from the Red Sea after attacks",
+          "body": "Several carriers are diverting Asia-Europe sailings away from the Red Sea and Bab el-Mandeb.",
+          "outlet": "Maritime Wire (SIM)"
+        }
+      }
+    },
+    {
+      "t_min": 4,
+      "note": "Carrier advisory: INNSA-NLRTM rerouted via the Cape, +25 days",
+      "event": {
+        "event_id": "RS-02",
+        "source": "carrier_advisory",
+        "kind_hint": "SCHEDULE_CHANGE",
+        "payload": {
+          "carrier": "Oceanic Line (SIM)",
+          "affected_lane": "INNSA-NLRTM",
+          "action": "reroute",
+          "via": "CAPE",
+          "added_transit_days": 25,
+          "vessel_ids": ["MV-EURO-07"]
+        }
+      }
+    },
+    {
+      "t_min": 7,
+      "note": "Second carrier confirms the same reroute",
+      "event": {
+        "event_id": "RS-03",
+        "source": "carrier_advisory",
+        "kind_hint": "SCHEDULE_CHANGE",
+        "payload": {
+          "carrier": "Blue Meridian (SIM)",
+          "affected_lane": "INNSA-NLRTM",
+          "action": "reroute",
+          "via": "Cape of Good Hope",
+          "added_transit_days": 25,
+          "vessel_ids": ["MV-EURO-11"]
+        }
+      }
+    },
+    {
+      "t_min": 10,
+      "note": "AIS: MV-EURO-07 turns south, ETA +25 days",
+      "event": {
+        "event_id": "RS-04",
+        "source": "ais",
+        "kind_hint": "ETA_UPDATE",
+        "payload": {
+          "vessel_id": "MV-EURO-07",
+          "expected_eta": "2026-03-18T00:00:00Z",
+          "new_eta": "2026-04-12T00:00:00Z",
+          "position": {"lat": 12.6, "lon": 51.2},
+          "speed_knots": 17.5,
+          "deviation_flag": true
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,249 @@
+# ROUTERA · Disruption Sentinel tunables.
+# Every number here is a prototype ASSUMPTION taken from the module spec (global layer) or set for
+# the India-inside layer (v2): tune it with the team, validate the domestic numbers with a real
+# exporter, and say so if judges ask. Loaded by agents/sentinel/settings.py; every key is required.
+
+reliability:                 # r_source for the noisy-OR confidence (spec section 3, step 4)
+  port_authority: 0.95
+  tariff_feed: 0.95
+  carrier_advisory: 0.90
+  weather: 0.80
+  ais: 0.70
+  ais_port: 0.80             # port congestion estimated from live AIS anchorage counts
+  news: 0.40                 # multiplied by the news classifier's own confidence (LLM or keywords)
+  road_authority: 0.95       # India-inside feeds (v2)
+  transport_union: 0.90
+  reefer_telemetry: 0.85
+  facility_status: 0.90
+  compliance_feed: 0.95
+  mandi_prices: 0.95
+
+lifecycle:                   # spec section 3, step 5
+  confirm_threshold: 0.6
+  # any one of these confirms on its own
+  authoritative_sources: [port_authority, tariff_feed, road_authority, compliance_feed, mandi_prices]
+  merge_window_hours: 72
+  candidate_ttl_hours: 24
+  resolve_after_hours: 12    # resolving -> resolved when nothing adverse arrives in this window
+
+classification:              # spec section 3.1 (+ India-inside rules)
+  vessel_delay_min_hours: 24
+  tariff_min_delta_pts: 5
+  weather_alert_levels: [orange, red]
+  reefer_excursion_c: 3      # degrees above setpoint...
+  reefer_excursion_minutes: 30   # ...for at least this long counts as a reefer failure
+  mandi_drop_pct: 20         # modal price this far below the baseline counts as a crash
+
+delay_days:                  # spec section 3.3 (+ India-inside defaults, used when a feed gives no end)
+  port_closure_unknown_end: 14
+  port_congestion: 3
+  lane_suspension: 14
+  route_reroute_default: 18  # only when no added_transit_days is given (spec: Cape ~ +18-38 d)
+  vessel_delay_default: 1    # only for a vessel delay reported without ETAs (e.g. news)
+  weather:
+    orange: 1
+    red: 3
+  road_closure_unknown_end: 1
+  truck_strike_unknown_end: 3
+  reefer_swap: 0.5           # time to get the load onto another reefer
+  facility_power_unknown_end: 0.5
+  cold_store_full: 1
+  compliance_hold: 3
+  next_sailing_gap: 7        # a box that misses its vessel cut-off waits for the next weekly sailing
+
+severity:                    # spec section 3.4 (rounding is half-up, not Python's banker's round)
+  w_shelf: 0.55
+  w_cost: 0.25
+  w_scale: 0.20
+  market_unreachable_bonus: 0.15
+  cost_divisor_pct: 50
+  scale_weight_kg: 200000
+  default_days_left: 30
+  urgent_at: 4
+  # Shelf life burnt by a reefer excursion, per degree-hour above setpoint. Illustrative: about
+  # half a day for 1 h at +10 C on table grapes; the Shelf-Life Tracker should own this number.
+  reefer_loss_days_per_degree_hour: 0.03
+
+matching:                    # spec section 3.2 (+ India-inside legs)
+  in_transit_statuses: [packed, at_packhouse, precooling, in_cold_store, on_truck, at_port, at_sea]
+  pre_port_statuses: [packed, at_packhouse, precooling, in_cold_store, on_truck]
+  # Disruptions that can make a box miss its vessel cut-off; the delay then adds next_sailing_gap.
+  cutoff_types: [ROAD_CLOSURE, TRUCK_STRIKE, REEFER_FAILURE, COMPLIANCE_HOLD, PORT_CONGESTION]
+
+publish:                     # spec section 3, step 10: material change thresholds
+  delay_change_days: 1
+
+# When signals of different types merge into one disruption, the highest-ranked type wins.
+type_rank:
+  - PORT_CLOSURE
+  - LANE_SUSPENSION
+  - ROUTE_REROUTE
+  - TARIFF_CHANGE
+  - TRUCK_STRIKE
+  - ROAD_CLOSURE
+  - COMPLIANCE_HOLD
+  - PORT_CONGESTION
+  - FACILITY_OUTAGE
+  - REEFER_FAILURE
+  - MARKET_PRICE_CRASH
+  - WEATHER_ALERT
+  - VESSEL_DELAY
+
+# A structured signal corroborates a news-only candidate only within the same family
+# (a rain alert must not "confirm" a strike rumour).
+families:
+  - [PORT_CLOSURE, PORT_CONGESTION, LANE_SUSPENSION, ROUTE_REROUTE, VESSEL_DELAY]
+  - [TARIFF_CHANGE]
+  - [WEATHER_ALERT]
+  - [ROAD_CLOSURE]
+  - [TRUCK_STRIKE]
+  - [REEFER_FAILURE]
+  - [FACILITY_OUTAGE]
+  - [COMPLIANCE_HOLD]
+  - [MARKET_PRICE_CRASH]
+
+# Option families the Scenario Planner can rank for each disruption type. The Sentinel only
+# names them; it does not rank or execute anything.
+actions:
+  alternate_port: Switch export port (JNPT <-> Mundra)
+  alternate_carrier: Switch carrier or mode (rail from Nashik ICD, a transporter not on strike)
+  hold_cold_store: Hold in a cold store (cost per tonne-day)
+  split_market: Split loads across domestic markets (Mumbai, Pune, Bengaluru, Hyderabad, Delhi)
+  processor_salvage: Send to a processor (juice, raisins, wine)
+  resequence_packing: Re-sequence harvest and packing so the most vulnerable lots go first
+  redo_documents: Draft re-inspection or re-certification documents
+  switch_destination: Switch destination market or country
+  reroute_vessel: Reroute or transship at sea
+options_by_type:
+  ROAD_CLOSURE: [alternate_port, alternate_carrier, hold_cold_store, resequence_packing]
+  TRUCK_STRIKE: [alternate_carrier, hold_cold_store, resequence_packing, split_market]
+  REEFER_FAILURE: [alternate_carrier, hold_cold_store, processor_salvage]
+  FACILITY_OUTAGE: [hold_cold_store, resequence_packing, processor_salvage]
+  COMPLIANCE_HOLD: [redo_documents, switch_destination, hold_cold_store]
+  MARKET_PRICE_CRASH: [split_market, hold_cold_store, processor_salvage]
+  WEATHER_ALERT: [resequence_packing, hold_cold_store, processor_salvage]
+  PORT_CONGESTION: [alternate_port, hold_cold_store]
+  PORT_CLOSURE: [switch_destination, hold_cold_store, split_market]
+  LANE_SUSPENSION: [switch_destination, reroute_vessel]
+  ROUTE_REROUTE: [reroute_vessel, switch_destination, split_market]
+  VESSEL_DELAY: [reroute_vessel, switch_destination]
+  TARIFF_CHANGE: [switch_destination, split_market]
+
+news:                        # offline keyword fallback for free-text news
+  strong_confidence: 0.90    # a strong keyword and no hedging
+  hedged_confidence: 0.75    # only weak keywords, or hedged wording
+  hedges: [reports, reportedly, rumour, rumor, rumours, rumors, unverified, unconfirmed, claim,
+           claims, allegedly, may, might, could, weighs, considering, possible, sources say]
+  keywords:                  # order breaks ties: the first type with a strong hit wins
+    TRUCK_STRIKE:
+      strong: [truck strike, truckers strike, truckers' strike, transporters strike,
+               transporters' strike, transport strike, chakka jam]
+      weak: [strike, strikes]
+    ROAD_CLOSURE:
+      strong: [landslide, highway closed, road closed, ghat closed, ghat shut, road blocked,
+               road washed away]
+      weak: [traffic diverted, traffic jam]
+    REEFER_FAILURE:
+      strong: [reefer breakdown, reefer failure, temperature excursion, cooling failure]
+      weak: []
+    MARKET_PRICE_CRASH:        # before ROUTE_REROUTE: "diverted lots" in mandi news is not a reroute
+      strong: [price crash, prices crash, prices plunge, prices collapse, glut]
+      weak: [prices fall, price drop]
+    PORT_CLOSURE:
+      strong: [closed, closure, shut, shuts, shutdown, halt, halts, halted, suspends operations]
+      weak: [unrest, conflict, attack, attacks, tension, tensions, security threat, blockade]
+    LANE_SUSPENSION:
+      strong: [service suspended, suspends service, lane suspended, sailings cancelled]
+      weak: []
+    ROUTE_REROUTE:
+      strong: [reroute, rerouted, rerouting, divert, diverts, diverted, diverting]
+      weak: [detour]
+    COMPLIANCE_HOLD:           # before PORT_CONGESTION so "inspection backlog" is compliance
+      strong: [phytosanitary, phyto certificate, phyto certificates, residue test, residue tests,
+               mrl, inspection backlog]
+      weak: [residue, inspection]
+    PORT_CONGESTION:
+      strong: [congestion, congested, backlog]
+      weak: [queue, queues, berthing delays]
+    TARIFF_CHANGE:
+      strong: [tariff, tariffs, duty, duties, levy]
+      weak: [trade action]
+    FACILITY_OUTAGE:
+      strong: [power cut, power cuts, power outage, load shedding, cold storage full,
+               cold stores full, cold store full]
+      weak: []
+    WEATHER_ALERT:
+      strong: [cyclone, typhoon, hurricane, flood, flooding, storm, hail, hailstorm,
+               unseasonal rain]
+      weak: [fog, heavy rain]
+    VESSEL_DELAY:
+      strong: [vessel delayed, sailing delayed, eta slips]
+      weak: [delayed, delay]
+
+locations:
+  chokepoints: [SUEZ, BAB_EL_MANDEB, HORMUZ, CAPE]
+  # Rerouting "via" one of these bypasses the listed chokepoints; the first is the disruption location.
+  reroute_bypass:
+    CAPE: [SUEZ, BAB_EL_MANDEB]
+  aliases:                   # free text -> UN/LOCODE, chokepoint, road segment or market
+    AEJEA: [jebel ali, jebel ali port]
+    AEAUH: [abu dhabi, khalifa port]
+    QAHMD: [hamad port]
+    SADMM: [dammam]
+    OMSOH: [sohar]
+    INNSA: [nhava sheva, jnpt, jawaharlal nehru port]
+    INMUN: [mundra]
+    INCOK: [kochi, cochin]
+    INVTZ: [visakhapatnam, vizag]
+    SGSIN: [singapore]
+    LKCMB: [colombo]
+    NLRTM: [rotterdam]
+    GBLGP: [london gateway]
+    DEHAM: [hamburg]
+    USLAX: [los angeles]
+    USNYC: [new york]
+    SUEZ: [suez, suez canal]
+    BAB_EL_MANDEB: [bab el-mandeb, bab-el-mandeb, bab el mandeb, bab al-mandab]
+    HORMUZ: [hormuz, strait of hormuz]
+    CAPE: [cape of good hope, the cape]
+    KASARA_GHAT: [kasara ghat, kasara]
+    MKT-VASHI: [vashi, vashi apmc, navi mumbai apmc]
+    MKT-PUNE: [gultekdi, pune market yard]
+    MKT-BLR: [bengaluru fruit market]
+    MKT-HYD: [gaddiannaram]
+    MKT-AZADPUR: [azadpur, azadpur mandi, delhi mandi, delhi]
+  regions:                   # vague places in news; members let a structured signal corroborate them
+    GULF:
+      aliases: [gulf, persian gulf, arabian gulf]
+      members: [AEJEA, AEAUH, QAHMD, SADMM, KWSWK, BHKBS, HORMUZ]
+    RED_SEA:
+      aliases: [red sea]
+      members: [BAB_EL_MANDEB, SUEZ, SAJED, DJJIB]
+    NASHIK:                  # grape belt: pack houses, cold stores and the corridors that start there
+      aliases: [nashik, nasik, pimpalgaon, niphad, dindori, lasalgaon]
+      members: [PH-PMP, PH-NPD, CS-NSK, NSK-JNPT, NSK-MUN, NSK-JNPT-RAIL]
+  countries:                 # importing country for tariff news
+    US:
+      aliases: [united states, washington, american]
+      exact: [US, U.S., USA]
+    AE:
+      aliases: [united arab emirates, emirati]
+      exact: [UAE]
+    NL:
+      aliases: [netherlands, dutch]
+      exact: []
+    GB:
+      aliases: [united kingdom, britain, british]
+      exact: [UK]
+    DE:
+      aliases: [germany, german]
+      exact: []
+    CN:
+      aliases: [china, chinese, beijing]
+      exact: []
+  products:                  # HS prefix -> words that name the product in news
+    "0306": [shrimp, shrimps, prawn, prawns, seafood]
+    "0806": [grape, grapes]
+    "0810": [pomegranate, pomegranates]
+    "0703": [onion, onions]
+    "0803": [banana, bananas]

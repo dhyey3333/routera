@@ -1,0 +1,146 @@
+[
+ {
+  "container_id": "MNG-01",
+  "crop": "mangoes",
+  "hs_code": "080450",
+  "weight_kg": 12000,
+  "vessel_id": "MV-EURO-07",
+  "origin_port": "INNSA",
+  "destination_port": "NLRTM",
+  "destination_country": "NL",
+  "route_legs": [
+   "INNSA",
+   "BAB_EL_MANDEB",
+   "SUEZ",
+   "NLRTM"
+  ],
+  "eta": "2026-03-22T06:00:00Z",
+  "status": "at_port",
+  "days_left": 26
+ },
+ {
+  "container_id": "MNG-02",
+  "crop": "mangoes",
+  "hs_code": "080450",
+  "weight_kg": 12000,
+  "vessel_id": "MV-EURO-07",
+  "origin_port": "INNSA",
+  "destination_port": "NLRTM",
+  "destination_country": "NL",
+  "route_legs": [
+   "INNSA",
+   "BAB_EL_MANDEB",
+   "SUEZ",
+   "NLRTM"
+  ],
+  "eta": "2026-03-22T06:00:00Z",
+  "status": "at_port",
+  "days_left": 25
+ },
+ {
+  "container_id": "MNG-03",
+  "crop": "mangoes",
+  "hs_code": "080450",
+  "weight_kg": 12000,
+  "vessel_id": "MV-EURO-07",
+  "origin_port": "INNSA",
+  "destination_port": "NLRTM",
+  "destination_country": "NL",
+  "route_legs": [
+   "INNSA",
+   "BAB_EL_MANDEB",
+   "SUEZ",
+   "NLRTM"
+  ],
+  "eta": "2026-03-22T06:00:00Z",
+  "status": "at_port",
+  "days_left": 24
+ },
+ {
+  "container_id": "MNG-04",
+  "crop": "mangoes",
+  "hs_code": "080450",
+  "weight_kg": 12000,
+  "vessel_id": "MV-GULF-09",
+  "origin_port": "INNSA",
+  "destination_port": "AEJEA",
+  "destination_country": "AE",
+  "route_legs": [
+   "INNSA",
+   "HORMUZ",
+   "AEJEA"
+  ],
+  "eta": "2026-03-06T06:00:00Z",
+  "status": "at_port",
+  "days_left": 18
+ },
+ {
+  "container_id": "MNG-05",
+  "crop": "mangoes",
+  "hs_code": "080450",
+  "weight_kg": 12000,
+  "vessel_id": "MV-GULF-09",
+  "origin_port": "INNSA",
+  "destination_port": "AEJEA",
+  "destination_country": "AE",
+  "route_legs": [
+   "INNSA",
+   "HORMUZ",
+   "AEJEA"
+  ],
+  "eta": "2026-03-06T06:00:00Z",
+  "status": "at_port",
+  "days_left": 17
+ },
+ {
+  "container_id": "MNG-06",
+  "crop": "mangoes",
+  "hs_code": "080450",
+  "weight_kg": 12000,
+  "vessel_id": "MV-GULF-04",
+  "origin_port": "INNSA",
+  "destination_port": "AEJEA",
+  "destination_country": "AE",
+  "route_legs": [
+   "HORMUZ",
+   "AEJEA"
+  ],
+  "eta": "2026-03-04T06:00:00Z",
+  "status": "at_sea",
+  "days_left": 15
+ },
+ {
+  "container_id": "MNG-07",
+  "crop": "mangoes",
+  "hs_code": "080450",
+  "weight_kg": 12000,
+  "vessel_id": "MV-GULF-04",
+  "origin_port": "INNSA",
+  "destination_port": "AEJEA",
+  "destination_country": "AE",
+  "route_legs": [
+   "HORMUZ",
+   "AEJEA"
+  ],
+  "eta": "2026-03-04T06:00:00Z",
+  "status": "at_sea",
+  "days_left": 14
+ },
+ {
+  "container_id": "MNG-08",
+  "crop": "mangoes",
+  "hs_code": "080450",
+  "weight_kg": 12000,
+  "vessel_id": "MV-STRAITS-05",
+  "origin_port": "INNSA",
+  "destination_port": "SGSIN",
+  "destination_country": "SG",
+  "route_legs": [
+   "INNSA",
+   "SGSIN"
+  ],
+  "eta": "2026-03-09T06:00:00Z",
+  "status": "at_port",
+  "days_left": 20
+ }
+]

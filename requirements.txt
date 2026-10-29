@@ -1,0 +1,4 @@
+# ROUTERA: the Sentinel's runtime plus the live AIS ship feed
+-r agents/sentinel/requirements.txt
+websockets>=12  # AIS ships in live mode (aisstream.io)
+reportlab>=4.0  # draft PDFs in the filing pack (the ZIP still works without it)

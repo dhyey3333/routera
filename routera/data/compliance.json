@@ -1,0 +1,144 @@
+{
+  "note": "ILLUSTRATIVE buyer-country rules and lot test results. The rules engine is deterministic: a block cannot be overridden by anyone. Mango treatments (hot water for the EU, irradiation for the US) are illustrative too.",
+  "markets": {
+    "SG": {
+      "requires": [
+        "phyto"
+      ],
+      "mrl_standard": "SG",
+      "doc_days": 1,
+      "doc_cost_inr": 6000
+    },
+    "LK": {
+      "requires": [
+        "phyto"
+      ],
+      "mrl_standard": "CODEX",
+      "doc_days": 1,
+      "doc_cost_inr": 4000
+    },
+    "MY": {
+      "requires": [
+        "phyto",
+        "import_permit"
+      ],
+      "mrl_standard": "CODEX",
+      "doc_days": 1,
+      "doc_cost_inr": 6000,
+      "permit_days": 10
+    },
+    "NL": {
+      "requires": [
+        "phyto"
+      ],
+      "mrl_standard": "EU",
+      "doc_days": 2,
+      "doc_cost_inr": 9000
+    },
+    "AE": {
+      "requires": [
+        "phyto"
+      ],
+      "mrl_standard": "CODEX",
+      "doc_days": 1,
+      "doc_cost_inr": 4000
+    },
+    "US": {
+      "requires": [
+        "phyto"
+      ],
+      "mrl_standard": "CODEX",
+      "doc_days": 2,
+      "doc_cost_inr": 9000
+    },
+    "IN": {
+      "requires": [],
+      "mrl_standard": null
+    }
+  },
+  "default_lot": {
+    "mrl": {
+      "CODEX": "pass",
+      "SG": "pass",
+      "EU": "pass"
+    },
+    "permits": []
+  },
+  "lots": {
+    "GRP-03": {
+      "mrl": {
+        "SG": "fail"
+      },
+      "note": "chlorpyrifos above the Singapore MRL"
+    },
+    "GRP-09": {
+      "mrl": {
+        "EU": "fail"
+      },
+      "note": "residue above the EU MRL"
+    },
+    "GLF-23": {
+      "mrl": {
+        "SG": "fail"
+      },
+      "note": "residue above the Singapore MRL"
+    },
+    "NSK-05": {
+      "mrl": {
+        "SG": "fail"
+      },
+      "note": "residue above the Singapore MRL"
+    },
+    "MNG-01": {
+      "treated": [
+        "hot water treatment"
+      ],
+      "phyto": [
+        "NL"
+      ]
+    },
+    "MNG-02": {
+      "treated": [
+        "hot water treatment"
+      ],
+      "phyto": [
+        "NL"
+      ]
+    },
+    "MNG-03": {
+      "treated": [],
+      "phyto": [
+        "NL"
+      ],
+      "note": "hot water treatment slot missed"
+    }
+  },
+  "treatments": {
+    "mangoes": {
+      "NL": {
+        "name": "hot water treatment",
+        "days": 1,
+        "cost_inr": 15000,
+        "facility": "MSAMB facility, Vashi (SIM)"
+      },
+      "US": {
+        "name": "irradiation",
+        "days": 2,
+        "cost_inr": 30000,
+        "facility": "irradiation facility, Vashi (SIM)"
+      }
+    }
+  },
+  "exporters": {
+    "grapes": {
+      "iec": "SIM-IEC-0301",
+      "packhouse_code": "GrapeNet PH-NSK-014 (SIM)",
+      "orchard_code": "GrapeNet farm NSK-F-2231 (SIM)"
+    },
+    "mangoes": {
+      "iec": "SIM-IEC-0412",
+      "packhouse_code": "MangoNet PH-RTN-007 (SIM)",
+      "orchard_code": "MangoNet farm RTN-F-0918 (SIM)"
+    }
+  }
+}

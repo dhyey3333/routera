@@ -1,0 +1,12 @@
+# Disruption Sentinel: runtime
+pydantic>=2.6,<3
+fastapi>=0.110
+uvicorn>=0.29
+PyYAML>=6.0
+
+# tests and lint
+pytest>=8
+httpx>=0.27  # FastAPI's TestClient
+ruff>=0.6
+
+# Optional LLM providers live in requirements-llm.txt; the demo runs without them.
