@@ -99,6 +99,7 @@ def test_gdacs_only_signals_alerts_near_the_network_and_says_how_far_the_nearest
     assert {e["payload"]["port_code"] or e["payload"]["region"] for e in events} == {"INNSA", "INMUN", "Nashik"}
     assert {e["source"] for e in events} == {"gdacs"} and events[0]["payload"]["alert_level"] == "orange"
     assert any("Nearest: Quake in Alaska" in i["title"] for i in state["items"])
+    assert {m["near"] for m in state["markers"]} == {True, False}  # both go on the map
     assert feed.poll(NOW)[0] == []  # one signal per alert
     feed.reset()
     assert len(feed.poll(NOW)[0]) == 3  # all within 500 km of the cyclone
@@ -172,6 +173,7 @@ def test_ais_feed_counts_ships_waiting_at_anchor_and_flags_congestion() -> None:
     assert event["source"] == "ais_port" and event["payload"]["port_code"] == "INNSA"
     assert event["payload"]["status"] == "congested" and "16 ships waiting" in event["payload"]["reason"]
     assert state["ok"] and "16 waiting at anchor, 1 at berth" in state["items"][0]["title"]
+    assert len(state["markers"]) == 17 and "at anchor" in state["markers"][0]["title"]  # real ships on the map
     again, _ = feed.poll(NOW)
     assert again == []  # one signal per port per hour
 

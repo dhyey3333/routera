@@ -34,6 +34,7 @@ from agents.sentinel.llm_client import LLM_MODES, build_llm_client
 from agents.sentinel.replay import SCENARIO_NAMES, Rig, Scenario, make_rig
 from routera.audit import HashChainAudit
 from routera.filing import build_zip, pdf_available, render_pdf
+from routera.geo import load_geo
 from routera.live_feeds import default_feeds, live_books
 from routera.orchestrator import Orchestrator
 
@@ -215,6 +216,17 @@ def create_routera_app(service: RouteraService | None = None) -> FastAPI:
         name = f"{plan_id}-{container}-filing-pack.zip"
         return Response(build_zip(paperwork(plan_id, container, route)), media_type="application/zip",
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    @app.get("/api/map")
+    def map_data() -> dict[str, Any]:
+        return load_geo()
+
+    @app.get("/api/containers/{container_id}/options")
+    def container_options(container_id: str) -> dict[str, Any]:
+        try:
+            return service.run(service.orchestrator.options, container_id)
+        except KeyError as exc:
+            raise HTTPException(404, f"no container {container_id}") from exc
 
     @app.get("/api/rules")
     def rules() -> dict[str, Any]:

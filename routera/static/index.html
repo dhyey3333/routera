@@ -272,6 +272,47 @@ td.r, th.r { text-align: right; }
 .ring.good .arc { stroke: var(--good); } .ring.warn .arc { stroke: var(--warn); } .ring.bad .arc { stroke: var(--bad); }
 .lifetxt.good { color: var(--good); } .lifetxt.warn { color: var(--warn); } .lifetxt.bad { color: var(--bad); }
 
+/* --- live map ------------------------------------------------------------------------------- */
+.mappanel { margin-bottom: 16px; overflow: hidden; }
+.mapgrid { display: grid; grid-template-columns: minmax(0, 1fr) 350px; }
+#map { height: 500px; background: var(--panel-2); z-index: 0; }
+#map .mapfail { padding: 60px 20px; text-align: center; color: var(--muted); }
+.mapside { border-left: 1px solid var(--line); padding: 12px 14px; height: 500px; overflow: auto; font-size: 12.5px; }
+.mapside h4 { margin: 0 0 2px; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.mapside h4 .btn { margin-left: auto; }
+.mapside .lead { color: var(--muted); margin: 0 0 10px; }
+.mapside .lead b { color: var(--text); }
+.mapside ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+.mapside li { margin: 4px 0; }
+.opt { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: start; width: 100%; text-align: left; padding: 8px; margin-bottom: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); cursor: pointer; font: inherit; }
+.opt:hover { border-color: var(--line-2); background: var(--panel); }
+.opt.now { border-color: var(--good); }
+.opt.off { cursor: default; opacity: .72; }
+.opt .sw { width: 10px; height: 10px; border-radius: 50%; margin-top: 3px; }
+.opt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.opt .v { font-weight: 650; white-space: nowrap; }
+.maplegend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; }
+.maplegend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.maplegend i.dot2 { width: 8px; height: 8px; border-radius: 50%; }
+.maplegend .note { margin-left: auto; color: var(--faint); }
+.leaflet-container { font: inherit; }
+#map.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.82) saturate(.55); }
+.leaflet-tooltip { background: var(--panel); color: var(--text); border: 1px solid var(--line-2); box-shadow: var(--shadow); font-size: 12px; max-width: 280px; white-space: normal; }
+.leaflet-tooltip.maplabel { background: transparent; border: 0; box-shadow: none; color: var(--text); font-size: 10.5px; padding: 0 2px; opacity: .85 !important; text-shadow: 0 0 3px var(--panel); white-space: nowrap; }
+.leaflet-tooltip.maplabel::before { display: none; }
+.mk { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--bad); animation: mapping 1.6s infinite; }
+.mk.warn { background: var(--warn); }
+.mk.shut { border-radius: 4px; }
+@keyframes mapping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); } 100% { box-shadow: 0 0 0 16px transparent; } }
+.mk { color: var(--bad); } .mk.warn { color: var(--warn); }
+.gd { display: block; font-size: 12px; line-height: 12px; text-align: center; }
+@media (max-width: 860px) {
+  .mapgrid { grid-template-columns: minmax(0, 1fr); }
+  #map { height: 340px; }
+  .mapside { height: auto; max-height: 420px; border-left: 0; border-top: 1px solid var(--line); }
+  .maplegend .note { margin-left: 0; }
+}
+
 /* --- dialog + toasts + footer ---------------------------------------------------------------- */
 dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--text); padding: 0; width: min(520px, calc(100vw - 32px)); box-shadow: var(--shadow); }
 dialog::backdrop { background: #0008; backdrop-filter: blur(2px); }
@@ -383,6 +424,31 @@ footer.foot { margin-top: 20px; color: var(--faint); font-size: 12px; text-align
     <div class="stage" id="st-approve" style="--c: var(--good)">
       <div class="k">④ Approve &amp; log <span class="who">Human + hash chain</span></div>
       <div class="v num" id="kv-approve">₹0</div><div class="s" id="ks-approve">value protected</div>
+    </div>
+  </section>
+
+  <section class="panel mappanel" aria-label="Live map">
+    <header>
+      <h3>Live map</h3><span class="tag" id="map-tag">routes and alternatives</span>
+      <div class="right tabs" id="map-layers">
+        <button data-layer="boxes" aria-selected="true">Containers</button>
+        <button data-layer="ships" aria-selected="true">Real ships</button>
+        <button data-layer="alerts" aria-selected="true">Real alerts</button>
+      </div>
+    </header>
+    <div class="mapgrid">
+      <div id="map"></div>
+      <aside class="mapside" id="map-side"></aside>
+    </div>
+    <div class="maplegend">
+      <span><i style="background:var(--good)"></i>Plan route</span>
+      <span><i style="background:var(--accent)"></i>Alternative</span>
+      <span><i style="background:var(--warn)"></i>Needs human review</span>
+      <span><i style="background:var(--bad)"></i>Blocked or at risk</span>
+      <span><i class="dot2" style="background:var(--good)"></i>Container (colour = shelf life)</span>
+      <span><i class="dot2" style="background:#22d3ee"></i>Real ship (AIS)</span>
+      <span>▲ Real alert (GDACS)</span>
+      <span class="note">Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute. No live traffic.</span>
     </div>
   </section>
 
@@ -542,6 +608,7 @@ const dirty = new Set();
 let frame = 0;
 function mark(...parts) {
   parts.forEach((p) => dirty.add(p));
+  if (parts.some((p) => p === "plans" || p === "fleet" || p === "sense" || p === "feeds")) dirty.add("map");
   if (!frame) frame = setTimeout(flush, 16);  // not rAF: keeps rendering in a background tab
 }
 function flush() {
@@ -736,7 +803,7 @@ function planHTML(plan) {
         <div class="sub">${c && c.route_id !== "STAY" ? `arrives with ${c.arrival_days_left.toFixed(1)} d · ₹${c.price_inr_per_kg}/kg` : esc(r.baseline.label)}
         ${compChip(c && c.compliance)}${paperChip(c && c.paperwork)}${c && c.human_only ? ` <span class="chip warn" title="Below the floor price: a human must choose">human only</span>` : ""}</div></td>
       <td class="r num"><b>${c ? inr(c.value_inr) : "–"}</b><div class="sub ${s > 0 ? "pos" : s < 0 ? "neg" : ""}">${s > 0 ? "+" : ""}${inr(s)}</div></td>
-      <td class="r"><button class="btn small" data-why="${esc(r.container_id)}">${why ? "Hide" : "Why?"}</button></td></tr>
+      <td class="r"><button class="btn small" data-mapbox="${esc(r.container_id)}" title="Show its routes on the map" aria-label="Show ${esc(r.container_id)} on the map">🗺</button> <button class="btn small" data-why="${esc(r.container_id)}">${why ? "Hide" : "Why?"}</button></td></tr>
       ${why ? `<tr class="whyrow"><td colspan="5">💬 ${esc(why.text)}<span class="by">${why.by === "template" ? "explained from plan data" : "phrased by " + esc(why.by)}</span></td></tr>` : ""}`;
   }).join("");
   const docs = plan.docs || [];
@@ -1011,6 +1078,10 @@ document.addEventListener("click", async (ev) => {
   else if (d.fleet) { S.fleetTab = d.fleet; $$("[data-fleet]").forEach((b) => b.setAttribute("aria-selected", b === t)); mark("fleet"); }
   else if (d.plan) { S.plan = d.plan; mark("plans"); }
   else if (d.why) why(S.plan, d.why);
+  else if (d.layer) toggleLayer(d.layer, t);
+  else if (d.mapbox) { selectBox(d.mapbox); $(".mappanel").scrollIntoView({ behavior: "smooth", block: "center" }); }
+  else if (d.mapclear !== undefined) { selectBox(null); }
+  else if (d.mapopt) pickRoute(d.mapopt);
   else if (d.pack) { const [cid, rid] = d.pack.split("|"); openPack(S.plan, cid, rid); }
   else if (d.approve !== undefined) { t.disabled = true; await approve(S.plan); }
   else if (d.reject !== undefined) {
@@ -1056,6 +1127,7 @@ $("#theme").addEventListener("click", () => {
   const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
   const next = cur === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next; store("routera.theme", next);
+  if (M.map) { M.tiles.remove(); M.tiles = baseTiles().addTo(M.map); M.sig = ""; M.cls.clear(); mark("map"); }
 });
 if (load("routera.theme")) document.documentElement.dataset.theme = load("routera.theme");
 
@@ -1087,6 +1159,342 @@ $("#send-news").addEventListener("click", (e) => {
   if (!text) { e.preventDefault(); $("#headline").focus(); return; }
   feed({ source: "news", kind_hint: null, payload: { headline: text, body: "", outlet: "Control room (SIM)" } }, "news");
   $("#headline").value = "";
+});
+
+// --- live map ----------------------------------------------------------------------------------
+// Containers are placed from their ETAs and move with the clock; alternatives are re-priced live.
+const LEAFLET = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4";
+const HOME = [20, 62], HOME_ZOOM = 4;  // India, the Gulf and the Red Sea
+const SEA_KM_DAY = 650, ROAD_KM_DAY = 850;  // how far a box travels in a day, to place it from its ETA
+const M = { map: null, geo: null, tiles: null, canvas: null, groups: {}, paths: new Map(), dots: new Map(), cls: new Map(),
+            lines: new Map(), sel: null, row: null, rowPlan: null, sig: "", dataSig: "", plan: null, fit: false, off: new Set() };
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const isDark = () => (document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+function baseTiles() {  // OpenStreetMap needs no key; a CSS filter darkens the same tiles in dark mode
+  $("#map").classList.toggle("dark", isDark());
+  return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 12, attribution: "© OpenStreetMap contributors" });
+}
+function hav(a, b) {
+  const r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+function flatten(stretches) {
+  const pts = [], cum = [0];
+  let land = 0, onLand = true;
+  for (const s of stretches) {
+    for (const p of s.path) {
+      const last = pts[pts.length - 1];
+      if (last && last[0] === p[0] && last[1] === p[1]) continue;
+      if (last) {
+        const d = hav(last, p);
+        cum.push(cum[cum.length - 1] + d);
+        if (onLand && s.mode !== "sea") land += d;
+      }
+      pts.push(p);
+    }
+    if (s.mode === "sea") onLand = false;
+  }
+  return { pts, cum, land, total: cum[cum.length - 1] };
+}
+function pointAt(p, km) {
+  const k = Math.max(0, Math.min(km, p.total));
+  let i = 1;
+  while (i < p.cum.length - 1 && p.cum[i] < k) i++;
+  const t = (k - p.cum[i - 1]) / (p.cum[i] - p.cum[i - 1] || 1);
+  return [p.pts[i - 1][0] + (p.pts[i][0] - p.pts[i - 1][0]) * t, p.pts[i - 1][1] + (p.pts[i][1] - p.pts[i - 1][1]) * t];
+}
+function fromHere(pos, p) {  // the rest of a route, joined from where the box is now
+  let best = 0, least = Infinity;
+  p.pts.forEach((q, i) => { const d = hav(pos, q); if (d < least) { least = d; best = i; } });
+  return flatten([{ mode: "sea", path: [pos, ...p.pts.slice(best)] }]);
+}
+function cached(key, make) {
+  if (!M.paths.has(key)) M.paths.set(key, make());
+  return M.paths.get(key);
+}
+const bookedPath = (key) => (M.geo.booked[key] ? cached(`b:${key}`, () => flatten(M.geo.booked[key].stretches)) : null);
+const routePath = (id) => (M.geo.routes[id] ? cached(`r:${id}`, () => flatten(M.geo.routes[id].stretches)) : null);
+function onBooking(f, now) {
+  const p = bookedPath(f.path);
+  if (!p) return null;
+  if (f.status === "at_sea") return pointAt(p, Math.max(p.land, p.total - Math.max(0, (Date.parse(f.eta) - now) / 864e5) * SEA_KM_DAY));
+  if (f.status === "on_truck") return pointAt(p, (p.land || p.total) - Math.max(0, (Date.parse(f.cutoff_at || f.eta) - now) / 864e5) * ROAD_KM_DAY);
+  return pointAt(p, 0);
+}
+function boxPos(f, now) {
+  const b = f.booking, route = b && M.geo.routes[b.route_id];
+  if (!route) return onBooking(f, now);
+  const p = cached(`m:${f.container_id}|${b.booking_id}|${b.at}`, () => fromHere(onBooking(f, Date.parse(b.at)) || routePath(b.route_id).pts[0], routePath(b.route_id)));
+  return pointAt(p, p.total * Math.min(1, Math.max(0, (now - Date.parse(b.at)) / 864e5) / (route.days || 1)));
+}
+function tipFor(id) {
+  const f = S.fleet.get(id);
+  if (!f) return id;
+  const where = f.booking ? `${f.booking.label} (booked)` : `${f.status.replaceAll("_", " ")} → ${f.destination_name}`;
+  return `<b>${esc(id)}</b> ${esc(f.crop)} · ${(f.weight_kg / 1000).toFixed(0)} t<br>${life(lifeNow(id) ?? f.days_left)} of shelf life left<br>${esc(where)}${f.affected_by.length && !f.booking ? `<br><b>At risk:</b> ${esc(f.affected_by.join(", "))}` : ""}`;
+}
+function moveDots() {
+  if (!M.map) return;
+  const now = simNow(), px = 360 / (256 * 2 ** M.map.getZoom()), seen = new Set();
+  for (const f of S.fleet.values()) {
+    const id = f.container_id, pos = boxPos(f, now);
+    if (!pos) continue;
+    seen.add(id);
+    let h = 0;
+    for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
+    const at = [pos[0] + ((h % 9) - 4) * 1.6 * px, pos[1] + (((h >> 4) % 9) - 4) * 1.6 * px];
+    let dot = M.dots.get(id);
+    if (!dot) {
+      dot = L.circleMarker(at, { renderer: M.canvas, radius: 5, weight: 1.5, fillOpacity: 0.95 }).bindTooltip(() => tipFor(id)).on("click", () => selectBox(id));
+      dot.addTo(M.groups.boxes);
+      M.dots.set(id, dot);
+    } else dot.setLatLng(at);
+    const shelf = lifeClass(lifeNow(id) ?? f.days_left);
+    const ring = id === M.sel ? "sel" : f.booking ? "good" : f.affected_by.length ? "bad" : "line";
+    const cls = `${shelf}|${ring}`;
+    if (M.cls.get(id) !== cls) {
+      M.cls.set(id, cls);
+      dot.setStyle({ fillColor: cssVar(`--${shelf}`), radius: ring === "sel" ? 8 : 5, weight: ring === "line" ? 1 : 2.5,
+                     color: ring === "sel" ? cssVar("--text") : ring === "line" ? "#0008" : cssVar(`--${ring}`) });
+    }
+  }
+  for (const [id, dot] of M.dots) if (!seen.has(id)) { dot.remove(); M.dots.delete(id); M.cls.delete(id); }
+}
+function pendingRow(cid) {
+  for (const plan of S.r?.plans || []) {
+    if (plan.status !== "pending") continue;
+    const row = plan.rows.find((r) => r.container_id === cid);
+    if (row) return { plan, row };
+  }
+  return null;
+}
+async function loadRow() {
+  const cid = M.sel;
+  if (!cid) return;
+  const held = pendingRow(cid);
+  if (held) { M.row = held.row; M.rowPlan = held.plan.plan_id; return; }
+  try {
+    const row = await api(`/api/containers/${encodeURIComponent(cid)}/options`);
+    if (M.sel === cid) { M.row = row; M.rowPlan = null; M.sig = ""; mark("map"); }
+  } catch (e) { console.warn(e); }
+}
+function selectBox(cid) {
+  M.sel = cid; M.row = null; M.rowPlan = null; M.sig = ""; M.fit = Boolean(cid); M.cls.clear();
+  if (!cid) M.plan = undefined;  // back to the plan view: refit it
+  if (cid) loadRow();
+  moveDots(); mark("map");
+}
+function toggleLayer(name, btn) {
+  const off = M.off.has(name);
+  if (off) M.off.delete(name); else M.off.add(name);
+  btn.setAttribute("aria-selected", String(off));
+  if (M.map && M.groups[name]) { if (off) M.groups[name].addTo(M.map); else M.groups[name].remove(); }
+}
+function pickRoute(routeId) {
+  const line = M.lines.get(routeId);
+  if (line) line.openTooltip();
+  const plan = (S.r?.plans || []).find((p) => p.plan_id === M.rowPlan), row = M.row;
+  if (!plan || plan.status !== "pending" || !row) return;
+  const o = row.options.find((x) => x.route_id === routeId);
+  if (!o || !o.feasible || o.compliance.status === "block") return;
+  const mine = S.overrides[plan.plan_id] = S.overrides[plan.plan_id] || {};
+  if (row.choice && routeId === row.choice.route_id) delete mine[row.container_id]; else mine[row.container_id] = routeId;
+  S.plan = plan.plan_id; M.sig = ""; mark("plans");
+}
+function routeStyle(o, isChoice) {
+  if (isChoice) return { color: cssVar("--good"), weight: 5, opacity: 0.95 };
+  if (o.compliance.status === "block") return { color: cssVar("--bad"), weight: 2, opacity: 0.8, dashArray: "4 7" };
+  if (!o.feasible) return { color: cssVar("--bad"), weight: 2, opacity: 0.45, dashArray: "2 7" };
+  if (o.compliance.status === "review") return { color: cssVar("--warn"), weight: 3, opacity: 0.9, dashArray: "8 6" };
+  return { color: cssVar("--accent"), weight: 3, opacity: 0.8 };
+}
+const optColor = (o, isChoice) => (isChoice ? "var(--good)" : o.compliance.status === "block" || !o.feasible ? "var(--bad)" : o.compliance.status === "review" ? "var(--warn)" : "var(--accent)");
+const kmText = (id) => (M.geo.routes[id] ? M.geo.routes[id].stretches.map((s) => `${s.km.toLocaleString("en-IN")} km ${s.mode}`).join(" + ") : "");
+function currentChoice() {
+  const plan = (S.r?.plans || []).find((p) => p.plan_id === M.rowPlan);
+  return plan && M.row ? chosen(plan, M.row) : M.row?.choice;
+}
+function drawRoutes() {
+  const g = M.groups.routes;
+  g.clearLayers(); M.lines.clear();
+  const bounds = [];
+  const lanes = new Set(), risky = new Set(), moved = new Map();
+  for (const f of S.fleet.values()) {
+    if (f.booking) moved.set(f.booking.route_id, (moved.get(f.booking.route_id) || 0) + 1);
+    else if (f.affected_by.length) risky.add(f.path);
+    else lanes.add(f.path);
+  }
+  for (const key of lanes) {
+    const p = bookedPath(key);
+    if (p) L.polyline(p.pts, { color: cssVar("--muted"), weight: 1, opacity: 0.3, interactive: false }).addTo(g);
+  }
+  const f = M.sel && S.fleet.get(M.sel);
+  if (f) {
+    const pos = boxPos(f, simNow()) ;
+    const here = (p) => (pos ? fromHere(pos, p).pts : p.pts);
+    const booked = bookedPath(f.path);
+    if (booked) {
+      const line = L.polyline(here(booked), { color: cssVar(f.affected_by.length ? "--bad" : "--muted"), weight: 3, opacity: 0.8, dashArray: "1 6" }).bindTooltip(`Booked route to ${esc(f.destination_name)}${f.affected_by.length ? " (at risk)" : ""}`, { sticky: true }).addTo(g);
+      if (!M.row?.options?.some((o) => o.feasible && M.geo.routes[o.route_id])) bounds.push(...line.getLatLngs());
+    }
+    const choice = currentChoice();
+    const opts = (M.row?.options || []).filter((o) => M.geo.routes[o.route_id]);
+    opts.sort((a, b) => (a.route_id === choice?.route_id) - (b.route_id === choice?.route_id) || a.feasible - b.feasible);
+    for (const o of opts) {
+      const isChoice = o.route_id === choice?.route_id;
+      const tip = `<b>${esc(o.label)}</b><br>${esc(kmText(o.route_id))}<br>${o.feasible ? `${inr(o.value_inr)} · arrives with ${o.arrival_days_left.toFixed(1)} d left` : esc(o.reason)}`;
+      const line = L.polyline(here(routePath(o.route_id)), routeStyle(o, isChoice)).bindTooltip(tip, { sticky: true }).on("click", () => pickRoute(o.route_id)).addTo(g);
+      M.lines.set(o.route_id, line);
+      if (o.feasible && o.compliance.status !== "block") bounds.push(...line.getLatLngs());  // don't zoom out for dead routes
+    }
+    if (pos) bounds.push(L.latLng(pos));
+  } else {
+    for (const key of risky) {
+      const p = bookedPath(key);
+      if (p) L.polyline(p.pts, { color: cssVar("--bad"), weight: 2, opacity: 0.65, dashArray: "1 6" }).bindTooltip("Booked route at risk", { sticky: true }).addTo(g);
+    }
+    const plan = (S.r?.plans || []).find((x) => x.plan_id === S.plan);
+    const counts = new Map();
+    if (plan?.status === "pending") {
+      for (const r of plan.rows) {
+        const c = chosen(plan, r);
+        if (c && c.route_id !== "STAY") counts.set(c.route_id, { n: (counts.get(c.route_id)?.n || 0) + 1, c });
+      }
+    }
+    for (const [id, { n, c }] of counts) {
+      const p = routePath(id);
+      if (!p) continue;
+      const line = L.polyline(p.pts, { color: cssVar("--good"), weight: Math.min(3 + n, 8), opacity: 0.9 }).bindTooltip(`<b>${n} box${n > 1 ? "es" : ""}:</b> ${esc(c.label)}<br>${esc(kmText(id))}`, { sticky: true }).addTo(g);
+      bounds.push(...line.getLatLngs());
+    }
+    if ((plan?.plan_id ?? null) !== M.plan) {  // a new plan on screen: show its routes, or the whole theatre
+      M.plan = plan?.plan_id ?? null;
+      M.fit = counts.size > 0;
+      if (!M.fit) M.map.setView(HOME, HOME_ZOOM);
+    }
+  }
+  for (const [id, n] of moved) {
+    const p = routePath(id);
+    if (p && !f) L.polyline(p.pts, { color: cssVar("--good"), weight: 2.5, opacity: 0.7 }).bindTooltip(`${n} booked: ${esc(M.geo.routes[id] ? kmText(id) : id)}`, { sticky: true }).addTo(g);
+  }
+  if (M.fit && bounds.length && (!M.sel || M.row)) { M.map.fitBounds(L.latLngBounds(bounds), { padding: [36, 36], maxZoom: 7 }); M.fit = false; }
+}
+function drawEvents() {
+  const g = M.groups.events;
+  g.clearLayers();
+  const shown = new Set();
+  for (const item of S.disruptions.values()) {
+    const d = item.disruption, place = M.geo.places[d.location];
+    if (!place || !OPEN.has(item.ignored ? "ignored" : d.status)) continue;
+    shown.add(d.location);
+    const sure = d.status !== "candidate";
+    const [, label] = TYPE[d.type] || ["", d.type];
+    L.marker([place.lat, place.lon], { icon: L.divIcon({ className: "", html: `<span class="mk ${sure ? "" : "warn"}"></span>`, iconSize: [16, 16] }) })
+      .bindTooltip(`<b>${sure ? "" : "Possible "}${esc(sure ? label : label.toLowerCase())}</b> at ${esc(place.name)}<br>${Math.round(d.confidence * 100)}% sure${sure ? `, ${d.affected_container_ids.length} containers` : ", news only so far"}`).addTo(g);
+  }
+  for (const [code, why] of Object.entries(S.r?.map?.blocked || {})) {
+    const place = M.geo.places[code];
+    if (!place || shown.has(code)) continue;
+    L.marker([place.lat, place.lon], { icon: L.divIcon({ className: "", html: `<span class="mk shut"></span>`, iconSize: [16, 16] }) })
+      .bindTooltip(`<b>${esc(place.name)} blocked</b><br>${esc(why)}`).addTo(g);
+  }
+}
+function drawLive() {
+  M.groups.ships.clearLayers(); M.groups.alerts.clearLayers();
+  const feeds = S.live?.on ? S.live.feeds || {} : {};
+  for (const ship of feeds.ais?.markers || []) {
+    L.circleMarker([ship.lat, ship.lon], { renderer: M.canvas, radius: 2.5, weight: 0, fillColor: "#22d3ee", fillOpacity: 0.9 }).bindTooltip(`<b>Real ship</b> ${esc(ship.title)}`).addTo(M.groups.ships);
+  }
+  const color = { Red: "var(--bad)", Orange: "var(--warn)", Green: "var(--good)" };
+  for (const a of feeds.gdacs?.markers || []) {
+    L.marker([a.lat, a.lon], { icon: L.divIcon({ className: "", html: `<span class="gd" style="color:${color[a.level] || "var(--muted)"};font-size:${a.near ? 16 : 11}px">▲</span>`, iconSize: [16, 16] }) })
+      .bindTooltip(`<b>Real alert (GDACS)</b><br>${esc(a.title)}`).addTo(M.groups.alerts);
+  }
+  for (const w of feeds.weather?.markers || []) {
+    L.marker([w.lat, w.lon], { icon: L.divIcon({ className: "", html: `<span class="gd" style="font-size:14px">🌦</span>`, iconSize: [16, 16] }) })
+      .bindTooltip(`<b>Real weather</b><br>${esc(w.title)}`).addTo(M.groups.alerts);
+  }
+}
+function sideHTML() {
+  const f = M.sel && S.fleet.get(M.sel);
+  if (!f) {
+    const all = [...S.fleet.values()], risk = all.filter((x) => x.affected_by.length && !x.booking).length;
+    const feeds = S.live?.on ? S.live.feeds || {} : null;
+    return `<h4>Click any container</h4><p class="lead">See its booked route and <b>every alternative, priced right now</b> on the current closures, shelf life and market prices.</p>
+      <ul><li><b>${all.length}</b> containers on the map${risk ? `, <b>${risk} at risk</b>` : ""}</li>
+      ${feeds ? `<li><b>${(feeds.ais?.markers || []).length}</b> real ships (AIS)</li><li><b>${(feeds.gdacs?.markers || []).length}</b> real disaster alerts (GDACS)</li>` : `<li>Pick 🔴 LIVE to add real ships and alerts</li>`}
+      <li>A plan's routes show in green; use 🗺 on a plan row to open that box here</li></ul>`;
+  }
+  const row = M.row, choice = currentChoice();
+  const plan = (S.r?.plans || []).find((p) => p.plan_id === M.rowPlan);
+  const head = `<h4><span class="mono">${esc(f.container_id)}</span><button class="btn small ghost" data-mapclear>✕</button></h4>
+    <p class="lead">${esc(f.crop)} · ${(f.weight_kg / 1000).toFixed(0)} t · <b>${life(lifeNow(f.container_id) ?? f.days_left)}</b> left · ${esc(f.status.replaceAll("_", " "))}<br>Booked to <b>${esc(f.destination_name)}</b>${f.booking ? `<br>Now on <b>${esc(f.booking.label)}</b> (${esc(f.booking.booking_id)})` : ""}${f.affected_by.length && !f.booking ? `<br><b style="color:var(--bad)">At risk:</b> ${esc(f.affected_by.join(", "))}` : ""}</p>`;
+  if (!row) return `${head}<p class="lead">Working out its routes…</p>`;
+  const opts = row.options.filter((o) => o.route_id === "STAY" || M.geo.routes[o.route_id]);
+  if (!opts.length) return `${head}<p class="lead">No alternative routes are modelled from where this box is now. It stays on its booking.</p>`;
+  const can = plan?.status === "pending";
+  const list = opts.map((o) => {
+    const isChoice = o.route_id === choice?.route_id, ok = o.feasible && o.compliance.status !== "block";
+    const stay = o.route_id === "STAY";
+    const detail = !o.feasible ? esc(o.reason) : `${stay ? "No change to the booking" : esc(kmText(o.route_id))}${o.arrival_days_left != null ? ` · arrives with ${o.arrival_days_left.toFixed(1)} d` : ""}${o.compliance.status === "review" ? " · human review" : ""}`;
+    return `<button class="opt ${isChoice ? "now" : ""} ${ok ? "" : "off"}" data-mapopt="${esc(o.route_id)}"><i class="sw" style="background:${optColor(o, isChoice)}"></i>
+      <span><b>${esc(o.label)}</b>${isChoice ? ` <span class="chip good">${can ? "plan" : "best now"}</span>` : ""}<small>${detail}</small></span><span class="v">${o.value_inr != null ? inr(o.value_inr) : "–"}</span></button>`;
+  }).join("");
+  const baseline = row.baseline ? `<p class="lead">Without ROUTERA: ${esc(row.baseline.label)}, ${inr(row.baseline.value_inr)}.</p>` : "";
+  return `${head}${can ? `<p class="lead">In plan <b>${esc(plan.plan_id)}</b>: click a route to change it.</p>` : `<p class="lead">Priced live. Nothing is booked unless a plan is approved.</p>`}${list}${baseline}`;
+}
+RENDER.map = () => {
+  if (!M.map) return;
+  const plans = (S.r?.plans || []).map((p) => [p.plan_id, p.version, p.status]);
+  const dis = [...S.disruptions.values()].map((i) => [i.disruption.disruption_id, i.disruption.status, i.disruption.confidence, i.ignored]);
+  const boxes = [...S.fleet.values()].map((f) => [f.container_id, f.booking?.booking_id, f.affected_by.length]);
+  const polled = Object.values(S.live?.feeds || {}).map((x) => x.polled_at);
+  const data = JSON.stringify([plans, dis, boxes, polled, S.live?.on, S.r?.map]);
+  if (data !== M.dataSig) { M.dataSig = data; loadRow(); M.sig = ""; drawEvents(); drawLive(); }
+  const sig = JSON.stringify([data, S.plan, S.overrides, M.sel, Boolean(M.row), M.row?.options?.length, M.rowPlan]);
+  if (sig !== M.sig) { M.sig = sig; drawRoutes(); $("#map-side").innerHTML = sideHTML(); moveDots(); }
+};
+function initMap() {
+  try {
+    M.map = L.map("map", { zoomControl: true, worldCopyJump: false, minZoom: 2 }).setView(HOME, HOME_ZOOM);
+    M.tiles = baseTiles().addTo(M.map);
+    M.canvas = L.canvas({ padding: 0.3 });
+    for (const name of ["routes", "places", "events", "alerts", "ships", "boxes"]) M.groups[name] = L.layerGroup().addTo(M.map);
+    for (const place of Object.values(M.geo.places)) {
+      if (place.kind === "region") continue;
+      const major = place.kind === "port" || place.kind === "chokepoint";
+      const mark_ = L.circleMarker([place.lat, place.lon], { renderer: M.canvas, radius: major ? 3.5 : 2.5, weight: 1, color: cssVar("--text"), fillColor: cssVar(place.kind === "chokepoint" ? "--warn" : "--muted"), fillOpacity: 0.9 });
+      mark_.bindTooltip(esc(place.name), major ? { permanent: true, direction: "right", className: "maplabel", offset: [4, 0] } : {}).addTo(M.groups.places);
+    }
+    M.map.on("zoomend", moveDots);
+    M.off.forEach((name) => M.groups[name]?.remove());
+    setInterval(moveDots, 1000);
+    M.sig = ""; M.dataSig = ""; mark("map");
+  } catch (e) { mapFail(e); }
+}
+function mapFail(e) {
+  console.warn("map", e);
+  $("#map").innerHTML = `<div class="mapfail"><b>The map library could not load.</b><br>It needs internet access to cdnjs and the map tiles. Everything else keeps working.</div>`;
+}
+(async function loadMap() {
+  try { M.geo = await api("/api/map"); } catch (e) { mapFail(e); return; }
+  const css = document.createElement("link");
+  css.rel = "stylesheet"; css.href = `${LEAFLET}/leaflet.min.css`;
+  document.head.append(css);
+  const js = document.createElement("script");
+  js.src = `${LEAFLET}/leaflet.min.js`; js.onload = initMap; js.onerror = mapFail;
+  document.head.append(js);
+  $("#map-side").innerHTML = sideHTML();
+})();
+document.querySelector("#map-side").addEventListener("mouseover", (ev) => {
+  const id = ev.target.closest("[data-mapopt]")?.dataset.mapopt, line = id && M.lines.get(id);
+  if (line) { line.setStyle({ weight: 7 }); line.bringToFront(); }
+});
+document.querySelector("#map-side").addEventListener("mouseout", (ev) => {
+  const id = ev.target.closest("[data-mapopt]")?.dataset.mapopt, line = id && M.lines.get(id);
+  const o = id && M.row?.options.find((x) => x.route_id === id);
+  if (line && o) line.setStyle(routeStyle(o, id === currentChoice()?.route_id));
 });
 
 mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet");

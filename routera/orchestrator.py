@@ -16,6 +16,7 @@ from agents.sentinel.models import ContainerRef, ReeferTelemetryPayload
 from agents.sentinel.sentinel import DisruptionSentinel
 from routera.audit import HashChainAudit
 from routera.compliance import FPO_BY_CROP, ComplianceRules
+from routera.geo import booked_key
 from routera.market import load_markets
 from routera.paperwork import draft_pack
 from routera.planner import Context, Planner, fmt_inr, summarise
@@ -291,6 +292,11 @@ class Orchestrator:
         pack["on_chain"] = plan.get("packs", {}).get(container_id)
         return pack
 
+    def options(self, container_id: str) -> dict[str, Any]:
+        """Every route for one container right now, priced on the live closures: any box, any time."""
+        row = self.planner.plan([self.containers()[container_id]], self.context())["rows"][0]
+        return {**row, "booking": self.assigned.get(container_id)}
+
     def escalation(self, plan: dict[str, Any], now: datetime) -> dict[str, Any]:
         """Who the plan waits on now. Past the last stage it is an SLA breach, and it still waits."""
         created = datetime.fromisoformat(plan["created_at"])
@@ -346,6 +352,7 @@ class Orchestrator:
     def snapshot(self) -> dict[str, Any]:
         now = self.clock.now()
         self._escalate(now)
+        ctx = self.context()
         boxes = self.containers()
         open_ids: dict[str, list[str]] = {}
         for incident in self._incidents(("confirmed", "active", "resolving")):
@@ -363,6 +370,8 @@ class Orchestrator:
                 "days_left": state.days_left, "rate": state.rate, "estimated": state.estimated,
                 "affected_by": open_ids.get(c.container_id, []),
                 "booking": self.assigned.get(c.container_id),
+                "path": booked_key(c), "eta": c.eta.isoformat(),
+                "cutoff_at": c.cutoff_at.isoformat() if c.cutoff_at else None,
             })
         fleet.sort(key=lambda f: (not f["affected_by"] or bool(f["booking"]), f["days_left"]))
         plans = sorted(self.plans.values(), key=lambda p: (p["status"] != "pending", p["plan_id"]))
@@ -372,6 +381,7 @@ class Orchestrator:
             "fleet": fleet,
             "plans": plans,
             "bookings": self.bookings[-50:],
+            "map": {"blocked": ctx.blocked, "slow": ctx.slow},
             "kpis": {
                 "containers": len(fleet),
                 "at_risk": len(at_risk),

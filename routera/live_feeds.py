@@ -48,9 +48,9 @@ def http_get(url: str, timeout: float = 12.0) -> bytes:
 
 
 def status(name: str, label: str, ok: bool, summary: str, items: list[dict[str, Any]] | None = None,
-           error: str = "") -> dict[str, Any]:
+           error: str = "", markers: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     return {"name": name, "label": label, "ok": ok, "summary": summary, "items": items or [],
-            "error": error, "polled_at": datetime.now(UTC).isoformat()}
+            "error": error, "polled_at": datetime.now(UTC).isoformat(), "markers": markers or []}
 
 
 # --- weather --------------------------------------------------------------------------------------
@@ -93,7 +93,7 @@ class WeatherFeed:
         self.fetch = fetch
 
     def poll(self, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        events, items = [], []
+        events, items, markers = [], [], []
         try:
             for label, lat, lon, region, port in WEATHER_PLACES:
                 url = ("https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode({
@@ -105,6 +105,7 @@ class WeatherFeed:
                 rains = [round(r or 0.0, 1) for r in daily["precipitation_sum"]]
                 items.append({"title": f"{label}: {cur['temperature_2m']:.0f} °C now, "
                               f"rain next 3 days {' / '.join(f'{r:g}' for r in rains)} mm"})
+                markers.append({"lat": lat, "lon": lon, "title": items[-1]["title"]})
                 for day, rain, code, tmax in zip(daily["time"], rains, daily["weather_code"],
                                                  daily["temperature_2m_max"], strict=True):
                     hazard = weather_hazard(rain, int(code or 0), float(tmax or 0))
@@ -123,7 +124,7 @@ class WeatherFeed:
         except Exception as exc:  # a feed must never take the control room down
             return [], status(self.name, self.label, False, "unreachable", items, repr(exc)[:200])
         alerts = f"{len(events)} alert(s)" if events else "no IMD threshold crossed (≥35.6 mm/day, hail, ≥40 °C)"
-        return events, status(self.name, self.label, True, alerts, items)
+        return events, status(self.name, self.label, True, alerts, items, markers=markers)
 
 
 # --- news -----------------------------------------------------------------------------------------
@@ -179,7 +180,7 @@ class GdacsFeed:
                 features = json.loads(self.fetch(GDACS_URL)).get("features", [])
             except Exception as exc:  # a feed must never take the control room down
                 return [], status(self.name, self.label, False, "unreachable", [], repr(exc)[:200])
-        events, near, far = [], [], []
+        events, near, far, markers = [], [], [], []
         for feature in features:
             p = feature.get("properties", {})
             kind, level = p.get("eventtype"), p.get("alertlevel")
@@ -191,6 +192,8 @@ class GdacsFeed:
             km, closest = spots[0]
             name = str(p.get("name") or kind)[:80]
             title = f"{name} ({level}): {km:,.0f} km from {closest[0]}"
+            markers.append({"lat": lat, "lon": lon, "title": title, "level": level, "kind": kind,
+                            "near": km <= GDACS_RADIUS_KM[kind]})
             if km > GDACS_RADIUS_KM[kind]:
                 far.append((km, title))
                 continue
@@ -210,7 +213,7 @@ class GdacsFeed:
         nearest = [title for _, title in sorted(far)[:3]]
         items = [{"title": f"⚠ {title}"} for title in near] + [{"title": f"Nearest: {title}"} for title in nearest]
         summary = f"{len(near) + len(far)} live alerts worldwide, {len(near)} near your routes"
-        return events, status(self.name, self.label, True, summary, items[:8])
+        return events, status(self.name, self.label, True, summary, items[:8], markers=markers)
 
 
 NEWS_QUERIES = (
@@ -288,6 +291,8 @@ AIS_PORTS = {  # port -> (label, [[lat_min, lon_min], [lat_max, lon_max]], ships
 # aisstream.io is crowd-sourced: Europe and North America are well covered, Indian and Gulf waters
 # barely (checked 29 Oct 2026: 0 of 727 positions in 20 s). Those cards show 0 rather than a guess.
 AT_ANCHOR, MOORED = 1, 5  # AIS navigational status codes
+AIS_STATE = {AT_ANCHOR: "at anchor", MOORED: "at berth"}
+AIS_MAX_MARKERS = 300
 FRESH_S = 1800  # anchored ships report every few minutes; forget a ship after 30 min of silence
 
 
@@ -331,7 +336,7 @@ class AisFeed:
         with self._lock:
             self.vessels[mmsi] = {"port": port, "name": str(meta.get("ShipName") or mmsi).strip(),
                                   "status": report.get("NavigationalStatus"), "sog": report.get("Sog"),
-                                  "seen": self.clock()}
+                                  "lat": lat, "lon": lon, "seen": self.clock()}
 
     def _messages(self, subscription: str) -> Iterator[str]:
         if self.stream is not None:
@@ -389,7 +394,10 @@ class AisFeed:
             return [], status(self.name, self.label, False, "unreachable", items, self.error)
         summary = (f"{len(fresh)} ships tracked in the last 30 min" if fresh
                    else "listening… (anchored ships report every few minutes)")
-        return events, status(self.name, self.label, True, summary, items)
+        markers = [{"lat": v["lat"], "lon": v["lon"],
+                    "title": f"{v['name']}: {AIS_STATE.get(v['status'], 'under way')}, {v['sog'] or 0:g} kn"}
+                   for v in fresh[:AIS_MAX_MARKERS]]
+        return events, status(self.name, self.label, True, summary, items, markers=markers)
 
 
 # --- the fleet, moved to today --------------------------------------------------------------------
