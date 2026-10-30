@@ -45,6 +45,7 @@ You can also pick **🔴 LIVE** in the scenario dropdown. The same Sentinel, pla
 | Feed | Source | Key | Becomes |
 |---|---|---|---|
 | Weather for Nashik and JNPT, 3-day forecast | Open-Meteo | none | `WEATHER_ALERT` when an IMD threshold is crossed (≥35.6 mm/day rain, hail, ≥40 °C) |
+| Official disaster alerts (cyclones, floods, earthquakes) near any port, sea lane or corridor of the network | GDACS (UN and European Commission) | none | `WEATHER_ALERT` (source `gdacs`, reliability 0.90). Orange and red alerts confirm a disruption on their own; green ones only show as signals |
 | Headlines on the corridor, JNPT, grapes, Red Sea / Hormuz | Google News RSS | none | news the Sentinel classifies (rules, or the LLM) |
 | Ships off Rotterdam, JNPT, Mundra and Jebel Ali | AIS via aisstream.io (`pip install websockets`) | `AISSTREAM_API_KEY` (free, GitHub sign-up) | `PORT_CONGESTION` when ships at anchor pass a threshold (source `ais_port`, reliability 0.80: an estimate, not an official notice). aisstream.io is crowd-sourced and barely covers Indian and Gulf waters, so those ports usually show 0 ships; Rotterdam, where the mangoes go, is well covered |
 

@@ -651,12 +651,13 @@ function disHTML(item) {
   const closed = !OPEN.has(status) ? " closed" : "";
   const layer = item.layer === "india" ? `<span class="layer india">India</span>` : `<span class="layer global">Global</span>`;
   const n = d.affected_container_ids.length;
+  const waiting = d.status === "candidate" && item.news_only;  // real news, nothing official yet
   return `<article class="dis ${esc(status)}${closed}${S.fresh.has(d.disruption_id) ? " new" : ""}">
-    <div class="row1"><span>${icon}</span><span class="type">${esc(label)}</span>${layer}<span class="status ${esc(status)}">${esc(status)}</span></div>
+    <div class="row1"><span>${icon}</span><span class="type">${waiting ? `Possible ${esc(label.toLowerCase())}` : esc(label)}</span>${layer}<span class="status ${esc(status)}">${esc(status)}</span></div>
     <div class="loc mono">${esc(d.location)} · ${esc(d.disruption_id)}</div>
-    <p>${esc(d.summary)}</p>
+    <p>${waiting ? `📰 News only: ${item.reports} report${item.reports === 1 ? "" : "s"}. News never confirms on its own, so nothing moves until an official source agrees.` : esc(d.summary)}</p>
     <div class="meta">${sevHTML(d.severity)}<span class="chip">${Math.round(d.confidence * 100)}% sure</span>
-      ${d.expected_delay_days ? `<span class="chip warn">+${d.expected_delay_days} d</span>` : ""}
+      ${d.expected_delay_days && !waiting ? `<span class="chip warn">+${d.expected_delay_days} d</span>` : ""}
       ${n ? `<span class="chip acc">${n} container${n > 1 ? "s" : ""} · ${Math.round(d.affected_weight_kg / 1000)} t</span>` : ""}
       ${(item.linked || []).length ? `<span class="chip" title="Shares containers with ${esc(item.linked.join(", "))}">🔗 ${item.linked.length} linked</span>` : ""}
       ${item.summary_by && item.summary_by !== "template" ? `<span class="chip">summary: ${esc(item.summary_by)}</span>` : ""}</div>
@@ -893,7 +894,7 @@ function loadSnapshot(s, reset) {
   applyRoutera(s.routera, true);
   S.chain = s.routera.chain.tail.slice();
   S.planKey = "";
-  if (S.live.on) S.note = `<b>● LIVE since ${hm(s.clock)} IST</b> · weather every 10 min, news and ships every 5 min (ships need a free key)`;
+  if (S.live.on) S.note = `<b>● LIVE since ${hm(s.clock)} IST</b> · weather every 10 min, official disaster alerts every 15 min, news and ships every 5 min (ships need a free key)`;
   mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet", "feeds");
 }
 function connect() {

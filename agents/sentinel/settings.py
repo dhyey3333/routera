@@ -26,6 +26,7 @@ class ReliabilityConfig(_Section):
     weather: Fraction
     ais: Fraction
     ais_port: Fraction = 0.80  # port congestion estimated from live AIS anchorage counts
+    gdacs: Fraction = 0.90  # official UN/EU disaster alerts
     news: Fraction
     road_authority: Fraction
     transport_union: Fraction

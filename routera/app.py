@@ -49,7 +49,7 @@ def live_scenario(now: datetime) -> Scenario:
     return Scenario(
         name=LIVE, title="LIVE: real weather, news and ships for Nashik grapes and Konkan mangoes",
         simulated=True, layer="india", start=now, container_ids=[], steps=[],
-        disclaimer="Feeds are REAL (Open-Meteo, Google News; AIS with a free key). The fleet is the "
+        disclaimer="Feeds are REAL (Open-Meteo, GDACS, Google News; AIS with a free key). The fleet is the "
                    "SIMULATED book moved to today; bookings stay simulated.",
     )
 

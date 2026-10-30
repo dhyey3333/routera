@@ -181,6 +181,8 @@ class DisruptionSentinel:
             "disruption": self._present(incident.disruption).model_dump(mode="json"),
             "ignored": incident.closed_as == "ignored",
             "closed_reason": incident.closed_reason,
+            "news_only": incident.news_only,
+            "reports": len(incident.signals),
             "published": disruption_id in self._published,
             "summary_by": summary.by if summary else "template",
             "layer": self.layer_of(incident.disruption),

@@ -48,6 +48,7 @@ SourceName = Literal[
     "ais_port",  # port status estimated from live AIS anchorage counts (ROUTERA live mode)
     "tariff_feed",
     "weather",
+    "gdacs",  # UN/EU official disaster alerts near the network (ROUTERA live mode)
     "news",
     # India-inside feeds (v2)
     "road_authority",
@@ -268,6 +269,7 @@ PAYLOAD_MODELS: dict[str, type[_Payload]] = {
     "ais_port": PortAuthorityPayload,
     "tariff_feed": TariffPayload,
     "weather": WeatherPayload,
+    "gdacs": WeatherPayload,
     "news": NewsPayload,
     "road_authority": RoadAuthorityPayload,
     "transport_union": TransportUnionPayload,

@@ -10,6 +10,7 @@ reliability:                 # r_source for the noisy-OR confidence (spec sectio
   weather: 0.80
   ais: 0.70
   ais_port: 0.80             # port congestion estimated from live AIS anchorage counts
+  gdacs: 0.90                # official UN/EU disaster alerts near the network
   news: 0.40                 # multiplied by the news classifier's own confidence (LLM or keywords)
   road_authority: 0.95       # India-inside feeds (v2)
   transport_union: 0.90
@@ -150,8 +151,15 @@ news:                        # offline keyword fallback for free-text news
       strong: [price crash, prices crash, prices plunge, prices collapse, glut]
       weak: [prices fall, price drop]
     PORT_CLOSURE:
-      strong: [closed, closure, shut, shuts, shutdown, halt, halts, halted, suspends operations]
-      weak: [unrest, conflict, attack, attacks, tension, tensions, security threat, blockade]
+      strong: [closed, closure, shut, shuts, shutdown, halt, halts, halted, suspends operations,
+               dockworkers strike, dock workers strike, dockers strike, dock strike, port strike,
+               port workers strike, missile strike, drone strike]
+      weak: [unrest, conflict, attack, attacks, tension, tensions, security threat, blockade,
+             ship on fire, tanker on fire, vessel on fire, ship fire, tanker fire, vessel fire,
+             ship attacked, tanker attacked, vessel attacked, ship seized, tanker seized, vessel seized,
+             ship sunk, tanker sunk, vessel sunk, hijacked, submerged, houthi, houthis,
+             reported on fire, under attack, mine claims, naval mine, naval mines, sea mine, sea mines,
+             threaten shipping, threatens shipping]
     LANE_SUSPENSION:
       strong: [service suspended, suspends service, lane suspended, sailings cancelled]
       weak: []

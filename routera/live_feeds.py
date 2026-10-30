@@ -1,6 +1,8 @@
 """Real feeds for Live mode. Each poll returns raw Sentinel events plus a status for the UI.
 
     Open-Meteo   real weather forecast for Nashik and JNPT (no key); IMD-style thresholds
+    GDACS        official UN/EU disaster alerts (cyclones, floods, earthquakes, no key) near a port, sea lane
+                 or corridor of the network; orange and red alerts confirm a disruption on their own
     Google News  real headlines on the corridor, the ports and the global lanes (no key)
     AIS          real ship positions off JNPT, Mundra, Jebel Ali and Rotterdam via aisstream.io (free key in
                  AISSTREAM_API_KEY, needs `pip install websockets`); ships waiting at anchor above a
@@ -15,6 +17,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import math
 import os
 import tempfile
 import threading
@@ -124,6 +127,91 @@ class WeatherFeed:
 
 
 # --- news -----------------------------------------------------------------------------------------
+
+GDACS_URL = ("https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?"
+             "eventlist=TC;FL;EQ;VO;WF&alertlevel=Green;Orange;Red")
+GDACS_PLACES = (  # (label, lat, lon, region, port or chokepoint code): every node a container can pass
+    ("Nashik", 20.0, 73.79, "Nashik", None),
+    ("JNPT", 18.95, 72.95, None, "INNSA"),
+    ("Mundra", 22.75, 69.7, None, "INMUN"),
+    ("Jebel Ali", 25.0, 55.06, None, "AEJEA"),
+    ("Strait of Hormuz", 26.57, 56.25, None, "HORMUZ"),
+    ("Salalah", 16.94, 54.0, None, "OMSLL"),
+    ("Bab el-Mandeb", 12.58, 43.33, None, "BAB_EL_MANDEB"),
+    ("Suez", 30.0, 32.55, None, "SUEZ"),
+    ("Colombo", 6.95, 79.84, None, "LKCMB"),
+    ("Port Klang", 3.0, 101.39, None, "MYPKG"),
+    ("Singapore", 1.26, 103.84, None, "SGSIN"),
+    ("Rotterdam", 51.95, 4.14, None, "NLRTM"),
+    ("Cape of Good Hope", -34.36, 18.47, None, "CAPE"),
+)
+GDACS_RADIUS_KM = {"TC": 500, "FL": 300, "EQ": 200, "VO": 100, "WF": 100}  # ASSUMPTION: how far each hazard reaches
+GDACS_DAYS = {"TC": 3, "FL": 3, "EQ": 1, "VO": 2, "WF": 2}  # ASSUMPTION: how long an alert stays open
+GDACS_TIMEOUT_S = 40.0
+GDACS_LEVEL = {"Red": "red", "Orange": "orange", "Green": "yellow"}  # the Sentinel acts on orange and red only
+
+
+def km_between(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    a = (math.sin(math.radians(lat2 - lat1) / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+         * math.sin(math.radians(lon2 - lon1) / 2) ** 2)
+    return 2 * 6371 * math.asin(math.sqrt(a))
+
+
+class GdacsFeed:
+    """GDACS (UN and European Commission): official alerts for live disasters worldwide. Only those near
+    the network become Sentinel signals; the card also says how close the nearest one is."""
+
+    name, label, interval_s = "gdacs", "GDACS disaster alerts (UN/EU)", 900.0
+
+    def __init__(self, fetch: Fetch | None = None) -> None:
+        self.fetch = fetch or (lambda url: http_get(url, timeout=GDACS_TIMEOUT_S))
+        self.sent: set[str] = set()
+
+    def reset(self) -> None:
+        """A new live run has a new Sentinel: send it every current alert again."""
+        self.sent.clear()
+
+    def poll(self, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        try:
+            features = json.loads(self.fetch(GDACS_URL)).get("features", [])
+        except Exception:  # GDACS is slow at times: try once more before reporting it down
+            try:
+                features = json.loads(self.fetch(GDACS_URL)).get("features", [])
+            except Exception as exc:  # a feed must never take the control room down
+                return [], status(self.name, self.label, False, "unreachable", [], repr(exc)[:200])
+        events, near, far = [], [], []
+        for feature in features:
+            p = feature.get("properties", {})
+            kind, level = p.get("eventtype"), p.get("alertlevel")
+            if kind not in GDACS_RADIUS_KM or level not in GDACS_LEVEL or str(p.get("iscurrent")).lower() != "true":
+                continue
+            lon, lat = feature["geometry"]["coordinates"][:2]
+            spots = sorted((km_between(lat, lon, plat, plon), place) for place in GDACS_PLACES
+                           for plat, plon in [place[1:3]])
+            km, closest = spots[0]
+            name = str(p.get("name") or kind)[:80]
+            title = f"{name} ({level}): {km:,.0f} km from {closest[0]}"
+            if km > GDACS_RADIUS_KM[kind]:
+                far.append((km, title))
+                continue
+            near.append(title)
+            for dist, (label, _, _, region, port) in spots:
+                event_id = f"GDACS-{kind}{p.get('eventid')}-{p.get('episodeid')}-{port or label.upper()}-{level}"
+                if dist > GDACS_RADIUS_KM[kind] or event_id in self.sent:
+                    continue
+                self.sent.add(event_id)
+                events.append({
+                    "event_id": event_id, "source": "gdacs", "kind_hint": "WEATHER_ALERT",
+                    "payload": {"region": region, "port_code": port, "alert_level": GDACS_LEVEL[level],
+                                "hazard": f"{name}, {dist:,.0f} km from {label} (GDACS {level} alert)",
+                                "valid_from": now.isoformat(),
+                                "valid_to": (now + timedelta(days=GDACS_DAYS[kind])).isoformat()},
+                })
+        nearest = [title for _, title in sorted(far)[:3]]
+        items = [{"title": f"⚠ {title}"} for title in near] + [{"title": f"Nearest: {title}"} for title in nearest]
+        summary = f"{len(near) + len(far)} live alerts worldwide, {len(near)} near your routes"
+        return events, status(self.name, self.label, True, summary, items[:8])
+
 
 NEWS_QUERIES = (
     '("truck strike" OR "transporters strike" OR "chakka jam") (Nashik OR Maharashtra OR Mumbai)',
@@ -326,5 +414,5 @@ def live_books(now: datetime, books: tuple[Path, ...] = LIVE_BOOKS) -> list[Path
 
 
 def default_feeds() -> list[Any]:
-    return [WeatherFeed(), NewsFeed(), AisFeed()]
+    return [WeatherFeed(), GdacsFeed(), NewsFeed(), AisFeed()]
 

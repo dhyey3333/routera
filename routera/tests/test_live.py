@@ -16,6 +16,7 @@ from routera.live_feeds import (
     MANGO_BOOK,
     MOORED,
     AisFeed,
+    GdacsFeed,
     NewsFeed,
     WeatherFeed,
     live_books,
@@ -81,6 +82,74 @@ def test_news_feed_reads_google_news_rss_and_skips_seen_articles() -> None:
     assert again == []
     feed.reset()  # live restarted: the new Sentinel gets today's headlines again
     assert len(feed.poll(NOW)[0]) == 2
+
+
+def gdacs_event(kind: str, level: str, lat: float, lon: float, name: str = "Storm") -> dict[str, Any]:
+    return {"geometry": {"type": "Point", "coordinates": [lon, lat]},
+            "properties": {"eventtype": kind, "eventid": "77", "episodeid": "1", "alertlevel": level,
+                           "iscurrent": "true", "name": name}}
+
+
+def test_gdacs_only_signals_alerts_near_the_network_and_says_how_far_the_nearest_is() -> None:
+    body = {"features": [gdacs_event("TC", "Orange", 19.5, 70.5, "Cyclone Near JNPT"),
+                         gdacs_event("EQ", "Green", 53.6, -163.0, "Quake in Alaska")]}
+    feed = GdacsFeed(fetch=lambda url: json.dumps(body).encode())
+    events, state = feed.poll(NOW)
+    assert state["ok"] and "2 live alerts worldwide, 1 near your routes" in state["summary"]
+    assert {e["payload"]["port_code"] or e["payload"]["region"] for e in events} == {"INNSA", "INMUN", "Nashik"}
+    assert {e["source"] for e in events} == {"gdacs"} and events[0]["payload"]["alert_level"] == "orange"
+    assert any("Nearest: Quake in Alaska" in i["title"] for i in state["items"])
+    assert feed.poll(NOW)[0] == []  # one signal per alert
+    feed.reset()
+    assert len(feed.poll(NOW)[0]) == 3  # all within 500 km of the cyclone
+
+
+def test_an_official_orange_gdacs_alert_confirms_a_real_plan_but_news_alone_never_does() -> None:
+    class Alerts:
+        name, label, interval_s = "gdacs", "GDACS (test)", 3600.0
+
+        def __init__(self, level: str) -> None:
+            self.feed = GdacsFeed(fetch=lambda url: json.dumps(
+                {"features": [gdacs_event("TC", level, 26.0, 58.0, "Cyclone Near Hormuz")]}).encode())
+
+        def poll(self, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+            return self.feed.poll(now)
+
+    class Headlines:
+        name, label, interval_s = "news", "News (test)", 3600.0
+
+        def poll(self, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+            titles = [("Tanker on fire and largely submerged in Hormuz", "Seatrade"),
+                      ("Ship on fire in Strait of Hormuz", "Firstpost"),
+                      ("Strait of Hormuz Watch: Vessel Attacks Persist", "IndustryWeek"),
+                      ("Houthis threaten shipping near Hormuz", "AFP")]
+            return ([{"event_id": f"N{i}", "source": "news", "kind_hint": None,
+                      "payload": {"headline": t, "body": "", "outlet": o}} for i, (t, o) in enumerate(titles)],
+                    status(self.name, self.label, True, "4 headlines"))
+
+    def run_live(*feeds: Any) -> dict[str, Any]:
+        service = RouteraService(feeds=list(feeds))
+        try:
+            service.start_live()
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline and len(service.live["feeds"]) < len(feeds):
+                time.sleep(0.1)
+            return service.snapshot()
+        finally:
+            service.stop_replay()
+
+    news_only = run_live(Headlines())
+    [candidate] = [d["disruption"] for d in news_only["disruptions"]]
+    assert candidate["status"] == "candidate" and candidate["location"] == "HORMUZ" and candidate["confidence"] > 0.6
+    assert news_only["routera"]["kpis"]["pending_plans"] == 0
+
+    official = run_live(Alerts("Orange"))
+    assert any(d["disruption"]["type"] == "WEATHER_ALERT" and d["disruption"]["status"] != "candidate"
+               for d in official["disruptions"])
+    assert official["routera"]["kpis"]["pending_plans"] >= 1
+
+    green = run_live(Alerts("Green"))
+    assert green["disruptions"] == [] and green["routera"]["kpis"]["pending_plans"] == 0
 
 
 def ais_message(mmsi: int, lat: float, lon: float, status: int, sog: float) -> str:
