@@ -103,6 +103,13 @@ select.btn { padding-right: 8px; }
 .feed li { margin: 2px 0; }
 .feed a { color: var(--text); text-decoration: none; }
 .feed a:hover { text-decoration: underline; }
+.feed .fi { all: unset; cursor: pointer; color: var(--text); }
+.feed .fi:hover, .feed .fi:focus-visible { color: var(--accent); text-decoration: underline; }
+.feed .ext { margin-left: 4px; color: var(--faint); }
+.feed.fresh { animation: feedflash 1.6s ease-out; }
+@keyframes feedflash { 0% { border-color: var(--good); box-shadow: 0 0 0 3px var(--good-soft); } 100% { border-color: var(--line); } }
+.feed .age { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 11px; color: var(--faint); }
+.feed .age button { margin-left: auto; }
 .ticker { flex: 1 1 320px; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ticker b { color: var(--text); font-weight: 600; }
 .pipeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -581,6 +588,7 @@ function load(key) { try { return localStorage.getItem(key); } catch (e) { retur
 
 // --- state ------------------------------------------------------------------------------------
 const S = {
+  feedSeen: {},
   scenario: null, scenarios: [], replay: { running: false, speed: null, step: 0, steps: 0 }, llm: "off",
   signals: [], disruptions: new Map(), published: 0, r: null, fleet: new Map(), asOf: 0,
   chain: [], chainOk: null, plan: null, overrides: {}, why: {}, phoneWhy: {}, phoneSeen: new Set(),
@@ -618,6 +626,10 @@ function flush() {
   for (const p of parts) {
     try { RENDER[p](); } catch (e) { console.error(`render ${p}`, e); }
   }
+}
+function feedItems(f) {  // each with its place in the feed; the headlines the Sentinel acted on come first
+  const items = f.items.map((i, n) => ({ i, n, flagged: f.name === "news" && itemSignal(i)?.status === "accepted" }));
+  return items.sort((a, b) => b.flagged - a.flagged);
 }
 const RENDER = {
   header() {
@@ -683,10 +695,13 @@ const RENDER = {
   },
   feeds() {
     const feeds = Object.values(S.live.feeds || {});
-    $("#feeds").innerHTML = feeds.length ? feeds.map((f) => `<div class="feed">
-      <div class="h"><span class="dot ${f.ok ? "live" : ""}"></span>${esc(f.label)}<small>polled ${hm(f.polled_at)} IST</small></div>
+    const fresh = new Set(feeds.filter((f) => S.feedSeen[f.name] && S.feedSeen[f.name] !== f.polled_at).map((f) => f.name));
+    feeds.forEach((f) => { S.feedSeen[f.name] = f.polled_at; });
+    $("#feeds").innerHTML = feeds.length ? feeds.map((f) => `<div class="feed ${fresh.has(f.name) ? "fresh" : ""}">
+      <div class="h"><span class="dot ${f.ok ? "live" : ""}"></span>${esc(f.label)}</div>
+      <div class="age"><span data-age="${esc(f.name)}"></span><button class="btn small ghost" data-refresh="${esc(f.name)}" title="Fetch this feed now" aria-label="Refresh ${esc(f.label)}">↻</button></div>
       <p>${esc(f.summary)}${f.error ? ` <span class="chip bad" title="${esc(f.error)}">error</span>` : ""}</p>
-      ${f.items.length ? `<ul>${f.items.map((i) => `<li>${i.link ? `<a href="${esc(i.link)}" target="_blank" rel="noopener">${esc(i.title)}</a>${i.outlet ? ` · ${esc(i.outlet)}` : ""}` : esc(i.title)}</li>`).join("")}</ul>` : ""}
+      ${f.items.length ? `<ul>${feedItems(f).map(({ i, n, flagged }) => `<li>${flagged ? "⚠ " : ""}<button class="fi" data-fi="${esc(f.name)}|${n}" title="See this on the map and what it touches">${esc(i.title)}</button>${i.outlet ? ` · ${esc(i.outlet)}` : ""}${i.link ? `<a class="ext" href="${esc(i.link)}" target="_blank" rel="noopener" aria-label="Read the article">↗</a>` : ""}</li>`).join("")}</ul>` : ""}
     </div>`).join("") : `<div class="feed"><div class="h"><span class="dot live"></span>Connecting to the real feeds…</div><p>Open-Meteo weather, Google News and AIS ships.</p></div>`;
   },
   phone() { $("#thread").innerHTML = phoneHTML(); const t = $("#thread"); t.scrollTop = t.scrollHeight; },
@@ -915,6 +930,18 @@ function tick() {
   }
 }
 setInterval(tick, 250);
+function feedAges() {  // real time, not the simulated clock: these feeds are live
+  for (const el of $$("[data-age]")) {
+    const f = S.live?.feeds?.[el.dataset.age];
+    if (!f) continue;
+    const ago = Math.max(0, (Date.now() - Date.parse(f.polled_at)) / 1000);
+    const next = f.interval_s ? Math.max(0, f.interval_s - ago) : null;
+    const span = (s) => (s < 60 ? `${Math.round(s)} s` : `${Math.round(s / 60)} min`);
+    const text = `Updated ${span(ago)} ago${next != null ? (next > 0 ? ` · next in ${span(next)}` : " · updating…") : ""}`;
+    if (el.textContent !== text) el.textContent = text;
+  }
+}
+setInterval(feedAges, 1000);
 
 // --- live stream ------------------------------------------------------------------------------
 function toast(title, text, color = "var(--accent)") {
@@ -1081,7 +1108,14 @@ document.addEventListener("click", async (ev) => {
   else if (d.why) why(S.plan, d.why);
   else if (d.layer) toggleLayer(d.layer, t);
   else if (d.mapbox) { selectBox(d.mapbox); $(".mappanel").scrollIntoView({ behavior: "smooth", block: "center" }); }
-  else if (d.mapclear !== undefined) { selectBox(null); }
+  else if (d.mapclear !== undefined) { M.focus = null; selectBox(null); }
+  else if (d.fi) { const [name, n] = d.fi.split("|"); focusItem(name, Number(n)); }
+  else if (d.whatif) whatIf(d.whatif);
+  else if (d.refocus !== undefined) { M.focus = M.lastFocus; selectBox(null); drawFocus(true); }
+  else if (d.refresh) {
+    try { await api(`/api/feeds/${encodeURIComponent(d.refresh)}/refresh`, {}); toast("↻ Refreshing", "Fetching this feed now", "var(--good)"); }
+    catch (e) { toast("Not yet", e.message, "var(--warn)"); }
+  }
   else if (d.mapopt) pickRoute(d.mapopt);
   else if (d.pack) { const [cid, rid] = d.pack.split("|"); openPack(S.plan, cid, rid); }
   else if (d.approve !== undefined) { t.disabled = true; await approve(S.plan); }
@@ -1285,6 +1319,8 @@ async function loadRow() {
   } catch (e) { console.warn(e); }
 }
 function selectBox(cid) {
+  if (cid && M.focus) { M.lastFocus = M.focus; M.focus = null; drawFocus(); }
+  if (!cid) M.lastFocus = M.focus;
   M.sel = cid; M.row = null; M.rowPlan = null; M.sig = ""; M.fit = Boolean(cid); M.cls.clear();
   if (!cid) M.plan = undefined;  // back to the plan view: refit it
   if (cid) loadRow();
@@ -1366,7 +1402,7 @@ function drawRoutes() {
     }
     const plan = (S.r?.plans || []).find((x) => x.plan_id === S.plan);
     const counts = new Map();
-    if (plan?.status === "pending") {
+    if (plan?.status === "pending" && !M.focus) {
       for (const r of plan.rows) {
         const c = chosen(plan, r);
         if (c && c.route_id !== "STAY") counts.set(c.route_id, { n: (counts.get(c.route_id)?.n || 0) + 1, c });
@@ -1449,6 +1485,7 @@ function drawLive() {
   }
 }
 function sideHTML() {
+  if (M.focus) return focusHTML();
   const f = M.sel && S.fleet.get(M.sel);
   if (!f) {
     const all = [...S.fleet.values()], risk = all.filter((x) => x.affected_by.length && !x.booking).length;
@@ -1461,7 +1498,7 @@ function sideHTML() {
   }
   const row = M.row, choice = currentChoice();
   const plan = (S.r?.plans || []).find((p) => p.plan_id === M.rowPlan);
-  const head = `<h4><span class="mono">${esc(f.container_id)}</span><button class="btn small ghost" data-mapclear>✕</button></h4>
+  const head = `${M.lastFocus ? `<button class="btn small ghost" data-refocus style="margin-bottom:6px">← Back to ${esc(M.lastFocus.it.title.slice(0, 34))}…</button>` : ""}<h4><span class="mono">${esc(f.container_id)}</span><button class="btn small ghost" data-mapclear>✕</button></h4>
     <p class="lead">${esc(f.crop)} · ${(f.weight_kg / 1000).toFixed(0)} t · <b>${life(lifeNow(f.container_id) ?? f.days_left)}</b> left · ${esc(f.status.replaceAll("_", " "))}<br>Booked to <b>${esc(f.destination_name)}</b>${f.booking ? `<br>Now on <b>${esc(f.booking.label)}</b> (${esc(f.booking.booking_id)})` : ""}${f.affected_by.length && !f.booking ? `<br><b style="color:var(--bad)">At risk:</b> ${esc(f.affected_by.join(", "))}` : ""}</p>`;
   if (!row) return `${head}<p class="lead">Working out its routes…</p>`;
   const opts = row.options.filter((o) => o.route_id === "STAY" || M.geo.routes[o.route_id]);
@@ -1477,6 +1514,86 @@ function sideHTML() {
   const baseline = row.baseline ? `<p class="lead">Without ROUTERA: ${esc(row.baseline.label)}, ${inr(row.baseline.value_inr)}.</p>` : "";
   return `${head}${can ? `<p class="lead">In plan <b>${esc(plan.plan_id)}</b>: click a route to change it.</p>` : `<p class="lead">Priced live. Nothing is booked unless a plan is approved.</p>`}${list}${baseline}`;
 }
+// --- clicking a real feed item: where it is, what it touches, and what a closure there would mean
+const REGION_NODE = { GULF: "HORMUZ", RED_SEA: "BAB_EL_MANDEB", NASHIK: "KASARA_GHAT" };
+function itemSignal(it) {  // what the Sentinel decided about a headline
+  return S.signals.find((s) => (s.title || "").startsWith(it.title)) || null;
+}
+function boxesTouched(it) {
+  const all = [...S.fleet.values()].filter((f) => !f.booking);
+  const code = it.via || it.place;
+  if (code) return all.filter((f) => f.path.split("|").includes(code));
+  if (it.lat != null) {
+    const spot = [it.lat, it.lon], km = it.radius_km || 300;
+    return all.filter((f) => { const p = bookedPath(f.path); return p && p.pts.some((q) => hav(spot, q) <= km); });
+  }
+  return [];
+}
+function focusItem(name, n) {
+  const feed = S.live?.feeds?.[name], item = feed?.items?.[n];
+  if (!item || !M.map) return;
+  const it = { ...item };
+  const sig = name === "news" ? itemSignal(it) : null;
+  const code = sig?.location && (REGION_NODE[sig.location] || sig.location);  // "the Gulf" reaches boxes through Hormuz
+  if (code && M.geo.places[code]) { it.place = code; it.lat = M.geo.places[code].lat; it.lon = M.geo.places[code].lon; it.zoom = 5; }
+  M.focus = { name, label: feed.label, it, sig, preview: null, loading: false };
+  M.lastFocus = null; M.sel = null; M.row = null; M.rowPlan = null; M.sig = ""; M.cls.clear();
+  drawFocus(true); mark("map");
+  $(".mappanel").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function drawFocus(move = false) {
+  const g = M.groups.focus;
+  if (!g) return;
+  g.clearLayers();
+  const focus = M.focus;
+  if (!focus) return;
+  const { it, preview } = focus, bounds = [];
+  if (it.road) {
+    for (const r of (S.live?.feeds?.traffic?.roads || []).filter((x) => x.label === it.road)) {
+      const line = L.polyline(r.path, r.alternative ? { color: cssVar("--accent"), weight: 4, opacity: 0.9, dashArray: "8 6" } : { color: cssVar("--good"), weight: 6, opacity: 0.95 })
+        .bindTooltip(`<b>${r.alternative ? "Live alternative" : "Live now"}</b><br>${roadTime(r.minutes)} now · ${r.km.toLocaleString("en-IN")} km`, { sticky: true }).addTo(g);
+      bounds.push(...line.getLatLngs());
+    }
+  } else if (it.lat != null) {
+    L.circleMarker([it.lat, it.lon], { radius: 16, weight: 3, color: cssVar("--accent"), fillColor: cssVar("--accent"), fillOpacity: 0.18, interactive: false }).addTo(g);
+  }
+  for (const route of new Set((preview?.routes || []).map((r) => r.route_id))) {
+    const p = routePath(route);
+    if (!p) continue;
+    const n = preview.routes.filter((r) => r.route_id === route), line = L.polyline(p.pts, { color: cssVar("--good"), weight: Math.min(3 + n.length, 8), opacity: 0.9, dashArray: "10 6" })
+      .bindTooltip(`<b>Preview: ${n.length} box${n.length > 1 ? "es" : ""}</b><br>${esc(n[0].label)}<br>Nothing has moved`, { sticky: true }).addTo(g);
+    bounds.push(...line.getLatLngs());
+  }
+  if (!move && !preview) return;
+  if (bounds.length) M.map.fitBounds(L.latLngBounds(bounds), { padding: [36, 36], maxZoom: 8 });
+  else if (it.lat != null) M.map.setView([it.lat, it.lon], it.zoom || 6);
+}
+async function whatIf(place) {
+  const focus = M.focus;
+  if (!focus) return;
+  focus.loading = true; mark("map");
+  try { focus.preview = await api(`/api/whatif?place=${encodeURIComponent(place)}`); }
+  catch (e) { toast("Preview failed", e.message, "var(--bad)"); }
+  focus.loading = false; M.sig = ""; drawFocus(true); mark("map");
+}
+function focusHTML() {
+  const { it, label, sig, preview, loading, name } = M.focus;
+  const touched = boxesTouched(it);
+  const verdict = name !== "news" ? "" : !sig ? `<p class="lead">The Sentinel has not processed this headline yet.</p>`
+    : sig.status === "accepted" ? `<p class="lead"><b>The Sentinel took this seriously:</b> ${esc((TYPE[sig.type] || ["", sig.type])[1]).toLowerCase()} at ${esc(M.geo.places[sig.location]?.name || sig.location)}, as evidence only. News alone never moves cargo.</p>`
+    : `<p class="lead"><b>The Sentinel ignored this:</b> ${esc(sig.reason || sig.status_reason || "not a disruption")}.</p>`;
+  const roads = it.road ? (S.live?.feeds?.traffic?.roads || []).filter((r) => r.label === it.road) : [];
+  const roadList = roads.map((r) => `<li>${r.alternative ? "Alternative" : "<b>Best now</b>"}: ${roadTime(r.minutes)}${r.delay_min >= 1 ? ` (+${roadTime(r.delay_min)})` : ""}, ${r.km.toLocaleString("en-IN")} km</li>`).join("");
+  const boxes = touched.slice(0, 12).map((f) => `<button class="opt" data-mapbox="${esc(f.container_id)}"><i class="sw" style="background:var(--${lifeClass(lifeNow(f.container_id) ?? f.days_left)})"></i><span><b class="mono">${esc(f.container_id)}</b><small>${esc(f.crop)} · ${esc(f.status.replaceAll("_", " "))} → ${esc(f.destination_name)}</small></span><span class="v">${life(lifeNow(f.container_id) ?? f.days_left)}</span></button>`).join("");
+  const code = it.place;
+  const name_ = code ? M.geo.places[code]?.name || code : "";
+  const shown = preview ? `<div class="notice ${preview.containers ? "good" : "muted"}" style="margin:8px 0"><b>Preview only. Nothing has moved.</b><br>${esc(preview.headline)}${preview.containers ? `<br>Saves about <b>${inr(preview.saved_inr)}</b> vs doing nothing. Dashed green on the map.` : ""}</div>` : "";
+  const button = code && !preview && touched.length ? `<button class="btn primary" data-whatif="${esc(code)}" ${loading ? "disabled" : ""} style="width:100%;margin:8px 0">${loading ? "Working it out…" : `What if ${esc(name_)} closes?`}</button>` : "";
+  return `<h4>${esc(label)}<button class="btn small ghost" data-mapclear>✕</button></h4>
+    <p class="lead"><b>${esc(it.title)}</b></p>${verdict}${roadList ? `<ul>${roadList}</ul>` : ""}${button}${shown}
+    <p class="lead" style="margin-top:8px">${touched.length ? `<b>${touched.length} of your containers</b> ${it.road ? "could use this road" : it.place ? "pass through here" : "pass near this"}. Click one for its alternatives.` : "None of your containers pass through here."}</p>
+    ${boxes}${touched.length > 12 ? `<p class="lead">and ${touched.length - 12} more</p>` : ""}`;
+}
 RENDER.map = () => {
   if (!M.map) return;
   const plans = (S.r?.plans || []).map((p) => [p.plan_id, p.version, p.status]);
@@ -1485,7 +1602,7 @@ RENDER.map = () => {
   const polled = Object.values(S.live?.feeds || {}).map((x) => x.polled_at);
   const data = JSON.stringify([plans, dis, boxes, polled, S.live?.on, S.r?.map]);
   if (data !== M.dataSig) { M.dataSig = data; loadRow(); M.sig = ""; drawEvents(); drawLive(); }
-  const sig = JSON.stringify([data, S.plan, S.overrides, M.sel, Boolean(M.row), M.row?.options?.length, M.rowPlan]);
+  const sig = JSON.stringify([data, S.plan, S.overrides, M.sel, Boolean(M.row), M.row?.options?.length, M.rowPlan, M.focus?.it?.title, M.focus?.preview?.place, M.focus?.loading]);
   if (sig !== M.sig) { M.sig = sig; drawRoutes(); $("#map-side").innerHTML = sideHTML(); moveDots(); }
 };
 function initMap() {
@@ -1493,7 +1610,7 @@ function initMap() {
     M.map = L.map("map", { zoomControl: true, worldCopyJump: false, minZoom: 2 }).setView(HOME, HOME_ZOOM);
     M.tiles = baseTiles().addTo(M.map);
     M.canvas = L.canvas({ padding: 0.3 });
-    for (const name of ["traffic", "routes", "places", "events", "alerts", "ships", "boxes"]) M.groups[name] = L.layerGroup().addTo(M.map);
+    for (const name of ["traffic", "routes", "focus", "places", "events", "alerts", "ships", "boxes"]) M.groups[name] = L.layerGroup().addTo(M.map);
     M.roads = L.layerGroup().addTo(M.groups.traffic);
     for (const place of Object.values(M.geo.places)) {
       if (place.kind === "region") continue;

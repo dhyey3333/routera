@@ -101,6 +101,7 @@ def test_gdacs_only_signals_alerts_near_the_network_and_says_how_far_the_nearest
     assert {e["source"] for e in events} == {"gdacs"} and events[0]["payload"]["alert_level"] == "orange"
     assert any("Nearest: Quake in Alaska" in i["title"] for i in state["items"])
     assert {m["near"] for m in state["markers"]} == {True, False}  # both go on the map
+    assert all(i["lat"] and i["lon"] for i in state["items"])  # every item can be clicked to its place
     assert feed.poll(NOW)[0] == []  # one signal per alert
     feed.reset()
     assert len(feed.poll(NOW)[0]) == 3  # all within 500 km of the cyclone

@@ -24,6 +24,7 @@ from routera.reroute import load_routes
 from routera.shelf_life import ShelfLifeTracker
 
 PLANNING_STATUSES = ("confirmed", "active")
+WHAT_IF_ROAD_DAYS, WHAT_IF_PORT_DAYS = 1.0, 14.0  # the Sentinel's defaults for a closure with no known end
 CONGESTION_DAYS = 3.0
 PAPERWORK_BACKLOG_DAYS = 3.0
 TYPE_LABEL = {
@@ -305,6 +306,32 @@ class Orchestrator:
         """Every route for one container right now, priced on the live closures: any box, any time."""
         row = self.planner.plan([self.containers()[container_id]], self.context())["rows"][0]
         return {**row, "booking": self.assigned.get(container_id)}
+
+    def what_if(self, place: str) -> dict[str, Any]:
+        """The plan if `place` shut today, for the boxes that pass through it. A preview only: nothing is
+        booked, no plan is created and nothing goes on the chain."""
+        network = self.sentinel.network
+        corridors = network.corridors_through(place)
+        closed = {place, *corridors}
+        ctx = self.context()
+        for spot in closed:
+            ctx.blocked[spot] = f"what if {place} shut"
+        boxes = [c for c in self.containers().values()
+                 if c.container_id not in self.assigned
+                 and not closed.isdisjoint({*c.route_legs, c.destination_port, c.facility_id or ""})]
+        if not boxes:
+            return {"place": place, "containers": 0, "headline": "No container on the books passes through here."}
+        on_road = corridors or place in {c.corridor_id for c in network.corridors}
+        days = WHAT_IF_ROAD_DAYS if on_road else WHAT_IF_PORT_DAYS
+        for c in boxes:
+            ctx.delay[c.container_id] = max(ctx.delay.get(c.container_id, 0.0), days)
+        built = self.planner.plan(boxes, ctx)
+        moves = ", ".join(f"{s['count']} → {s['name']}" for s in built["split"]) or "no feasible moves"
+        return {"place": place, "containers": len(boxes), "delay_days": days, "moves": moves,
+                "headline": f"If this shut for about {days:g} d: {len(boxes)} containers at risk. Plan: {moves}.",
+                "saved_inr": built["saved_inr"], "value_inr": built["value_inr"], "baseline_inr": built["baseline_inr"],
+                "routes": [{"container_id": r["container_id"], "route_id": r["choice"]["route_id"],
+                            "label": r["choice"]["label"]} for r in built["rows"] if r["choice"]]}
 
     def escalation(self, plan: dict[str, Any], now: datetime) -> dict[str, Any]:
         """Who the plan waits on now. Past the last stage it is an SLA breach, and it still waits."""

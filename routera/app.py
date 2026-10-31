@@ -43,6 +43,7 @@ DEFAULT_PORT = 8000
 OPTIONAL_BODY = Body(default={})
 LIVE = "live"
 LIVE_TICK_S = 60.0
+REFRESH_MIN_S = 30.0  # the fastest one feed can be refreshed by hand, to protect free API limits
 log = logging.getLogger("routera.live")
 
 
@@ -60,6 +61,9 @@ class RouteraService(SentinelService):
 
     def __init__(self, *args: Any, feeds: list[Any] | None = None, **kwargs: Any) -> None:
         self.feeds = feeds if feeds is not None else default_feeds()
+        self._wake = threading.Event()
+        self._due: dict[str, float] = {}
+        self._refreshed: dict[str, float] = {}
         super().__init__(*args, **kwargs)
 
     def _install(self, scenario: Scenario | None, rig: Rig) -> None:
@@ -106,7 +110,7 @@ class RouteraService(SentinelService):
         return {"live": True, "feeds": [f.name for f in self.feeds], "simulated_fleet": True}
 
     def _run_live(self, rig: Rig, stop: threading.Event) -> None:
-        due = dict.fromkeys((f.name for f in self.feeds), 0.0)
+        due = self._due = dict.fromkeys((f.name for f in self.feeds), 0.0)
         while not stop.is_set():
             for feed in self.feeds:
                 if time.monotonic() < due[feed.name]:
@@ -122,7 +126,7 @@ class RouteraService(SentinelService):
                             self.ingest(raw)
                         except Exception:  # one bad item must not stop the feeds
                             log.exception("live event %s failed", raw.get("event_id"))
-                    self.live["feeds"][feed.name] = state
+                    self.live["feeds"][feed.name] = {**state, "interval_s": feed.interval_s}
                     if "slow" in state:
                         self.orchestrator.set_live_slow(state["slow"])
                     self._broadcast("feeds", self.live)
@@ -132,7 +136,24 @@ class RouteraService(SentinelService):
                 self._advance(rig)
                 rig.sentinel.tick()
                 self._broadcast("routera", self.orchestrator.snapshot())
-            stop.wait(LIVE_TICK_S)
+            for _ in range(int(LIVE_TICK_S)):
+                if stop.wait(1.0) or self._wake.is_set():
+                    break
+            self._wake.clear()
+
+    def refresh_feed(self, name: str) -> dict[str, Any]:
+        """Poll one feed now instead of waiting for its turn."""
+        if name not in {f.name for f in self.feeds}:
+            raise KeyError(name)
+        if not self.live.get("on"):
+            raise ValueError("live mode is off")
+        wait = REFRESH_MIN_S - (time.monotonic() - self._refreshed.get(name, -REFRESH_MIN_S))
+        if wait > 0:
+            raise OverflowError(f"{name} was refreshed moments ago; try again in {wait:.0f} s")
+        self._refreshed[name] = time.monotonic()
+        self._due[name] = 0.0
+        self._wake.set()
+        return {"feed": name, "refreshing": True}
 
     @staticmethod
     def _advance(rig: Rig) -> None:
@@ -233,6 +254,24 @@ def create_routera_app(service: RouteraService | None = None) -> FastAPI:
         except Exception as exc:  # the message could carry the key
             raise HTTPException(502, "traffic tile unavailable") from exc
         return Response(data, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
+
+    @app.post("/api/feeds/{name}/refresh", status_code=202)
+    def refresh_feed(name: str) -> dict[str, Any]:
+        try:
+            return service.refresh_feed(name)
+        except KeyError as exc:
+            raise HTTPException(404, f"no feed {name}") from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except OverflowError as exc:
+            raise HTTPException(429, str(exc)) from exc
+
+    @app.get("/api/whatif")
+    def what_if(place: str = Query(...)) -> dict[str, Any]:
+        known = {*load_geo()["places"], *(c.corridor_id for c in service.orchestrator.sentinel.network.corridors)}
+        if place not in known:
+            raise HTTPException(404, f"unknown place {place}")
+        return service.run(service.orchestrator.what_if, place)
 
     @app.get("/api/map")
     def map_data() -> dict[str, Any]:

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,7 +12,7 @@ from fastapi.testclient import TestClient
 from agents.sentinel.fakes import JsonContainerRepo
 from routera.app import RouteraService, create_routera_app
 from routera.geo import booked_key, load_geo
-from routera.live_feeds import LIVE_BOOKS, TrafficFeed
+from routera.live_feeds import LIVE_BOOKS, TrafficFeed, status
 from routera.reroute import load_routes
 
 
@@ -51,6 +53,54 @@ def test_the_map_api_and_live_options_for_any_container(client: TestClient) -> N
     row = client.get(f"/api/containers/{box['container_id']}/options").json()
     assert row["container_id"] == box["container_id"] and "options" in row
     assert client.get("/api/containers/NOPE/options").status_code == 404
+
+
+def test_what_if_previews_a_closure_without_moving_or_logging_anything(client: TestClient) -> None:
+    client.service.start_replay("gulf_closure", 0)  # type: ignore[attr-defined]
+    client.service.wait_for_replay(30)  # type: ignore[attr-defined]
+    before = client.get("/api/state").json()["routera"]
+    preview = client.get("/api/whatif", params={"place": "HORMUZ"}).json()
+    after = client.get("/api/state").json()["routera"]
+    assert preview["containers"] > 0 and preview["routes"] and "If this shut" in preview["headline"]
+    assert preview["delay_days"] == 14
+    assert all(r["route_id"] for r in preview["routes"])
+    assert after["bookings"] == before["bookings"] and after["chain"]["length"] == before["chain"]["length"]
+    assert [p["plan_id"] for p in after["plans"]] == [p["plan_id"] for p in before["plans"]]
+    client.service.start_replay("nashik_corridor_strike", 0)  # type: ignore[attr-defined]
+    client.service.wait_for_replay(30)  # type: ignore[attr-defined]
+    road = client.get("/api/whatif", params={"place": "KASARA_GHAT"}).json()
+    assert road["delay_days"] == 1 and road["containers"] > 0
+    assert all(r["route_id"] not in ("N-JNPT-LK", "N-JNPT-SG", "N-VASHI") for r in road["routes"])  # the shut road
+    assert client.get("/api/whatif", params={"place": "ATLANTIS"}).status_code == 404
+
+
+def test_a_feed_can_be_refreshed_on_demand_but_not_hammered(client: TestClient) -> None:
+    class Counting:
+        name, label, interval_s = "count", "Counting (test)", 3600.0
+        polls = 0
+
+        def poll(self, now: Any) -> tuple[list[Any], dict[str, Any]]:
+            Counting.polls += 1
+            return [], status(self.name, self.label, True, f"poll {Counting.polls}")
+
+    service = client.service  # type: ignore[attr-defined]
+    service.feeds = [Counting()]
+    assert client.post("/api/feeds/count/refresh", json={}).status_code == 409  # live mode is off
+    service.start_live()
+    try:
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline and Counting.polls < 1:
+            time.sleep(0.05)
+        assert client.post("/api/feeds/nope/refresh", json={}).status_code == 404
+        assert client.post("/api/feeds/count/refresh", json={}).status_code == 202
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline and Counting.polls < 2:
+            time.sleep(0.05)
+        assert Counting.polls == 2  # polled again without waiting an hour
+        assert service.live["feeds"]["count"]["interval_s"] == 3600.0
+        assert client.post("/api/feeds/count/refresh", json={}).status_code == 429  # too soon
+    finally:
+        service.stop_replay()
 
 
 def test_the_traffic_tile_needs_a_key_and_checks_its_address(client: TestClient) -> None:

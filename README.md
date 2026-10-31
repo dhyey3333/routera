@@ -30,7 +30,7 @@ This opens http://localhost:8000 and plays the India-inside Nashik corridor scen
 | What | Command (`make` target) |
 |---|---|
 | Control room, port 8000 | `python -m routera` (`make routera`) |
-| Tests: engine, app and Sentinel (349) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
+| Tests: engine, app and Sentinel (351) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
 | Lint | `python -m ruff check routera agents/sentinel` (`make routera-lint`) |
 | Sentinel console only, port 8001 | `python -m agents.sentinel.api --demo` (`make sentinel-demo`) |
 
@@ -50,7 +50,7 @@ You can also pick **🔴 LIVE** in the scenario dropdown. The same Sentinel, pla
 | Headlines on the corridor, JNPT, grapes, Red Sea / Hormuz | Google News RSS | none | news the Sentinel classifies (rules, or the LLM) |
 | Ships off Rotterdam, JNPT, Mundra and Jebel Ali | AIS via aisstream.io (`pip install websockets`) | `AISSTREAM_API_KEY` (free, GitHub sign-up) | `PORT_CONGESTION` when ships at anchor pass a threshold (source `ais_port`, reliability 0.80: an estimate, not an official notice). aisstream.io is crowd-sourced and barely covers Indian and Gulf waters, so those ports usually show 0 ships; Rotterdam, where the mangoes go, is well covered |
 
-Only the feeds are real. The fleet is still the simulated container book (Nashik grapes, plus Konkan mangoes in `routera/data/containers_mango.json`), moved so its ETAs and cut-offs start today, and bookings stay simulated. Mangoes age at their own reefer setpoint (12 °C; colder means chilling injury, not longer life). They also need hot water treatment for the EU and irradiation for the US, which ROUTERA drafts as a booking request. All mango prices and treatment rules are illustrative. On a quiet day, live mode correctly shows "no decision needed". Use **⚡ Feed the Sentinel** to add an event on top.
+Click any item on a feed card to see it on the map, which containers it touches, and what a closure there would mean. Only the feeds are real. The fleet is still the simulated container book (Nashik grapes, plus Konkan mangoes in `routera/data/containers_mango.json`), moved so its ETAs and cut-offs start today, and bookings stay simulated. Mangoes age at their own reefer setpoint (12 °C; colder means chilling injury, not longer life). They also need hot water treatment for the EU and irradiation for the US, which ROUTERA drafts as a booking request. All mango prices and treatment rules are illustrative. On a quiet day, live mode correctly shows "no decision needed". Use **⚡ Feed the Sentinel** to add an event on top.
 
 The LLM is off by default (`SENTINEL_LLM=off`). With it off, the keyword rules classify the news
 and the summaries come from templates. See `agents/sentinel/README.md` to switch it on.
@@ -89,6 +89,8 @@ and explainable.
 | `GET /api/plans/{id}/filing-pack.zip?container=NSK-03` | The pack as a ZIP: cover sheet, JSON, PDFs, manifest |
 | `GET /api/plans/{id}/paperwork/{doc_type}.pdf?container=NSK-03` | One draft as a PDF |
 | `GET /api/map` | Places and real route geometry for the map |
+| `GET /api/whatif?place=HORMUZ` | The plan if a place shut today. A preview: nothing is booked or logged |
+| `POST /api/feeds/{name}/refresh` | Fetch one feed now (at most every 30 s) |
 | `GET /api/traffic/tile/{z}/{x}/{y}.png` | Live traffic-flow tile, fetched by the server so the key stays private |
 | `GET /api/containers/{id}/options` | Every route for one container right now, on the live closures |
 | `GET /api/rules`, `GET /api/rules/to-verify` | Every rule with its citation and freshness; the rules still to verify, as Markdown |

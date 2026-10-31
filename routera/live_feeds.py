@@ -108,7 +108,8 @@ class WeatherFeed:
                 cur, daily = data["current"], data["daily"]
                 rains = [round(r or 0.0, 1) for r in daily["precipitation_sum"]]
                 items.append({"title": f"{label}: {cur['temperature_2m']:.0f} °C now, "
-                              f"rain next 3 days {' / '.join(f'{r:g}' for r in rains)} mm"})
+                              f"rain next 3 days {' / '.join(f'{r:g}' for r in rains)} mm",
+                              "lat": lat, "lon": lon, "zoom": 9, "place": port})
                 markers.append({"lat": lat, "lon": lon, "title": items[-1]["title"]})
                 for day, rain, code, tmax in zip(daily["time"], rains, daily["weather_code"],
                                                  daily["temperature_2m_max"], strict=True):
@@ -198,10 +199,11 @@ class GdacsFeed:
             title = f"{name} ({level}): {km:,.0f} km from {closest[0]}"
             markers.append({"lat": lat, "lon": lon, "title": title, "level": level, "kind": kind,
                             "near": km <= GDACS_RADIUS_KM[kind]})
+            spot = {"lat": lat, "lon": lon, "zoom": 6, "place": closest[4], "radius_km": GDACS_RADIUS_KM[kind]}
             if km > GDACS_RADIUS_KM[kind]:
-                far.append((km, title))
+                far.append((km, title, spot))
                 continue
-            near.append(title)
+            near.append((title, spot))
             for dist, (label, _, _, region, port) in spots:
                 event_id = f"GDACS-{kind}{p.get('eventid')}-{p.get('episodeid')}-{port or label.upper()}-{level}"
                 if dist > GDACS_RADIUS_KM[kind] or event_id in self.sent:
@@ -214,8 +216,9 @@ class GdacsFeed:
                                 "valid_from": now.isoformat(),
                                 "valid_to": (now + timedelta(days=GDACS_DAYS[kind])).isoformat()},
                 })
-        nearest = [title for _, title in sorted(far)[:3]]
-        items = [{"title": f"⚠ {title}"} for title in near] + [{"title": f"Nearest: {title}"} for title in nearest]
+        nearest = sorted(far, key=lambda found: found[0])[:3]
+        items = [{"title": f"⚠ {title}", **spot} for title, spot in near]
+        items += [{"title": f"Nearest: {title}", **spot} for _, title, spot in nearest]
         summary = f"{len(near) + len(far)} live alerts worldwide, {len(near)} near your routes"
         return events, status(self.name, self.label, True, summary, items[:8], markers=markers)
 
@@ -242,6 +245,9 @@ def parse_rss(xml_bytes: bytes) -> list[dict[str, str]]:
         items.append({"title": title, "link": (item.findtext("link") or "").strip(),
                       "published": (item.findtext("pubDate") or "").strip(), "outlet": source or "Google News"})
     return items
+
+
+MAX_NEWS_ITEMS = 30  # the card scrolls, and shows the headlines the Sentinel acted on first
 
 
 class NewsFeed:
@@ -280,7 +286,7 @@ class NewsFeed:
                                            "outlet": article["outlet"][:80]}})
         ok = len(errors) < len(self.queries)
         summary = f"{len(items)} headlines from the last 2 days, {len(events)} new" if ok else "unreachable"
-        return events, status(self.name, self.label, ok, summary, items[:8], "; ".join(errors))
+        return events, status(self.name, self.label, ok, summary, items[:MAX_NEWS_ITEMS], "; ".join(errors))
 
 
 # --- ships (AIS) ----------------------------------------------------------------------------------
@@ -380,12 +386,13 @@ class AisFeed:
         with self._lock:
             fresh = [v for v in self.vessels.values() if self.clock() - v["seen"] < FRESH_S]
         events, items = [], []
-        for code, (label, _, threshold) in AIS_PORTS.items():
+        for code, (label, box, threshold) in AIS_PORTS.items():
             here = [v for v in fresh if v["port"] == code]
             waiting = [v for v in here if v["status"] == AT_ANCHOR]  # not tugs and barges standing still
             berthed = sum(v["status"] == MOORED for v in here)
             items.append({"title": f"{label}: {len(here)} ships, {len(waiting)} waiting at anchor, "
-                                   f"{berthed} at berth"})
+                                   f"{berthed} at berth", "place": code, "zoom": 9,
+                          "lat": (box[0][0] + box[1][0]) / 2, "lon": (box[0][1] + box[1][1]) / 2})
             event_id = f"AIS-{code}-{now:%Y%m%d%H}"
             if len(waiting) >= threshold and event_id not in self.sent:
                 self.sent.add(event_id)
@@ -532,7 +539,8 @@ class TrafficFeed:
                     live_path = points
                 late = f"+{clock_time(delay)} in traffic" if delay >= 1 else "no delay"
                 km = s["lengthInMeters"] / 1000
-                items.append({"title": f"{label}: {clock_time(minutes)} now, {late}, {km:,.0f} km"})
+                items.append({"title": f"{label}: {clock_time(minutes)} now, {late}, {km:,.0f} km",
+                              "road": label, "place": place, "via": place or b})
                 for route_id in route_ids:
                     live_roads[route_id] = {"minutes": round(minutes), "delay_min": round(delay)}
                 if place and delay >= SLOW_FROM_MIN:
@@ -551,7 +559,8 @@ class TrafficFeed:
         summary = f"{len(items)} roads live, " + (f"worst +{clock_time(worst)}" if worst >= 1 else "no delays")
         summary += f" · {len(markers)} incident(s) on NH160" + (f", {closures} closed" if closures else "")
         worst_first = sorted(markers, key=lambda m: m["category"] != ROAD_CLOSED)
-        alerts = [{"title": f"⚠ {m['title']}"} for m in worst_first[:4]]
+        alerts = [{"title": f"⚠ {m['title']}", "lat": m["lat"], "lon": m["lon"], "zoom": 13, "place": m["place"]}
+                  for m in worst_first[:4]]
         state = status(self.name, self.label, True, summary, alerts + items, "; ".join(errors), markers)
         state.update(roads=roads, live_roads=live_roads, slow=slow)
         return events, state
@@ -578,14 +587,14 @@ class TrafficFeed:
             what = ((p.get("events") or [{}])[0].get("description") or "Traffic incident")[:80]
             where = " to ".join(x for x in (p.get("from"), p.get("to")) if x)[:80]
             late = f", +{clock_time(p['delay'] / 60)}" if p.get("delay") else ""
-            markers.append({"lat": points[0][1], "lon": points[0][0], "category": category,
+            near_ghat = min(km_between(c[1], c[0], ghat["lat"], ghat["lon"]) for c in points) <= KASARA_KM
+            segment = "KASARA_GHAT" if near_ghat else "NSK-JNPT"
+            markers.append({"lat": points[0][1], "lon": points[0][0], "category": category, "place": segment,
                             "title": f"{what}: {where}{late}" if where else f"{what}{late}"})
             middle = points[len(points) // 2]
             still_routed = not live or km_to_path(middle[1], middle[0], live) <= ON_ROAD_KM
             if category != ROAD_CLOSED or not on_highway or still_routed:
                 continue  # if TomTom's live route still runs through it, trucks are getting through
-            near_ghat = min(km_between(c[1], c[0], ghat["lat"], ghat["lon"]) for c in points) <= KASARA_KM
-            segment = "KASARA_GHAT" if near_ghat else "NSK-JNPT"
             closed_now[segment] = markers[-1]["title"]
             if segment in self.closed:
                 continue
