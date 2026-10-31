@@ -154,11 +154,11 @@ class Classifier:
                 else "reopen unknown"
             )
             return _disruption(
-                s, "PORT_CLOSURE", port, "", f"port_authority: {port} closed ({reopen})"
+                s, "PORT_CLOSURE", port, "", f"{s.source}: {port} closed ({reopen})"
             )
         if p.status == "congested":
-            return _disruption(s, "PORT_CONGESTION", port, "", f"port_authority: {port} congested")
-        return _resolution(s, f"port_authority: {port} open (reopen signal)")
+            return _disruption(s, "PORT_CONGESTION", port, "", f"{s.source}: {port} congested")
+        return _resolution(s, f"{s.source}: {port} open (reopen signal)")
 
     def _carrier_advisory(self, s: Signal, p: CarrierAdvisoryPayload) -> Signal:
         lane, days = p.affected_lane, p.added_transit_days

@@ -12,6 +12,8 @@ reliability:                 # r_source for the noisy-OR confidence (spec sectio
   ais_port: 0.80             # port congestion estimated from live AIS anchorage counts
   gdacs: 0.90                # official UN/EU disaster alerts near the network
   tomtom: 0.85               # live road closures on the corridor from TomTom Traffic
+  ops_port: 0.95             # a named person on the ops desk treats a report as real
+  ops_road: 0.95
   news: 0.40                 # multiplied by the news classifier's own confidence (LLM or keywords)
   road_authority: 0.95       # India-inside feeds (v2)
   transport_union: 0.90
@@ -23,7 +25,7 @@ reliability:                 # r_source for the noisy-OR confidence (spec sectio
 lifecycle:                   # spec section 3, step 5
   confirm_threshold: 0.6
   # any one of these confirms on its own
-  authoritative_sources: [port_authority, tariff_feed, road_authority, compliance_feed, mandi_prices]
+  authoritative_sources: [port_authority, tariff_feed, road_authority, compliance_feed, mandi_prices, ops_port, ops_road]
   merge_window_hours: 72
   candidate_ttl_hours: 24
   resolve_after_hours: 12    # resolving -> resolved when nothing adverse arrives in this window

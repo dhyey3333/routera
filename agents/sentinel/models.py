@@ -50,6 +50,8 @@ SourceName = Literal[
     "weather",
     "gdacs",  # UN/EU official disaster alerts near the network (ROUTERA live mode)
     "tomtom",  # live road closures on the corridor from TomTom Traffic (ROUTERA live mode)
+    "ops_port",  # a named person on the ops desk treats a report as a real port closure
+    "ops_road",  # the same for a road
     "news",
     # India-inside feeds (v2)
     "road_authority",
@@ -274,6 +276,8 @@ PAYLOAD_MODELS: dict[str, type[_Payload]] = {
     "news": NewsPayload,
     "road_authority": RoadAuthorityPayload,
     "tomtom": RoadAuthorityPayload,
+    "ops_port": PortAuthorityPayload,
+    "ops_road": RoadAuthorityPayload,
     "transport_union": TransportUnionPayload,
     "reefer_telemetry": ReeferTelemetryPayload,
     "facility_status": FacilityStatusPayload,

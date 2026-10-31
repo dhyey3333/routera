@@ -780,7 +780,7 @@ function optLabel(o) {
 }
 function emptyPlanHTML() {
   const n = S.r?.kpis?.containers ?? 0;
-  return `<div class="empty" style="padding:56px 12px"><b>No decision needed</b>Watching ${n} containers. When the Sentinel confirms a disruption that hits them, a plan appears here within the same second.</div>`;
+  return `<div class="empty" style="padding:56px 12px"><b>No decision needed</b>Watching ${n} containers. When an official source confirms a disruption that hits them, a plan appears here within the same second.${S.live?.on ? `<br><br>Want to act before it's official? Click a real item in the cards above, press <b>What if</b>, then <b>Open a decision</b>.` : ""}</div>`;
 }
 function escHTML(plan) {
   const e = plan.escalation;
@@ -1111,6 +1111,8 @@ document.addEventListener("click", async (ev) => {
   else if (d.mapclear !== undefined) { M.focus = null; selectBox(null); }
   else if (d.fi) { const [name, n] = d.fi.split("|"); focusItem(name, Number(n)); }
   else if (d.whatif) whatIf(d.whatif);
+  else if (d.opendecision) openDecision(d.opendecision, t);
+  else if (d.closedecision) closeDecision(d.closedecision);
   else if (d.refocus !== undefined) { M.focus = M.lastFocus; selectBox(null); drawFocus(true); }
   else if (d.refresh) {
     try { await api(`/api/feeds/${encodeURIComponent(d.refresh)}/refresh`, {}); toast("↻ Refreshing", "Fetching this feed now", "var(--good)"); }
@@ -1576,6 +1578,25 @@ async function whatIf(place) {
   catch (e) { toast("Preview failed", e.message, "var(--bad)"); }
   focus.loading = false; M.sig = ""; drawFocus(true); mark("map");
 }
+const opsPerson = () => ($("#approver")?.value || load("routera.approver") || "Sunil P.").trim() || "Sunil P.";
+async function openDecision(place, btn) {
+  btn.disabled = true;
+  try {
+    const r = await api("/api/decisions/open", { place, approver: opsPerson(), reason: M.focus?.it?.title || "reported closure" });
+    if (r.plan_id) {
+      toast(`Decision opened: ${r.plan_id}`, `${r.containers} containers. Nothing moves until someone approves.`, "var(--good)");
+      S.plan = r.plan_id; M.focus = null; drawFocus(); selectBox(null); mark("plans");
+      $(".decide").scrollIntoView({ behavior: "smooth", block: "start" });
+    } else { toast("No plan needed", "No container on the books is affected.", "var(--muted)"); btn.disabled = false; }
+  } catch (e) { toast("Not opened", e.message, "var(--bad)"); btn.disabled = false; }
+}
+async function closeDecision(place) {
+  try {
+    await api("/api/decisions/close", { place, approver: opsPerson() });
+    toast("Marked open again", "Logged to the audit chain. A plan nobody approved closes by itself.", "var(--good)");
+    M.sig = ""; mark("map", "plans");
+  } catch (e) { toast("Not closed", e.message, "var(--bad)"); }
+}
 function focusHTML() {
   const { it, label, sig, preview, loading, name } = M.focus;
   const touched = boxesTouched(it);
@@ -1588,9 +1609,15 @@ function focusHTML() {
   const code = it.place;
   const name_ = code ? M.geo.places[code]?.name || code : "";
   const shown = preview ? `<div class="notice ${preview.containers ? "good" : "muted"}" style="margin:8px 0"><b>Preview only. Nothing has moved.</b><br>${esc(preview.headline)}${preview.containers ? `<br>Saves about <b>${inr(preview.saved_inr)}</b> vs doing nothing. Dashed green on the map.` : ""}</div>` : "";
-  const button = code && !preview && touched.length ? `<button class="btn primary" data-whatif="${esc(code)}" ${loading ? "disabled" : ""} style="width:100%;margin:8px 0">${loading ? "Working it out…" : `What if ${esc(name_)} closes?`}</button>` : "";
+  const openHere = code && [...S.disruptions.values()].find((i) => i.disruption.location === code && OPEN.has(i.ignored ? "ignored" : i.disruption.status) && i.disruption.status !== "candidate");
+  const planHere = openHere && (S.r?.plans || []).find((p) => p.disruption_ids.includes(openHere.disruption.disruption_id));
+  const byPerson = code && S.signals.some((s) => String(s.source).startsWith("ops_") && s.location === code);
+  const decide = openHere
+    ? `<div class="notice warn" style="margin:8px 0"><b>This is a live disruption now.</b>${planHere ? `<br><button class="btn small" data-open="${esc(planHere.plan_id)}" style="margin-top:6px">Go to ${esc(planHere.plan_id)}</button>` : ""}${byPerson ? ` <button class="btn small ghost" data-closedecision="${esc(code)}" style="margin-top:6px">Mark as open again</button>` : ""}</div>`
+    : preview?.containers ? `<button class="btn good" data-opendecision="${esc(code)}" style="width:100%;margin:2px 0 4px">Open a decision for this</button><p class="lead">You take responsibility, under your name on the audit chain. It goes to Decide as a real plan, and nothing moves until it's approved.</p>` : "";
+  const button = code && !preview && !openHere && touched.length ? `<button class="btn primary" data-whatif="${esc(code)}" ${loading ? "disabled" : ""} style="width:100%;margin:8px 0">${loading ? "Working it out…" : `What if ${esc(name_)} closes?`}</button>` : "";
   return `<h4>${esc(label)}<button class="btn small ghost" data-mapclear>✕</button></h4>
-    <p class="lead"><b>${esc(it.title)}</b></p>${verdict}${roadList ? `<ul>${roadList}</ul>` : ""}${button}${shown}
+    <p class="lead"><b>${esc(it.title)}</b></p>${verdict}${roadList ? `<ul>${roadList}</ul>` : ""}${button}${shown}${decide}
     <p class="lead" style="margin-top:8px">${touched.length ? `<b>${touched.length} of your containers</b> ${it.road ? "could use this road" : it.place ? "pass through here" : "pass near this"}. Click one for its alternatives.` : "None of your containers pass through here."}</p>
     ${boxes}${touched.length > 12 ? `<p class="lead">and ${touched.length - 12} more</p>` : ""}`;
 }
@@ -1602,7 +1629,7 @@ RENDER.map = () => {
   const polled = Object.values(S.live?.feeds || {}).map((x) => x.polled_at);
   const data = JSON.stringify([plans, dis, boxes, polled, S.live?.on, S.r?.map]);
   if (data !== M.dataSig) { M.dataSig = data; loadRow(); M.sig = ""; drawEvents(); drawLive(); }
-  const sig = JSON.stringify([data, S.plan, S.overrides, M.sel, Boolean(M.row), M.row?.options?.length, M.rowPlan, M.focus?.it?.title, M.focus?.preview?.place, M.focus?.loading]);
+  const sig = JSON.stringify([data, S.plan, S.overrides, M.sel, Boolean(M.row), M.row?.options?.length, M.rowPlan, M.focus?.it?.title, M.focus?.preview?.place, M.focus?.loading, S.signals.length]);
   if (sig !== M.sig) { M.sig = sig; drawRoutes(); $("#map-side").innerHTML = sideHTML(); moveDots(); }
 };
 function initMap() {

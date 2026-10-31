@@ -69,7 +69,7 @@ def test_what_if_previews_a_closure_without_moving_or_logging_anything(client: T
     client.service.start_replay("nashik_corridor_strike", 0)  # type: ignore[attr-defined]
     client.service.wait_for_replay(30)  # type: ignore[attr-defined]
     road = client.get("/api/whatif", params={"place": "KASARA_GHAT"}).json()
-    assert road["delay_days"] == 1 and road["containers"] > 0
+    assert road["delay_days"] >= 1 and road["containers"] > 0
     assert all(r["route_id"] not in ("N-JNPT-LK", "N-JNPT-SG", "N-VASHI") for r in road["routes"])  # the shut road
     assert client.get("/api/whatif", params={"place": "ATLANTIS"}).status_code == 404
 
@@ -99,6 +99,78 @@ def test_a_feed_can_be_refreshed_on_demand_but_not_hammered(client: TestClient) 
         assert Counting.polls == 2  # polled again without waiting an hour
         assert service.live["feeds"]["count"]["interval_s"] == 3600.0
         assert client.post("/api/feeds/count/refresh", json={}).status_code == 429  # too soon
+    finally:
+        service.stop_replay()
+
+
+class Headlines:
+    """Real-style news on Hormuz: enough to raise a candidate, never enough to confirm one."""
+
+    name, label, interval_s = "news", "News (test)", 3600.0
+
+    def poll(self, now: Any) -> tuple[list[Any], dict[str, Any]]:
+        titles = ["Tanker on fire in Strait of Hormuz", "Ship on fire in Hormuz", "Vessel attacks persist in Hormuz"]
+        return ([{"event_id": f"N{i}", "source": "news", "kind_hint": None,
+                  "payload": {"headline": t, "body": "", "outlet": f"Outlet {i}"}} for i, t in enumerate(titles)],
+                status(self.name, self.label, True, "3 headlines"))
+
+
+def live_on_news(client: TestClient) -> Any:
+    service = client.service  # type: ignore[attr-defined]
+    service.feeds = [Headlines()]
+    service.start_live()
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline and not service.live["feeds"]:
+        time.sleep(0.05)
+    return service
+
+
+def test_news_alone_opens_no_decision_but_a_named_person_can_and_it_is_on_the_record(client: TestClient) -> None:
+    service = live_on_news(client)
+    try:
+        state = client.get("/api/state").json()
+        assert state["routera"]["kpis"]["pending_plans"] == 0  # the rule still holds
+        assert [d["disruption"]["status"] for d in state["disruptions"]] == ["candidate"]
+        opened = client.post("/api/decisions/open", json={"place": "HORMUZ", "approver": "Sunil P.",
+                                                          "reason": "Tanker on fire in Strait of Hormuz"})
+        assert opened.status_code == 201
+        pid = opened.json()["plan_id"]
+        assert pid and opened.json()["containers"] > 0
+        state = client.get("/api/state").json()
+        assert state["routera"]["kpis"]["pending_plans"] == 1 and state["routera"]["bookings"] == []
+        [entry] = [e for e in client.get("/api/audit").json()["entries"] if e["action"] == "decision.opened"]
+        assert entry["actor"] == "Sunil P." and "Tanker on fire" in entry["rationale"]
+        assert client.post(f"/api/plans/{pid}/approve", json={"approver": "Sunil P."}).status_code == 200
+        audit = client.get("/api/audit").json()
+        assert audit["ok"] and client.get("/api/state").json()["routera"]["bookings"]
+        assert client.post("/api/decisions/open", json={"place": "ATLANTIS"}).status_code == 404
+    finally:
+        service.stop_replay()
+
+
+@pytest.mark.parametrize("place", ["HORMUZ", "KASARA_GHAT"])
+def test_the_preview_shows_the_same_plan_a_real_closure_opens(client: TestClient, place: str) -> None:
+    service = live_on_news(client)
+    try:
+        preview = client.get("/api/whatif", params={"place": place}).json()
+        pid = client.post("/api/decisions/open", json={"place": place, "reason": "report"}).json()["plan_id"]
+        plan = next(p for p in client.get("/api/state").json()["routera"]["plans"] if p["plan_id"] == pid)
+        real = {r["container_id"]: r["choice"]["route_id"] for r in plan["rows"] if r["choice"]}
+        assert {r["container_id"]: r["route_id"] for r in preview["routes"]} == real
+        assert abs(preview["saved_inr"] - plan["saved_inr"]) <= 0.01 * abs(plan["saved_inr"])
+    finally:
+        service.stop_replay()
+
+
+def test_marking_a_place_open_again_closes_a_plan_nobody_approved(client: TestClient) -> None:
+    service = live_on_news(client)
+    try:
+        pid = client.post("/api/decisions/open", json={"place": "HORMUZ", "reason": "report"}).json()["plan_id"]
+        assert client.post("/api/decisions/close", json={"place": "HORMUZ"}).status_code == 200
+        plan = next(p for p in client.get("/api/state").json()["routera"]["plans"] if p["plan_id"] == pid)
+        assert plan["status"] == "closed"
+        assert client.get("/api/state").json()["routera"]["bookings"] == []
+        assert any(e["action"] == "decision.closed" for e in client.get("/api/audit").json()["entries"])
     finally:
         service.stop_replay()
 

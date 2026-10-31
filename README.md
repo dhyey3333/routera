@@ -30,7 +30,7 @@ This opens http://localhost:8000 and plays the India-inside Nashik corridor scen
 | What | Command (`make` target) |
 |---|---|
 | Control room, port 8000 | `python -m routera` (`make routera`) |
-| Tests: engine, app and Sentinel (351) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
+| Tests: engine, app and Sentinel (355) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
 | Lint | `python -m ruff check routera agents/sentinel` (`make routera-lint`) |
 | Sentinel console only, port 8001 | `python -m agents.sentinel.api --demo` (`make sentinel-demo`) |
 
@@ -91,6 +91,8 @@ and explainable.
 | `GET /api/map` | Places and real route geometry for the map |
 | `GET /api/whatif?place=HORMUZ` | The plan if a place shut today. A preview: nothing is booked or logged |
 | `POST /api/feeds/{name}/refresh` | Fetch one feed now (at most every 30 s) |
+| `POST /api/decisions/open` | Body `{"place": "HORMUZ", "approver": "Sunil P.", "reason": "..."}`. A named person treats a report as a real closure: a real plan opens, on the audit chain, and is approved like any other |
+| `POST /api/decisions/close` | The undo: the place is open again, and a plan nobody approved closes by itself |
 | `GET /api/traffic/tile/{z}/{x}/{y}.png` | Live traffic-flow tile, fetched by the server so the key stays private |
 | `GET /api/containers/{id}/options` | Every route for one container right now, on the live closures |
 | `GET /api/rules`, `GET /api/rules/to-verify` | Every rule with its citation and freshness; the rules still to verify, as Markdown |

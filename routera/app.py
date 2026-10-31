@@ -141,6 +141,41 @@ class RouteraService(SentinelService):
                     break
             self._wake.clear()
 
+    def _ops_event(self, place: str, status: str, reason: str) -> dict[str, Any]:
+        """The Sentinel event for a closure a person reports, port or road by what the place is."""
+        network = self.rig.sentinel.network
+        on_road = network.corridors_through(place) or place in {c.corridor_id for c in network.corridors}
+        now = self.rig.clock.now().isoformat()
+        payload = {"status": status, "reason": reason, "effective_from": now, "expected_reopen": None}
+        common = {"event_id": f"OPS-{place}-{status}-{now}", "received_at": now}
+        if on_road:
+            return {**common, "source": "ops_road", "kind_hint": "ROAD_STATUS",
+                    "payload": {"segment": place, **payload}}
+        return {**common, "source": "ops_port", "kind_hint": "PORT_STATUS",
+                "payload": {"port_code": place, **payload}}
+
+    def open_decision(self, place: str, person: str, reason: str) -> dict[str, Any]:
+        """A named person treats a real report as a real closure. News alone still never confirms anything;
+        a person can, on the record. This only opens a plan: it is approved or rejected like any other."""
+        with self._lock:
+            signal, _ = self.ingest(self._ops_event(place, "closed", f"{person}: {reason}"))
+            disruption_id = (signal or {}).get("disruption_id")
+            self.orchestrator.chain.log(person, "decision.opened",
+                                        {"place": place, "reason": reason, "disruption_id": disruption_id},
+                                        f"{person} treated {place} as closed and opened a decision, on: {reason}")
+            plan_id = self.orchestrator.plan_for_root.get(disruption_id or "")
+            plan = self.orchestrator.plans.get(plan_id or "")
+            return {"place": place, "disruption_id": disruption_id, "plan_id": plan_id,
+                    "containers": len(plan["rows"]) if plan else 0}
+
+    def close_decision(self, place: str, person: str) -> dict[str, Any]:
+        """The undo: the place is open again, and a plan nobody approved closes by itself."""
+        with self._lock:
+            signal, _ = self.ingest(self._ops_event(place, "open", f"{person}: open again"))
+            self.orchestrator.chain.log(person, "decision.closed", {"place": place},
+                                        f"{person} marked {place} open again")
+            return {"place": place, "disruption_id": (signal or {}).get("disruption_id")}
+
     def refresh_feed(self, name: str) -> dict[str, Any]:
         """Poll one feed now instead of waiting for its turn."""
         if name not in {f.name for f in self.feeds}:
@@ -255,6 +290,23 @@ def create_routera_app(service: RouteraService | None = None) -> FastAPI:
             raise HTTPException(502, "traffic tile unavailable") from exc
         return Response(data, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
 
+    def known_place(place: str) -> str:
+        known = {*load_geo()["places"], *(c.corridor_id for c in service.orchestrator.sentinel.network.corridors)}
+        if place not in known:
+            raise HTTPException(404, f"unknown place {place}")
+        return place
+
+    @app.post("/api/decisions/open", status_code=201)
+    def open_decision(body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
+        person = str(body.get("approver") or "Sunil P.")[:60]
+        reason = str(body.get("reason") or "reported closure")[:200]
+        return service.open_decision(known_place(str(body.get("place"))), person, reason)
+
+    @app.post("/api/decisions/close")
+    def close_decision(body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
+        person = str(body.get("approver") or "Sunil P.")[:60]
+        return service.close_decision(known_place(str(body.get("place"))), person)
+
     @app.post("/api/feeds/{name}/refresh", status_code=202)
     def refresh_feed(name: str) -> dict[str, Any]:
         try:
@@ -268,10 +320,7 @@ def create_routera_app(service: RouteraService | None = None) -> FastAPI:
 
     @app.get("/api/whatif")
     def what_if(place: str = Query(...)) -> dict[str, Any]:
-        known = {*load_geo()["places"], *(c.corridor_id for c in service.orchestrator.sentinel.network.corridors)}
-        if place not in known:
-            raise HTTPException(404, f"unknown place {place}")
-        return service.run(service.orchestrator.what_if, place)
+        return service.run(service.orchestrator.what_if, known_place(place))
 
     @app.get("/api/map")
     def map_data() -> dict[str, Any]:

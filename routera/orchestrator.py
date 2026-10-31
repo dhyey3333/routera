@@ -12,7 +12,10 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
+from agents.sentinel import scoring
+from agents.sentinel.matching import MatchTarget, match_containers
 from agents.sentinel.models import ContainerRef, ReeferTelemetryPayload
+from agents.sentinel.scoring import DelayEstimate
 from agents.sentinel.sentinel import DisruptionSentinel
 from routera.audit import HashChainAudit
 from routera.compliance import FPO_BY_CROP, ComplianceRules
@@ -24,7 +27,6 @@ from routera.reroute import load_routes
 from routera.shelf_life import ShelfLifeTracker
 
 PLANNING_STATUSES = ("confirmed", "active")
-WHAT_IF_ROAD_DAYS, WHAT_IF_PORT_DAYS = 1.0, 14.0  # the Sentinel's defaults for a closure with no known end
 CONGESTION_DAYS = 3.0
 PAPERWORK_BACKLOG_DAYS = 3.0
 TYPE_LABEL = {
@@ -308,27 +310,34 @@ class Orchestrator:
         return {**row, "booking": self.assigned.get(container_id)}
 
     def what_if(self, place: str) -> dict[str, Any]:
-        """The plan if `place` shut today, for the boxes that pass through it. A preview only: nothing is
-        booked, no plan is created and nothing goes on the chain."""
-        network = self.sentinel.network
+        """The plan if `place` shut today, for the boxes a real closure there would hit. A preview only:
+        nothing is booked, no plan is created and nothing goes on the chain. It matches boxes and estimates
+        the delay with the Sentinel's own rules, so it agrees with the plan a real closure would open."""
+        sentinel, network = self.sentinel, self.sentinel.network
+        config = sentinel.config
         corridors = network.corridors_through(place)
-        closed = {place, *corridors}
-        ctx = self.context()
-        for spot in closed:
-            ctx.blocked[spot] = f"what if {place} shut"
-        boxes = [c for c in self.containers().values()
-                 if c.container_id not in self.assigned
-                 and not closed.isdisjoint({*c.route_legs, c.destination_port, c.facility_id or ""})]
+        on_road = bool(corridors) or place in {c.corridor_id for c in network.corridors}
+        dtype = "ROAD_CLOSURE" if on_road else "PORT_CLOSURE"
+        places = {*sentinel.classifier.gazetteer.expand([place]), *corridors}
+        target = MatchTarget(type=dtype, location=place, places=frozenset(places))
+        boxes = [c for c in match_containers(target, self.containers().values(), config)
+                 if c.container_id not in self.assigned]
         if not boxes:
-            return {"place": place, "containers": 0, "headline": "No container on the books passes through here."}
-        on_road = corridors or place in {c.corridor_id for c in network.corridors}
-        days = WHAT_IF_ROAD_DAYS if on_road else WHAT_IF_PORT_DAYS
+            return {"place": place, "containers": 0, "headline": "No container on the books would be hit here."}
+        days = config.delay_days
+        unknown_end = days.road_closure_unknown_end if on_road else days.port_closure_unknown_end
+        ctx = self.context()
+        base = DelayEstimate(unknown_end, True, not on_road, 0, "")
+        delay = scoring.with_missed_sailings(base, dtype, boxes, ctx.now, config)
+        for spot in {place, *corridors} if on_road else {place}:
+            ctx.blocked[spot] = f"what if {place} shut"
         for c in boxes:
-            ctx.delay[c.container_id] = max(ctx.delay.get(c.container_id, 0.0), days)
+            ctx.delay[c.container_id] = max(ctx.delay.get(c.container_id, 0.0), delay.days)
         built = self.planner.plan(boxes, ctx)
         moves = ", ".join(f"{s['count']} → {s['name']}" for s in built["split"]) or "no feasible moves"
-        return {"place": place, "containers": len(boxes), "delay_days": days, "moves": moves,
-                "headline": f"If this shut for about {days:g} d: {len(boxes)} containers at risk. Plan: {moves}.",
+        return {"place": place, "containers": len(boxes), "delay_days": delay.days, "moves": moves,
+                "headline": f"If this shut: {len(boxes)} containers at risk, about {delay.days:g} d of delay. "
+                            f"Plan: {moves}.",
                 "saved_inr": built["saved_inr"], "value_inr": built["value_inr"], "baseline_inr": built["baseline_inr"],
                 "routes": [{"container_id": r["container_id"], "route_id": r["choice"]["route_id"],
                             "label": r["choice"]["label"]} for r in built["rows"] if r["choice"]]}

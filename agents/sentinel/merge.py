@@ -64,6 +64,8 @@ RESOLVES: dict[str, frozenset[str]] = {
     "ais": frozenset({"VESSEL_DELAY"}),
     "road_authority": frozenset({"ROAD_CLOSURE"}),
     "tomtom": frozenset({"ROAD_CLOSURE"}),
+    "ops_port": frozenset({"PORT_CLOSURE", "PORT_CONGESTION"}),
+    "ops_road": frozenset({"ROAD_CLOSURE"}),
     "transport_union": frozenset({"TRUCK_STRIKE"}),
     "reefer_telemetry": frozenset({"REEFER_FAILURE"}),
     "facility_status": frozenset({"FACILITY_OUTAGE"}),
