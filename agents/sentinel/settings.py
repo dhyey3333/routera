@@ -27,6 +27,7 @@ class ReliabilityConfig(_Section):
     ais: Fraction
     ais_port: Fraction = 0.80  # port congestion estimated from live AIS anchorage counts
     gdacs: Fraction = 0.90  # official UN/EU disaster alerts
+    tomtom: Fraction = 0.85  # live road closures from TomTom Traffic
     news: Fraction
     road_authority: Fraction
     transport_union: Fraction

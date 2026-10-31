@@ -11,6 +11,7 @@ reliability:                 # r_source for the noisy-OR confidence (spec sectio
   ais: 0.70
   ais_port: 0.80             # port congestion estimated from live AIS anchorage counts
   gdacs: 0.90                # official UN/EU disaster alerts near the network
+  tomtom: 0.85               # live road closures on the corridor from TomTom Traffic
   news: 0.40                 # multiplied by the news classifier's own confidence (LLM or keywords)
   road_authority: 0.95       # India-inside feeds (v2)
   transport_union: 0.90

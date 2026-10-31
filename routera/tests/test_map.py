@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from agents.sentinel.fakes import JsonContainerRepo
 from routera.app import RouteraService, create_routera_app
 from routera.geo import booked_key, load_geo
-from routera.live_feeds import LIVE_BOOKS
+from routera.live_feeds import LIVE_BOOKS, TrafficFeed
 from routera.reroute import load_routes
 
 
@@ -51,3 +51,20 @@ def test_the_map_api_and_live_options_for_any_container(client: TestClient) -> N
     row = client.get(f"/api/containers/{box['container_id']}/options").json()
     assert row["container_id"] == box["container_id"] and "options" in row
     assert client.get("/api/containers/NOPE/options").status_code == 404
+
+
+def test_the_traffic_tile_needs_a_key_and_checks_its_address(client: TestClient) -> None:
+    feed = TrafficFeed(env={}, fetch=lambda url: b"PNG")
+    client.service.feeds = [feed]  # type: ignore[attr-defined]
+    assert client.get("/api/traffic/tile/7/90/56.png").status_code == 404  # no key
+    feed.key = "k"
+    tile = client.get("/api/traffic/tile/7/90/56.png")
+    assert tile.status_code == 200 and tile.content == b"PNG" and tile.headers["content-type"] == "image/png"
+    assert client.get("/api/traffic/tile/7/999/56.png").status_code == 422  # off the map
+
+    def down(url: str) -> bytes:
+        raise OSError(f"failed {url}")
+
+    feed.fetch = down
+    broken = client.get("/api/traffic/tile/8/90/56.png")
+    assert broken.status_code == 502 and "key" not in broken.text.replace("no key", "")

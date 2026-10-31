@@ -258,11 +258,11 @@ class Classifier:
                 "ROAD_CLOSURE",
                 p.segment,
                 "",
-                f"road_authority: {p.segment} closed{cause} ({until})",
+                f"{s.source}: {p.segment} closed{cause} ({until})",
             )
         if p.status == "restricted":
-            return _noise(s, f"road_authority: {p.segment} restricted{cause}; traffic still moves")
-        return _resolution(s, f"road_authority: {p.segment} open again")
+            return _noise(s, f"{s.source}: {p.segment} restricted{cause}; traffic still moves")
+        return _resolution(s, f"{s.source}: {p.segment} open again")
 
     def _union(self, s: Signal, p: TransportUnionPayload) -> Signal:
         start = f"from {p.effective_from:%Y-%m-%d %H:%M}Z"

@@ -296,7 +296,7 @@ td.r, th.r { text-align: right; }
 .maplegend i.dot2 { width: 8px; height: 8px; border-radius: 50%; }
 .maplegend .note { margin-left: auto; color: var(--faint); }
 .leaflet-container { font: inherit; }
-#map.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.82) saturate(.55); }
+#map.dark .basetiles { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.82) saturate(.55); }
 .leaflet-tooltip { background: var(--panel); color: var(--text); border: 1px solid var(--line-2); box-shadow: var(--shadow); font-size: 12px; max-width: 280px; white-space: normal; }
 .leaflet-tooltip.maplabel { background: transparent; border: 0; box-shadow: none; color: var(--text); font-size: 10.5px; padding: 0 2px; opacity: .85 !important; text-shadow: 0 0 3px var(--panel); white-space: nowrap; }
 .leaflet-tooltip.maplabel::before { display: none; }
@@ -432,6 +432,7 @@ footer.foot { margin-top: 20px; color: var(--faint); font-size: 12px; text-align
       <h3>Live map</h3><span class="tag" id="map-tag">routes and alternatives</span>
       <div class="right tabs" id="map-layers">
         <button data-layer="boxes" aria-selected="true">Containers</button>
+        <button data-layer="traffic" aria-selected="true" hidden>Live traffic</button>
         <button data-layer="ships" aria-selected="true">Real ships</button>
         <button data-layer="alerts" aria-selected="true">Real alerts</button>
       </div>
@@ -448,7 +449,7 @@ footer.foot { margin-top: 20px; color: var(--faint); font-size: 12px; text-align
       <span><i class="dot2" style="background:var(--good)"></i>Container (colour = shelf life)</span>
       <span><i class="dot2" style="background:#22d3ee"></i>Real ship (AIS)</span>
       <span>▲ Real alert (GDACS)</span>
-      <span class="note">Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute. No live traffic.</span>
+      <span class="note" id="map-note">Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute. No live traffic.</span>
     </div>
   </section>
 
@@ -961,7 +962,7 @@ function loadSnapshot(s, reset) {
   applyRoutera(s.routera, true);
   S.chain = s.routera.chain.tail.slice();
   S.planKey = "";
-  if (S.live.on) S.note = `<b>● LIVE since ${hm(s.clock)} IST</b> · weather every 10 min, official disaster alerts every 15 min, news and ships every 5 min (ships need a free key)`;
+  if (S.live.on) S.note = `<b>● LIVE since ${hm(s.clock)} IST</b> · weather and road traffic every 10 min, official disaster alerts every 15 min, news and ships every 5 min (ships and traffic need free keys)`;
   mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet", "feeds");
 }
 function connect() {
@@ -1127,7 +1128,11 @@ $("#theme").addEventListener("click", () => {
   const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
   const next = cur === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next; store("routera.theme", next);
-  if (M.map) { M.tiles.remove(); M.tiles = baseTiles().addTo(M.map); M.sig = ""; M.cls.clear(); mark("map"); }
+  if (M.map) {
+    M.tiles.remove(); M.tiles = baseTiles().addTo(M.map); M.sig = ""; M.dataSig = ""; M.cls.clear();
+    if (M.flow) { M.flow.remove(); M.flow = null; }
+    mark("map");
+  }
 });
 if (load("routera.theme")) document.documentElement.dataset.theme = load("routera.theme");
 
@@ -1172,7 +1177,7 @@ const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyV
 const isDark = () => (document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
 function baseTiles() {  // OpenStreetMap needs no key; a CSS filter darkens the same tiles in dark mode
   $("#map").classList.toggle("dark", isDark());
-  return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 12, attribution: "© OpenStreetMap contributors" });
+  return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 12, className: "basetiles", attribution: "© OpenStreetMap contributors" });
 }
 function hav(a, b) {
   const r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
@@ -1310,6 +1315,11 @@ function routeStyle(o, isChoice) {
   return { color: cssVar("--accent"), weight: 3, opacity: 0.8 };
 }
 const optColor = (o, isChoice) => (isChoice ? "var(--good)" : o.compliance.status === "block" || !o.feasible ? "var(--bad)" : o.compliance.status === "review" ? "var(--warn)" : "var(--accent)");
+const roadTime = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, "0")}` : `${Math.round(m)} min`);
+function liveText(id) {  // this route's road right now, from live traffic
+  const r = S.live?.on ? S.live.feeds?.traffic?.live_roads?.[id] : null;
+  return r ? ` · road ${roadTime(r.minutes)} now${r.delay_min >= 1 ? ` (+${roadTime(r.delay_min)})` : ""}` : "";
+}
 const kmText = (id) => (M.geo.routes[id] ? M.geo.routes[id].stretches.map((s) => `${s.km.toLocaleString("en-IN")} km ${s.mode}`).join(" + ") : "");
 function currentChoice() {
   const plan = (S.r?.plans || []).find((p) => p.plan_id === M.rowPlan);
@@ -1406,6 +1416,28 @@ function drawLive() {
   for (const ship of feeds.ais?.markers || []) {
     L.circleMarker([ship.lat, ship.lon], { renderer: M.canvas, radius: 2.5, weight: 0, fillColor: "#22d3ee", fillOpacity: 0.9 }).bindTooltip(`<b>Real ship</b> ${esc(ship.title)}`).addTo(M.groups.ships);
   }
+  const traffic = feeds.traffic, g = M.groups.traffic;
+  $('#map-layers [data-layer="traffic"]').hidden = !traffic?.ok;
+  $("#map-note").textContent = `Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute. ${traffic?.ok ? "Live road traffic: TomTom." : "No live traffic."}`;
+  M.roads.clearLayers();
+  if (traffic?.ok) {
+    if (!M.flow) {
+      M.flow = L.tileLayer(`/api/traffic/tile/{z}/{x}/{y}.png?dark=${isDark() ? "true" : "false"}`, { minZoom: 5, maxZoom: 12, zIndex: 5, attribution: "Traffic © TomTom",
+        errorTileUrl: "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" }).addTo(g);
+    }
+    const roads = (traffic.roads || []).slice().sort((a, b) => b.alternative - a.alternative);
+    for (const r of roads) {
+      if (r.path.length < 2) continue;
+      const share = r.delay_min / Math.max(r.clear_min, 1);
+      const style = r.alternative ? { color: cssVar("--accent"), weight: 2.5, opacity: 0.75, dashArray: "6 6" }
+        : { color: cssVar(share >= 0.3 ? "--bad" : share >= 0.1 ? "--warn" : "--good"), weight: 3, opacity: 0.85 };
+      L.polyline(r.path, style).bindTooltip(`<b>${r.alternative ? "Live alternative" : "Live now"}: ${esc(r.label)}</b><br>${roadTime(r.minutes)} now${r.delay_min >= 1 ? ` (+${roadTime(r.delay_min)} in traffic)` : ", no delay"}<br>${r.km.toLocaleString("en-IN")} km`, { sticky: true }).addTo(M.roads);
+    }
+    for (const m of traffic.markers || []) {
+      L.marker([m.lat, m.lon], { icon: L.divIcon({ className: "", html: `<span class="gd" style="font-size:15px">${m.category === 8 ? "⛔" : m.category === 9 ? "🚧" : "⚠️"}</span>`, iconSize: [16, 16] }) })
+        .bindTooltip(`<b>Live road incident (TomTom)</b><br>${esc(m.title)}`).addTo(M.roads);
+    }
+  } else if (M.flow) { M.flow.remove(); M.flow = null; }
   const color = { Red: "var(--bad)", Orange: "var(--warn)", Green: "var(--good)" };
   for (const a of feeds.gdacs?.markers || []) {
     L.marker([a.lat, a.lon], { icon: L.divIcon({ className: "", html: `<span class="gd" style="color:${color[a.level] || "var(--muted)"};font-size:${a.near ? 16 : 11}px">▲</span>`, iconSize: [16, 16] }) })
@@ -1423,6 +1455,7 @@ function sideHTML() {
     const feeds = S.live?.on ? S.live.feeds || {} : null;
     return `<h4>Click any container</h4><p class="lead">See its booked route and <b>every alternative, priced right now</b> on the current closures, shelf life and market prices.</p>
       <ul><li><b>${all.length}</b> containers on the map${risk ? `, <b>${risk} at risk</b>` : ""}</li>
+      ${feeds?.traffic?.ok ? `<li>${esc(feeds.traffic.summary)}. Zoom in on India for the traffic colours</li>` : feeds ? `<li>Add a free TOMTOM_API_KEY for live road traffic</li>` : ""}
       ${feeds ? `<li><b>${(feeds.ais?.markers || []).length}</b> real ships (AIS)</li><li><b>${(feeds.gdacs?.markers || []).length}</b> real disaster alerts (GDACS)</li>` : `<li>Pick 🔴 LIVE to add real ships and alerts</li>`}
       <li>A plan's routes show in green; use 🗺 on a plan row to open that box here</li></ul>`;
   }
@@ -1437,7 +1470,7 @@ function sideHTML() {
   const list = opts.map((o) => {
     const isChoice = o.route_id === choice?.route_id, ok = o.feasible && o.compliance.status !== "block";
     const stay = o.route_id === "STAY";
-    const detail = !o.feasible ? esc(o.reason) : `${stay ? "No change to the booking" : esc(kmText(o.route_id))}${o.arrival_days_left != null ? ` · arrives with ${o.arrival_days_left.toFixed(1)} d` : ""}${o.compliance.status === "review" ? " · human review" : ""}`;
+    const detail = !o.feasible ? esc(o.reason) : `${stay ? "No change to the booking" : esc(kmText(o.route_id) + liveText(o.route_id))}${o.arrival_days_left != null ? ` · arrives with ${o.arrival_days_left.toFixed(1)} d` : ""}${o.compliance.status === "review" ? " · human review" : ""}`;
     return `<button class="opt ${isChoice ? "now" : ""} ${ok ? "" : "off"}" data-mapopt="${esc(o.route_id)}"><i class="sw" style="background:${optColor(o, isChoice)}"></i>
       <span><b>${esc(o.label)}</b>${isChoice ? ` <span class="chip good">${can ? "plan" : "best now"}</span>` : ""}<small>${detail}</small></span><span class="v">${o.value_inr != null ? inr(o.value_inr) : "–"}</span></button>`;
   }).join("");
@@ -1460,7 +1493,8 @@ function initMap() {
     M.map = L.map("map", { zoomControl: true, worldCopyJump: false, minZoom: 2 }).setView(HOME, HOME_ZOOM);
     M.tiles = baseTiles().addTo(M.map);
     M.canvas = L.canvas({ padding: 0.3 });
-    for (const name of ["routes", "places", "events", "alerts", "ships", "boxes"]) M.groups[name] = L.layerGroup().addTo(M.map);
+    for (const name of ["traffic", "routes", "places", "events", "alerts", "ships", "boxes"]) M.groups[name] = L.layerGroup().addTo(M.map);
+    M.roads = L.layerGroup().addTo(M.groups.traffic);
     for (const place of Object.values(M.geo.places)) {
       if (place.kind === "region") continue;
       const major = place.kind === "port" || place.kind === "chokepoint";

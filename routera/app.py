@@ -35,7 +35,7 @@ from agents.sentinel.replay import SCENARIO_NAMES, Rig, Scenario, make_rig
 from routera.audit import HashChainAudit
 from routera.filing import build_zip, pdf_available, render_pdf
 from routera.geo import load_geo
-from routera.live_feeds import default_feeds, live_books
+from routera.live_feeds import TrafficFeed, default_feeds, live_books
 from routera.orchestrator import Orchestrator
 
 STATIC = Path(__file__).parent / "static"
@@ -50,7 +50,7 @@ def live_scenario(now: datetime) -> Scenario:
     return Scenario(
         name=LIVE, title="LIVE: real weather, news and ships for Nashik grapes and Konkan mangoes",
         simulated=True, layer="india", start=now, container_ids=[], steps=[],
-        disclaimer="Feeds are REAL (Open-Meteo, GDACS, Google News; AIS with a free key). The fleet is the "
+        disclaimer="Feeds are REAL (Open-Meteo, GDACS, Google News; AIS and TomTom with free keys). The fleet is the "
                    "SIMULATED book moved to today; bookings stay simulated.",
     )
 
@@ -123,6 +123,8 @@ class RouteraService(SentinelService):
                         except Exception:  # one bad item must not stop the feeds
                             log.exception("live event %s failed", raw.get("event_id"))
                     self.live["feeds"][feed.name] = state
+                    if "slow" in state:
+                        self.orchestrator.set_live_slow(state["slow"])
                     self._broadcast("feeds", self.live)
             with self._lock:
                 if rig is not self.rig:
@@ -216,6 +218,21 @@ def create_routera_app(service: RouteraService | None = None) -> FastAPI:
         name = f"{plan_id}-{container}-filing-pack.zip"
         return Response(build_zip(paperwork(plan_id, container, route)), media_type="application/zip",
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    @app.get("/api/traffic/tile/{z}/{x}/{y}.png")
+    def traffic_tile(z: int, x: int, y: int, dark: bool = False) -> Response:
+        feed = next((f for f in service.feeds if isinstance(f, TrafficFeed)), None)
+        if feed is None:
+            raise HTTPException(404, "no traffic feed")
+        try:
+            data = feed.tile(z, x, y, dark)
+        except LookupError as exc:
+            raise HTTPException(404, "no TomTom key") from exc
+        except ValueError as exc:
+            raise HTTPException(422, "no such tile") from exc
+        except Exception as exc:  # the message could carry the key
+            raise HTTPException(502, "traffic tile unavailable") from exc
+        return Response(data, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
 
     @app.get("/api/map")
     def map_data() -> dict[str, Any]:

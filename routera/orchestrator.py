@@ -62,6 +62,7 @@ class Orchestrator:
         self.assigned: dict[str, dict[str, Any]] = {}
         self.bookings: list[dict[str, Any]] = []
         self._excursions: set[str] = set()
+        self.live_slow: dict[str, float] = {}  # place -> extra days from live road traffic
 
     # --- inputs ---------------------------------------------------------------------------------
 
@@ -97,7 +98,15 @@ class Orchestrator:
                 ctx.doc_delay[d.location] = PAPERWORK_BACKLOG_DAYS
             for cid in d.affected_container_ids:
                 ctx.delay[cid] = max(ctx.delay.get(cid, 0.0), d.expected_delay_days)
+        for place, days in self.live_slow.items():
+            ctx.slow[place] = ctx.slow.get(place, 0.0) + days
         return ctx
+
+    def set_live_slow(self, slow: dict[str, float]) -> None:
+        """Live road delays feed the arrival times of pending plans; re-plan only when they change."""
+        if slow != self.live_slow:
+            self.live_slow = slow
+            self.refresh()
 
     def _record_excursions(self, boxes: dict[str, ContainerRef]) -> None:
         for incident in self.sentinel.tracker.incidents:

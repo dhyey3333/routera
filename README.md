@@ -30,7 +30,7 @@ This opens http://localhost:8000 and plays the India-inside Nashik corridor scen
 | What | Command (`make` target) |
 |---|---|
 | Control room, port 8000 | `python -m routera` (`make routera`) |
-| Tests: engine, app and Sentinel (342) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
+| Tests: engine, app and Sentinel (348) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
 | Lint | `python -m ruff check routera agents/sentinel` (`make routera-lint`) |
 | Sentinel console only, port 8001 | `python -m agents.sentinel.api --demo` (`make sentinel-demo`) |
 
@@ -46,6 +46,7 @@ You can also pick **🔴 LIVE** in the scenario dropdown. The same Sentinel, pla
 |---|---|---|---|
 | Weather for Nashik and JNPT, 3-day forecast | Open-Meteo | none | `WEATHER_ALERT` when an IMD threshold is crossed (≥35.6 mm/day rain, hail, ≥40 °C) |
 | Official disaster alerts (cyclones, floods, earthquakes) near any port, sea lane or corridor of the network | GDACS (UN and European Commission) | none | `WEATHER_ALERT` (source `gdacs`, reliability 0.90). Orange and red alerts confirm a disruption on their own; green ones only show as signals |
+| Live road times, delays and alternative routes on 8 corridors, plus closures on the Nashik to JNPT road | TomTom Traffic | `TOMTOM_API_KEY` (free: 2,500 requests and 50,000 map tiles a day) | A closure becomes `ROAD_CLOSURE` (source `tomtom`, reliability 0.85), which confirms on its own. Delays of an hour or more slow the planner's routes through that road. The key stays on the server; map tiles come through `/api/traffic/tile/...` |
 | Headlines on the corridor, JNPT, grapes, Red Sea / Hormuz | Google News RSS | none | news the Sentinel classifies (rules, or the LLM) |
 | Ships off Rotterdam, JNPT, Mundra and Jebel Ali | AIS via aisstream.io (`pip install websockets`) | `AISSTREAM_API_KEY` (free, GitHub sign-up) | `PORT_CONGESTION` when ships at anchor pass a threshold (source `ais_port`, reliability 0.80: an estimate, not an official notice). aisstream.io is crowd-sourced and barely covers Indian and Gulf waters, so those ports usually show 0 ships; Rotterdam, where the mangoes go, is well covered |
 
@@ -68,7 +69,7 @@ and explainable.
 | **Market** | `routera/market.py`, `data/markets.json` | Saturation formula `price × max(floor, 1 − elasticity × (added + load/2) / absorb)`, plus mandi crashes. Below 60% of list price, only a human may choose. |
 | **Compliance** | `routera/compliance.py`, `routera/rulebook.py`, `routera/rulepacks/` | Rules engine over the lot's facts and the team's YAML rule packs, each rule citing its law (EU 2016/2031, 7 CFR 319.56-3, ISPM 12 ...). **Only a verified rule may block**, and nobody can override a block (e.g. the EU residue limit). A failing rule that is not yet verified (e.g. the Singapore MRL) goes to **human review**: the planner never picks it, but a person may, and the approval logs it. Phyto, permits, treatments and traceability gaps are drafted for sign-off. `GET /api/rules/to-verify` lists every rule still to verify. |
 | **Paperwork** | `routera/paperwork.py` | The team's document model ([routera_compliance](https://github.com/kokilacg30/routera_compliance)), fitted to ROUTERA: 12 trade documents with their standards (UN/CEFACT, ISPM 12, WCO, FIATA). Each move gets a change set (keep, regenerate, new, superseded) and a critical path (the slowest document). Approval drafts the filing pack and logs its sha256 on the chain. A field ROUTERA does not know, such as the new buyer, is left for a human, never invented. Cross-document checks cover weight, HS code, value and consignee. Each pack downloads as a ZIP with a cover sheet (summary, human checklist, legal basis), every document as JSON and a DRAFT-stamped PDF (`routera/filing.py`, reportlab), and a manifest of sha256 hashes. |
-| **Live map** | `routera/geo.py`, `data/geo.json`, `routera/tools/build_geo.py` | Every container, placed from its ETA and moving with the clock, on an OpenStreetMap base. Click a box to see its booked route and every alternative, priced now on the live closures; click a route to change the plan. Real ships (AIS) and real alerts (GDACS, weather) are drawn on top. Road paths come from OSRM and sea lanes from searoute, generated once into `geo.json`; there is no live traffic. The fleet itself stays simulated. |
+| **Live map** | `routera/geo.py`, `data/geo.json`, `routera/tools/build_geo.py` | Every container, placed from its ETA and moving with the clock, on an OpenStreetMap base. Click a box to see its booked route and every alternative, priced now on the live closures; click a route to change the plan. Real ships (AIS) and real alerts (GDACS, weather) are drawn on top. Road paths come from OSRM and sea lanes from searoute, generated once into `geo.json`. With a TomTom key, live mode adds traffic colours, live road times and live alternative roads. The fleet itself stays simulated. |
 | **Escalation** | `routera/orchestrator.py` | From the team's approval policy: a pending plan waits on the operations lead for 2 h, then the export manager for 2 h, then the FPO director for 4 h, then it is an SLA breach. Each step is logged on the chain. **Silence is never consent**: a plan never approves itself. |
 | **Approval & Audit** | `routera/orchestrator.py`, `routera/audit.py` | One plan per situation: disruptions that share containers are grouped with union-find and re-planned live. Nothing moves until a human approves. Approval books SAP TM moves (simulated), drafts paperwork and logs the FPO payout. Every entry is sha256-chained to the previous one. |
 
@@ -88,6 +89,7 @@ and explainable.
 | `GET /api/plans/{id}/filing-pack.zip?container=NSK-03` | The pack as a ZIP: cover sheet, JSON, PDFs, manifest |
 | `GET /api/plans/{id}/paperwork/{doc_type}.pdf?container=NSK-03` | One draft as a PDF |
 | `GET /api/map` | Places and real route geometry for the map |
+| `GET /api/traffic/tile/{z}/{x}/{y}.png` | Live traffic-flow tile, fetched by the server so the key stays private |
 | `GET /api/containers/{id}/options` | Every route for one container right now, on the live closures |
 | `GET /api/rules`, `GET /api/rules/to-verify` | Every rule with its citation and freshness; the rules still to verify, as Markdown |
 | `GET /api/audit` | The whole chain, re-verified |

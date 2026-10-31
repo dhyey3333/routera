@@ -3,6 +3,8 @@
     Open-Meteo   real weather forecast for Nashik and JNPT (no key); IMD-style thresholds
     GDACS        official UN/EU disaster alerts (cyclones, floods, earthquakes, no key) near a port, sea lane
                  or corridor of the network; orange and red alerts confirm a disruption on their own
+    TomTom       live road times, delays and alternative routes on the corridors, and closures on the Nashik to
+                 JNPT road (free key in TOMTOM_API_KEY); a closure confirms a road disruption on its own
     Google News  real headlines on the corridor, the ports and the global lanes (no key)
     AIS          real ship positions off JNPT, Mundra, Jebel Ali and Rotterdam via aisstream.io (free key in
                  AISSTREAM_API_KEY, needs `pip install websockets`); ships waiting at anchor above a
@@ -28,10 +30,12 @@ import xml.etree.ElementTree as ET
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from datetime import UTC, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
 from agents.sentinel.fakes import ALL_CONTAINER_PATHS
+from routera.geo import load_geo
 
 USER_AGENT = "ROUTERA-Hackfest/1.0 (+control room)"
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -400,6 +404,199 @@ class AisFeed:
         return events, status(self.name, self.label, True, summary, items, markers=markers)
 
 
+# --- TomTom live road traffic ---------------------------------------------------------------------
+
+TOMTOM = "https://api.tomtom.com"
+TRAFFIC_CORRIDORS = (  # (label, from, to, planner routes on this road, place the planner slows down)
+    ("Nashik → JNPT", "NASHIK", "INNSA", ("N-JNPT-LK", "N-JNPT-SG", "N-HOLD-LK"), "KASARA_GHAT"),
+    ("Nashik → Mundra", "NASHIK", "INMUN", ("N-MUN-LK",), "NSK-MUN"),
+    ("Nashik → Pune", "NASHIK", "MKT-PUNE", ("N-PUNE",), None),
+    ("Nashik → Bengaluru", "NASHIK", "MKT-BLR", ("N-BLR",), None),
+    ("Nashik → Hyderabad", "NASHIK", "MKT-HYD", ("N-HYD",), None),
+    ("Nashik → Delhi", "NASHIK", "MKT-AZADPUR", ("N-DEL",), None),
+    ("JNPT → Delhi", "INNSA", "MKT-AZADPUR", ("J-DEL", "J-HOLD", "G-DEL", "G-HOLD"), None),
+    ("JNPT → Bengaluru", "INNSA", "MKT-BLR", ("J-BLR",), None),
+)
+# The incident API allows 10,000 km2 per box, so the Nashik to JNPT road takes two boxes (min lon, min lat, ...).
+INCIDENT_BOXES = ("73.35,19.55,74.15,20.25", "72.85,18.85,73.55,19.75")
+INCIDENT_FIELDS = ("{incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,"
+                   "events{description,code,iconCategory},startTime,endTime,from,to,length,delay}}}")
+ACCIDENT, ROAD_CLOSED = 1, 8
+ROAD_ALERTS = {ACCIDENT, 3, 6, 7, ROAD_CLOSED, 9, 11, 14}  # accident, danger, jam, lane or road closed, works, flood...
+ON_CORRIDOR_KM = 1.0  # an incident further than this from the corridor is on some other road
+KASARA_KM = 12.0
+SLOW_FROM_MIN = 60  # below this a delay doesn't change a perishable decision
+TILE_TTL_S, TILE_CACHE_MAX = 300.0, 1000
+
+
+def km_to_path(lat: float, lon: float, path: list[list[float]]) -> float:
+    """Shortest distance from a point to a polyline of [lat, lon] points, on a local flat projection."""
+    scale = math.cos(math.radians(lat))
+    best = math.inf
+    for (lat1, lon1), (lat2, lon2) in pairwise(path):
+        ax, ay, bx, by = (lon1 - lon) * scale, lat1 - lat, (lon2 - lon) * scale, lat2 - lat
+        dx, dy = bx - ax, by - ay
+        t = max(0.0, min(1.0, -(ax * dx + ay * dy) / ((dx * dx + dy * dy) or 1e-12)))
+        best = min(best, math.hypot(ax + t * dx, ay + t * dy) * 111.2)
+    return best
+
+
+def clock_time(minutes: float) -> str:
+    hours, mins = divmod(round(minutes), 60)
+    return f"{hours} h {mins:02d}" if hours else f"{mins} min"
+
+
+class TrafficFeed:
+    """TomTom Traffic. Each poll takes 10 requests, so every 10 minutes is 1,440 of the free 2,500 a day.
+
+    The key stays on the server: it never reaches the browser, and map tiles come through tile() below.
+    Only the Nashik to JNPT road is checked for closures; TomTom's data for an Indian road may be thin."""
+
+    name, label, interval_s = "traffic", "TomTom live traffic", 600.0
+
+    def __init__(self, env: Mapping[str, str] | None = None, fetch: Fetch = http_get) -> None:
+        self.key = (os.environ if env is None else env).get("TOMTOM_API_KEY", "")
+        self.fetch = fetch
+        self.closed: dict[str, str] = {}  # segment -> what closed it
+        self._tiles: dict[tuple[int, int, int, bool], tuple[float, bytes]] = {}
+        self._lock = threading.Lock()
+
+    def reset(self) -> None:
+        """A new live run has a new Sentinel: tell it about current closures again."""
+        self.closed.clear()
+
+    def _clean(self, exc: Exception) -> str:
+        return repr(exc).replace(self.key, "***")[:200] if self.key else repr(exc)[:200]
+
+    def _route_url(self, a: dict[str, Any], b: dict[str, Any]) -> str:
+        return (f"{TOMTOM}/routing/1/calculateRoute/{a['lat']},{a['lon']}:{b['lat']},{b['lon']}/json?"
+                + urllib.parse.urlencode({"key": self.key, "traffic": "true", "travelMode": "truck",
+                                          "vehicleCommercial": "true", "computeTravelTimeFor": "all",
+                                          "maxAlternatives": 2, "routeRepresentation": "polyline"}))
+
+    def _incidents(self) -> list[dict[str, Any]]:
+        found: list[dict[str, Any]] = []
+        for box in INCIDENT_BOXES:
+            query = urllib.parse.urlencode({"key": self.key, "bbox": box, "fields": INCIDENT_FIELDS,
+                                            "language": "en-GB", "timeValidityFilter": "present"})
+            url = f"{TOMTOM}/traffic/services/5/incidentDetails?{query}"
+            found += json.loads(self.fetch(url)).get("incidents", [])
+        return found
+
+    def poll(self, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        if not self.key:
+            return [], status(self.name, self.label, False, "off: set TOMTOM_API_KEY (free at developer.tomtom.com)")
+        geo = load_geo()
+        roads, items, errors = [], [], []
+        live_roads: dict[str, dict[str, float]] = {}
+        slow: dict[str, float] = {}
+        for label, a, b, route_ids, place in TRAFFIC_CORRIDORS:
+            try:
+                routes = json.loads(self.fetch(self._route_url(geo["places"][a], geo["places"][b]))).get("routes") or []
+            except Exception as exc:
+                errors.append(self._clean(exc))
+                continue
+            for i, route in enumerate(routes):
+                s = route["summary"]
+                minutes, delay = s["travelTimeInSeconds"] / 60, s.get("trafficDelayInSeconds", 0) / 60
+                clear = s.get("noTrafficTravelTimeInSeconds", s["travelTimeInSeconds"]) / 60
+                points = [[p["latitude"], p["longitude"]]
+                          for leg in route.get("legs", []) for p in leg.get("points", [])]
+                roads.append({"label": label, "alternative": i > 0, "km": round(s["lengthInMeters"] / 1000),
+                              "minutes": round(minutes), "delay_min": round(delay), "clear_min": round(clear),
+                              "path": points[:: max(1, len(points) // 150)] + points[-1:]})
+                if i:
+                    continue
+                late = f"+{clock_time(delay)} in traffic" if delay >= 1 else "no delay"
+                km = s["lengthInMeters"] / 1000
+                items.append({"title": f"{label}: {clock_time(minutes)} now, {late}, {km:,.0f} km"})
+                for route_id in route_ids:
+                    live_roads[route_id] = {"minutes": round(minutes), "delay_min": round(delay)}
+                if place and delay >= SLOW_FROM_MIN:
+                    slow[place] = round(delay / 15) * 15 / 1440  # in days, in steps of 15 min so plans stay steady
+        if len(errors) == len(TRAFFIC_CORRIDORS):
+            return [], status(self.name, self.label, False, "unreachable, over the free limit, or a bad key", [],
+                              errors[0])
+        try:
+            incidents = self._incidents()
+        except Exception as exc:
+            incidents = None  # unknown is not the same as clear: no road is reopened on a failed check
+            errors.append(self._clean(exc))
+        events, markers = self._closures(incidents, now, geo) if incidents is not None else ([], [])
+        worst = max((r["delay_min"] for r in roads if not r["alternative"]), default=0)
+        closures = sum(m["category"] == ROAD_CLOSED for m in markers)
+        summary = f"{len(items)} roads live, " + (f"worst +{clock_time(worst)}" if worst >= 1 else "no delays")
+        summary += f" · {len(markers)} incident(s) on Nashik–JNPT" + (f", {closures} road closed" if closures else "")
+        alerts = [{"title": f"⚠ {m['title']}"} for m in markers[:4]]
+        state = status(self.name, self.label, True, summary, alerts + items, "; ".join(errors), markers)
+        state.update(roads=roads, live_roads=live_roads, slow=slow)
+        return events, state
+
+    def _closures(self, incidents: list[dict[str, Any]], now: datetime,
+                  geo: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        corridor = geo["routes"]["N-JNPT-LK"]["stretches"][0]["path"]  # the booked road, even if traffic avoids it
+        ghat = geo["places"]["KASARA_GHAT"]
+        events, markers = [], []
+        closed_now: dict[str, str] = {}
+        for incident in incidents:
+            p = incident.get("properties", {})
+            category = p.get("iconCategory")
+            coords = (incident.get("geometry") or {}).get("coordinates") or []
+            points = coords if coords and isinstance(coords[0], list) else [coords]
+            points = [c for c in points if len(c) >= 2]
+            if category not in ROAD_ALERTS or not points:
+                continue
+            if min(km_to_path(c[1], c[0], corridor) for c in points) > ON_CORRIDOR_KM:
+                continue
+            what = ((p.get("events") or [{}])[0].get("description") or "Traffic incident")[:80]
+            where = " to ".join(x for x in (p.get("from"), p.get("to")) if x)[:80]
+            late = f", +{clock_time(p['delay'] / 60)}" if p.get("delay") else ""
+            markers.append({"lat": points[0][1], "lon": points[0][0], "category": category,
+                            "title": f"{what}: {where}{late}" if where else f"{what}{late}"})
+            if category != ROAD_CLOSED:
+                continue
+            near_ghat = min(km_between(c[1], c[0], ghat["lat"], ghat["lon"]) for c in points) <= KASARA_KM
+            segment = "KASARA_GHAT" if near_ghat else "NSK-JNPT"
+            closed_now[segment] = markers[-1]["title"]
+            if segment in self.closed:
+                continue
+            reopen = None
+            with contextlib.suppress(TypeError, ValueError):
+                end = datetime.fromisoformat(str(p.get("endTime")).replace("Z", "+00:00"))
+                reopen = end.isoformat() if end > now else None
+            title = markers[-1]["title"]
+            events.append({"event_id": f"TT-{segment}-{hashlib.sha1(title.encode()).hexdigest()[:10]}",
+                           "source": "tomtom", "kind_hint": "ROAD_STATUS",
+                           "payload": {"segment": segment, "status": "closed", "reason": f"TomTom live: {title}",
+                                       "effective_from": now.isoformat(), "expected_reopen": reopen}})
+        for segment in set(self.closed) - set(closed_now):
+            events.append({"event_id": f"TT-{segment}-open-{now:%Y%m%d%H%M}", "source": "tomtom",
+                           "kind_hint": "ROAD_STATUS",
+                           "payload": {"segment": segment, "status": "open", "reason": "TomTom live: closure cleared",
+                                       "effective_from": now.isoformat(), "expected_reopen": None}})
+        self.closed = closed_now
+        return events, markers
+
+    def tile(self, z: int, x: int, y: int, dark: bool) -> bytes:
+        """A traffic-flow map tile, fetched here so the key stays on the server, and kept for 5 minutes."""
+        if not self.key:
+            raise LookupError("no TomTom key")
+        if not (3 <= z <= 22 and 0 <= x < 2 ** z and 0 <= y < 2 ** z):
+            raise ValueError("no such tile")
+        slot = (z, x, y, dark)
+        with self._lock:
+            held = self._tiles.get(slot)
+            if held and time.monotonic() - held[0] < TILE_TTL_S:
+                return held[1]
+        style = "relative0-dark" if dark else "relative0"
+        data = self.fetch(f"{TOMTOM}/traffic/map/4/tile/flow/{style}/{z}/{x}/{y}.png?key={self.key}")
+        with self._lock:
+            if len(self._tiles) >= TILE_CACHE_MAX:
+                self._tiles.clear()
+            self._tiles[slot] = (time.monotonic(), data)
+        return data
+
+
 # --- the fleet, moved to today --------------------------------------------------------------------
 
 
@@ -422,5 +619,5 @@ def live_books(now: datetime, books: tuple[Path, ...] = LIVE_BOOKS) -> list[Path
 
 
 def default_feeds() -> list[Any]:
-    return [WeatherFeed(), GdacsFeed(), NewsFeed(), AisFeed()]
+    return [WeatherFeed(), GdacsFeed(), TrafficFeed(), NewsFeed(), AisFeed()]
 
