@@ -420,11 +420,15 @@ TRAFFIC_CORRIDORS = (  # (label, from, to, planner routes on this road, place th
 # The incident API allows 10,000 km2 per box, so the Nashik to JNPT road takes two boxes (min lon, min lat, ...).
 INCIDENT_BOXES = ("73.35,19.55,74.15,20.25", "72.85,18.85,73.55,19.75")
 INCIDENT_FIELDS = ("{incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,"
-                   "events{description,code,iconCategory},startTime,endTime,from,to,length,delay}}}")
-ACCIDENT, ROAD_CLOSED = 1, 8
-ROAD_ALERTS = {ACCIDENT, 3, 6, 7, ROAD_CLOSED, 9, 11, 14}  # accident, danger, jam, lane or road closed, works, flood...
-ON_CORRIDOR_KM = 1.0  # an incident further than this from the corridor is on some other road
+                   "events{description,code,iconCategory},startTime,endTime,from,to,length,delay,roadNumbers}}}")
+JAM, ROAD_CLOSED = 6, 8
+ROAD_ALERTS = {1, 3, JAM, 7, ROAD_CLOSED, 9, 11, 14}  # accident, danger, jam, lane or road closed, works, flood...
+# TomTom lists hundreds of closed side streets around this road, so a closure must pass three tests: it carries the
+# highway's number, it lies on the road itself, and TomTom's own live route has actually gone around it.
+CORRIDOR_ROADS = {"NH160", "AH47", "NH348"}
+ON_ROAD_KM = 0.1
 KASARA_KM = 12.0
+TRAFFIC_POINTS = {"INMUN": {"lat": 22.79, "lon": 69.705}}  # where trucks reach it: the port's own point has no road
 SLOW_FROM_MIN = 60  # below this a delay doesn't change a perishable decision
 TILE_TTL_S, TILE_CACHE_MAX = 300.0, 1000
 
@@ -447,7 +451,8 @@ def clock_time(minutes: float) -> str:
 
 
 class TrafficFeed:
-    """TomTom Traffic. Each poll takes 10 requests, so every 10 minutes is 1,440 of the free 2,500 a day.
+    """TomTom Traffic. Each poll takes 10 requests, so every 10 minutes is 1,440 of the free 2,500 a day
+    (plus one per run for the road's own path).
 
     The key stays on the server: it never reaches the browser, and map tiles come through tile() below.
     Only the Nashik to JNPT road is checked for closures; TomTom's data for an Indian road may be thin."""
@@ -458,12 +463,14 @@ class TrafficFeed:
         self.key = (os.environ if env is None else env).get("TOMTOM_API_KEY", "")
         self.fetch = fetch
         self.closed: dict[str, str] = {}  # segment -> what closed it
+        self.corridor: list[list[float]] | None = None  # the Nashik to JNPT road when nothing is closed
         self._tiles: dict[tuple[int, int, int, bool], tuple[float, bytes]] = {}
         self._lock = threading.Lock()
 
     def reset(self) -> None:
         """A new live run has a new Sentinel: tell it about current closures again."""
         self.closed.clear()
+        self.corridor = None
 
     def _clean(self, exc: Exception) -> str:
         return repr(exc).replace(self.key, "***")[:200] if self.key else repr(exc)[:200]
@@ -473,6 +480,18 @@ class TrafficFeed:
                 + urllib.parse.urlencode({"key": self.key, "traffic": "true", "travelMode": "truck",
                                           "vehicleCommercial": "true", "computeTravelTimeFor": "all",
                                           "maxAlternatives": 2, "routeRepresentation": "polyline"}))
+
+    def _corridor(self, geo: dict[str, Any]) -> list[list[float]]:
+        """The road itself, in full detail: via Kasara, ignoring live traffic. Fetched once per run."""
+        if self.corridor is None:
+            a, ghat, b = (geo["places"][code] for code in ("NASHIK", "KASARA_GHAT", "INNSA"))
+            url = (f"{TOMTOM}/routing/1/calculateRoute/{a['lat']},{a['lon']}:{ghat['lat']},{ghat['lon']}:"
+                   f"{b['lat']},{b['lon']}/json?"
+                   + urllib.parse.urlencode({"key": self.key, "traffic": "false", "travelMode": "truck",
+                                             "vehicleCommercial": "true", "routeRepresentation": "polyline"}))
+            legs = json.loads(self.fetch(url))["routes"][0]["legs"]
+            self.corridor = [[p["latitude"], p["longitude"]] for leg in legs for p in leg["points"]]
+        return self.corridor
 
     def _incidents(self) -> list[dict[str, Any]]:
         found: list[dict[str, Any]] = []
@@ -488,11 +507,13 @@ class TrafficFeed:
             return [], status(self.name, self.label, False, "off: set TOMTOM_API_KEY (free at developer.tomtom.com)")
         geo = load_geo()
         roads, items, errors = [], [], []
+        live_path: list[list[float]] | None = None  # where TomTom sends a truck from Nashik to JNPT right now
         live_roads: dict[str, dict[str, float]] = {}
         slow: dict[str, float] = {}
         for label, a, b, route_ids, place in TRAFFIC_CORRIDORS:
             try:
-                routes = json.loads(self.fetch(self._route_url(geo["places"][a], geo["places"][b]))).get("routes") or []
+                start, end = (TRAFFIC_POINTS.get(code) or geo["places"][code] for code in (a, b))
+                routes = json.loads(self.fetch(self._route_url(start, end))).get("routes") or []
             except Exception as exc:
                 errors.append(self._clean(exc))
                 continue
@@ -507,6 +528,8 @@ class TrafficFeed:
                               "path": points[:: max(1, len(points) // 150)] + points[-1:]})
                 if i:
                     continue
+                if place == "KASARA_GHAT":
+                    live_path = points
                 late = f"+{clock_time(delay)} in traffic" if delay >= 1 else "no delay"
                 km = s["lengthInMeters"] / 1000
                 items.append({"title": f"{label}: {clock_time(minutes)} now, {late}, {km:,.0f} km"})
@@ -517,24 +540,25 @@ class TrafficFeed:
         if len(errors) == len(TRAFFIC_CORRIDORS):
             return [], status(self.name, self.label, False, "unreachable, over the free limit, or a bad key", [],
                               errors[0])
+        events: list[dict[str, Any]] = []
+        markers: list[dict[str, Any]] = []
         try:
-            incidents = self._incidents()
-        except Exception as exc:
-            incidents = None  # unknown is not the same as clear: no road is reopened on a failed check
+            events, markers = self._closures(self._incidents(), now, geo, self._corridor(geo), live_path)
+        except Exception as exc:  # unknown is not the same as clear: no road is reopened on a failed check
             errors.append(self._clean(exc))
-        events, markers = self._closures(incidents, now, geo) if incidents is not None else ([], [])
         worst = max((r["delay_min"] for r in roads if not r["alternative"]), default=0)
         closures = sum(m["category"] == ROAD_CLOSED for m in markers)
         summary = f"{len(items)} roads live, " + (f"worst +{clock_time(worst)}" if worst >= 1 else "no delays")
-        summary += f" · {len(markers)} incident(s) on Nashik–JNPT" + (f", {closures} road closed" if closures else "")
-        alerts = [{"title": f"⚠ {m['title']}"} for m in markers[:4]]
+        summary += f" · {len(markers)} incident(s) on NH160" + (f", {closures} closed" if closures else "")
+        worst_first = sorted(markers, key=lambda m: m["category"] != ROAD_CLOSED)
+        alerts = [{"title": f"⚠ {m['title']}"} for m in worst_first[:4]]
         state = status(self.name, self.label, True, summary, alerts + items, "; ".join(errors), markers)
         state.update(roads=roads, live_roads=live_roads, slow=slow)
         return events, state
 
-    def _closures(self, incidents: list[dict[str, Any]], now: datetime,
-                  geo: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        corridor = geo["routes"]["N-JNPT-LK"]["stretches"][0]["path"]  # the booked road, even if traffic avoids it
+    def _closures(self, incidents: list[dict[str, Any]], now: datetime, geo: dict[str, Any],
+                  corridor: list[list[float]], live: list[list[float]] | None,
+                  ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         ghat = geo["places"]["KASARA_GHAT"]
         events, markers = [], []
         closed_now: dict[str, str] = {}
@@ -546,15 +570,20 @@ class TrafficFeed:
             points = [c for c in points if len(c) >= 2]
             if category not in ROAD_ALERTS or not points:
                 continue
-            if min(km_to_path(c[1], c[0], corridor) for c in points) > ON_CORRIDOR_KM:
+            on_highway = not CORRIDOR_ROADS.isdisjoint(p.get("roadNumbers") or [])
+            if not on_highway and category != JAM:  # a jam may have no road number; anything else is a side road
+                continue
+            if max(km_to_path(c[1], c[0], corridor) for c in points) > ON_ROAD_KM:
                 continue
             what = ((p.get("events") or [{}])[0].get("description") or "Traffic incident")[:80]
             where = " to ".join(x for x in (p.get("from"), p.get("to")) if x)[:80]
             late = f", +{clock_time(p['delay'] / 60)}" if p.get("delay") else ""
             markers.append({"lat": points[0][1], "lon": points[0][0], "category": category,
                             "title": f"{what}: {where}{late}" if where else f"{what}{late}"})
-            if category != ROAD_CLOSED:
-                continue
+            middle = points[len(points) // 2]
+            still_routed = not live or km_to_path(middle[1], middle[0], live) <= ON_ROAD_KM
+            if category != ROAD_CLOSED or not on_highway or still_routed:
+                continue  # if TomTom's live route still runs through it, trucks are getting through
             near_ghat = min(km_between(c[1], c[0], ghat["lat"], ghat["lon"]) for c in points) <= KASARA_KM
             segment = "KASARA_GHAT" if near_ghat else "NSK-JNPT"
             closed_now[segment] = markers[-1]["title"]

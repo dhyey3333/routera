@@ -30,7 +30,7 @@ This opens http://localhost:8000 and plays the India-inside Nashik corridor scen
 | What | Command (`make` target) |
 |---|---|
 | Control room, port 8000 | `python -m routera` (`make routera`) |
-| Tests: engine, app and Sentinel (348) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
+| Tests: engine, app and Sentinel (349) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
 | Lint | `python -m ruff check routera agents/sentinel` (`make routera-lint`) |
 | Sentinel console only, port 8001 | `python -m agents.sentinel.api --demo` (`make sentinel-demo`) |
 
@@ -46,7 +46,7 @@ You can also pick **🔴 LIVE** in the scenario dropdown. The same Sentinel, pla
 |---|---|---|---|
 | Weather for Nashik and JNPT, 3-day forecast | Open-Meteo | none | `WEATHER_ALERT` when an IMD threshold is crossed (≥35.6 mm/day rain, hail, ≥40 °C) |
 | Official disaster alerts (cyclones, floods, earthquakes) near any port, sea lane or corridor of the network | GDACS (UN and European Commission) | none | `WEATHER_ALERT` (source `gdacs`, reliability 0.90). Orange and red alerts confirm a disruption on their own; green ones only show as signals |
-| Live road times, delays and alternative routes on 8 corridors, plus closures on the Nashik to JNPT road | TomTom Traffic | `TOMTOM_API_KEY` (free: 2,500 requests and 50,000 map tiles a day) | A closure becomes `ROAD_CLOSURE` (source `tomtom`, reliability 0.85), which confirms on its own. Delays of an hour or more slow the planner's routes through that road. The key stays on the server; map tiles come through `/api/traffic/tile/...` |
+| Live road times, delays and alternative routes on 8 corridors, plus closures on the Nashik to JNPT road | TomTom Traffic | `TOMTOM_API_KEY` (free: 2,500 requests and 50,000 map tiles a day) | A closure becomes `ROAD_CLOSURE` (source `tomtom`, reliability 0.85), which confirms on its own, but only if it carries the highway's number, lies on the road and TomTom's own live route has gone around it: real data lists hundreds of closed side streets nearby. Delays of an hour or more slow the planner's routes through that road. The key stays on the server; map tiles come through `/api/traffic/tile/...` |
 | Headlines on the corridor, JNPT, grapes, Red Sea / Hormuz | Google News RSS | none | news the Sentinel classifies (rules, or the LLM) |
 | Ships off Rotterdam, JNPT, Mundra and Jebel Ali | AIS via aisstream.io (`pip install websockets`) | `AISSTREAM_API_KEY` (free, GitHub sign-up) | `PORT_CONGESTION` when ships at anchor pass a threshold (source `ais_port`, reliability 0.80: an estimate, not an official notice). aisstream.io is crowd-sourced and barely covers Indian and Gulf waters, so those ports usually show 0 ships; Rotterdam, where the mangoes go, is well covered |
 

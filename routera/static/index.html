@@ -1418,7 +1418,7 @@ function drawLive() {
   }
   const traffic = feeds.traffic, g = M.groups.traffic;
   $('#map-layers [data-layer="traffic"]').hidden = !traffic?.ok;
-  $("#map-note").textContent = `Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute. ${traffic?.ok ? "Live road traffic: TomTom." : "No live traffic."}`;
+  $("#map-note").textContent = `Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute. ${traffic?.ok ? "Live roads (TomTom): green clear, amber slow, red jammed, dashed = alternative." : "No live traffic."}`;
   M.roads.clearLayers();
   if (traffic?.ok) {
     if (!M.flow) {

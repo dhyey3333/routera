@@ -154,9 +154,13 @@ def test_an_official_orange_gdacs_alert_confirms_a_real_plan_but_news_alone_neve
     assert green["disruptions"] == [] and green["routera"]["kpis"]["pending_plans"] == 0
 
 
+ROAD = [[20.0, 73.79], [19.64, 73.48], [18.95, 72.95]]  # Nashik, Kasara ghat, JNPT
+GONE_ROUND = [[20.0, 73.79], [19.5, 73.9], [18.95, 72.95]]  # a live route that leaves the road at the ghat
+
+
 def tomtom(delay_s: int = 0, incidents: list[dict[str, Any]] | None = None,
-           fail_incidents: bool = False) -> Any:
-    """A stand-in for the TomTom API, in its documented response formats."""
+           fail_incidents: bool = False, live: list[list[float]] = GONE_ROUND) -> Any:
+    """A stand-in for the TomTom API, in the response formats it really returned."""
     def fetch(url: str) -> bytes:
         if "/tile/flow/" in url:
             return b"PNG"
@@ -164,7 +168,8 @@ def tomtom(delay_s: int = 0, incidents: list[dict[str, Any]] | None = None,
             if fail_incidents:
                 raise OSError(f"failed {url}")
             return json.dumps({"incidents": incidents if "73.35" in url else []}).encode()
-        leg = {"points": [{"latitude": 20.0, "longitude": 73.79}, {"latitude": 18.95, "longitude": 72.95}]}
+        path = ROAD if "traffic=false" in url else live
+        leg = {"points": [{"latitude": y, "longitude": x} for y, x in path]}
         route = {"summary": {"lengthInMeters": 200000, "travelTimeInSeconds": 9000 + delay_s,
                              "trafficDelayInSeconds": delay_s, "noTrafficTravelTimeInSeconds": 9000},
                  "legs": [leg]}
@@ -172,9 +177,10 @@ def tomtom(delay_s: int = 0, incidents: list[dict[str, Any]] | None = None,
     return fetch
 
 
-def closure(lat: float = 19.64, lon: float = 73.48, category: int = 8) -> dict[str, Any]:
+def closure(lat: float = 19.64, lon: float = 73.48, category: int = 8,
+            roads: tuple[str, ...] = ("AH47", "NH160")) -> dict[str, Any]:
     return {"type": "Feature", "geometry": {"type": "Point", "coordinates": [lon, lat]},
-            "properties": {"iconCategory": category, "from": "Igatpuri", "to": "Kasara",
+            "properties": {"iconCategory": category, "from": "Igatpuri", "to": "Kasara", "roadNumbers": list(roads),
                            "events": [{"description": "Road closed", "code": 401, "iconCategory": category}]}}
 
 
@@ -198,12 +204,20 @@ def test_traffic_reports_live_times_alternatives_and_slows_the_planner_only_for_
     assert calm.poll(NOW)[1]["slow"] == {}  # 20 minutes doesn't change a perishable decision
 
 
-def test_only_a_closure_on_the_corridor_counts_and_it_clears_when_tomtom_says_so() -> None:
-    far = closure(lat=19.95, lon=74.10)  # a closed street off the corridor
-    feed = TrafficFeed(env={"TOMTOM_API_KEY": "k"}, fetch=tomtom(incidents=[far]))
+def test_a_closed_side_street_never_shuts_the_corridor() -> None:
+    # what real TomTom data looks like: closed streets next to the highway, with no highway number
+    side_street = closure(roads=())
+    off_the_road = closure(lat=19.70, lon=73.60)  # the highway's number, but not on this stretch
+    feed = TrafficFeed(env={"TOMTOM_API_KEY": "k"}, fetch=tomtom(incidents=[side_street, off_the_road]))
     events, state = feed.poll(NOW)
     assert events == [] and state["markers"] == []
-    feed.fetch = tomtom(incidents=[closure()])
+    feed = TrafficFeed(env={"TOMTOM_API_KEY": "k"}, fetch=tomtom(incidents=[closure()], live=ROAD))
+    events, state = feed.poll(NOW)  # on the highway, but TomTom still routes trucks through it
+    assert events == [] and len(state["markers"]) == 1 and feed.closed == {}
+
+
+def test_a_real_closure_counts_and_it_clears_when_tomtom_says_so() -> None:
+    feed = TrafficFeed(env={"TOMTOM_API_KEY": "k"}, fetch=tomtom(incidents=[closure()]))
     [shut] = feed.poll(NOW)[0]
     assert shut["source"] == "tomtom" and shut["payload"]["segment"] == "KASARA_GHAT"
     assert shut["payload"]["status"] == "closed"
