@@ -1,9 +1,10 @@
 """Orchestrator: turns Sentinel disruptions into plans, waits for a human, then executes and logs.
 
-On every disruption.* message it groups open disruptions that share containers into one
-situation (a global shock and its domestic ripples become one plan), re-plans what is still
-pending, and emits a fresh snapshot. Approval books the moves (SAP TM, simulated), drafts the
-paperwork and logs decision and payout to the hash-chained audit.
+On every disruption.* message each open disruption gets its own plan, holding only the containers
+it hits, and whatever is still pending is re-planned. Plans are priced knowing about every open
+disruption, and a box hit by two can sit in both plans until one of them moves it. Approval books
+the moves (SAP TM, simulated), drafts the paperwork and logs decision and payout to the hash-chained
+audit.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from agents.sentinel.scoring import DelayEstimate
 from agents.sentinel.sentinel import DisruptionSentinel
 from routera.audit import HashChainAudit
 from routera.compliance import FPO_BY_CROP, ComplianceRules
-from routera.geo import booked_key
+from routera.geo import booked_key, load_geo
 from routera.market import load_markets
 from routera.paperwork import draft_pack
 from routera.planner import Context, Planner, fmt_inr, summarise
@@ -42,6 +43,17 @@ TYPE_LABEL = {
 # team's approval policy: silence or a timeout is never consent, so a plan only ever escalates.
 ESCALATION = (("Operations lead (Sunil P.)", 2.0), ("Export manager", 2.0), ("FPO director", 4.0))
 Emit = Callable[[str, dict[str, Any]], None]
+
+
+def on_table(plans: list[dict[str, Any]]) -> float:
+    """Value still waiting on a decision. A box in two plans counts once, at its better plan."""
+    best: dict[str, float] = {}
+    for plan in plans:
+        if plan["status"] == "pending":
+            for row in plan["rows"]:
+                cid = row["container_id"]
+                best[cid] = max(best.get(cid, row["value_saved_inr"]), row["value_saved_inr"])
+    return sum(best.values())
 
 
 class Orchestrator:
@@ -103,6 +115,12 @@ class Orchestrator:
                 ctx.delay[cid] = max(ctx.delay.get(cid, 0.0), d.expected_delay_days)
         for place, days in self.live_slow.items():
             ctx.slow[place] = ctx.slow.get(place, 0.0) + days
+        boxes = self.containers()
+        for booking in self.bookings:  # moves already approved use up route slots and market room
+            ctx.used[booking["route_id"]] = ctx.used.get(booking["route_id"], 0) + 1
+            if booking["container_id"] in boxes:
+                tonnes = boxes[booking["container_id"]].weight_kg / 1000
+                ctx.loaded[booking["destination"]] = ctx.loaded.get(booking["destination"], 0.0) + tonnes
         return ctx
 
     def set_live_slow(self, slow: dict[str, float]) -> None:
@@ -124,29 +142,6 @@ class Orchestrator:
                     if cid in boxes:
                         self.tracker.record_excursion(boxes[cid], p.temp_c - p.setpoint_c, p.minutes_above)
 
-    def situations(self) -> list[list[Any]]:
-        """Open disruptions grouped by shared containers (union-find)."""
-        incidents = [i for i in self._incidents() if i.disruption.affected_container_ids]
-        parent = list(range(len(incidents)))
-
-        def find(i: int) -> int:
-            while parent[i] != i:
-                parent[i] = parent[parent[i]]
-                i = parent[i]
-            return i
-
-        owner: dict[str, int] = {}
-        for idx, incident in enumerate(incidents):
-            for cid in incident.disruption.affected_container_ids:
-                if cid in owner:
-                    parent[find(idx)] = find(owner[cid])
-                else:
-                    owner[cid] = idx
-        groups: dict[int, list[Any]] = {}
-        for idx, incident in enumerate(incidents):
-            groups.setdefault(find(idx), []).append(incident)
-        return list(groups.values())
-
     # --- planning -------------------------------------------------------------------------------
 
     def on_bus(self, topic: str, message: dict[str, Any]) -> None:
@@ -156,45 +151,36 @@ class Orchestrator:
         boxes = self.containers()
         self._record_excursions(boxes)
         ctx = self.context()
-        live: dict[str, str] = {}  # pending plan id -> the plan that now covers it
-        for group in self.situations():
-            ids = sorted(i.disruption_id for i in group)
-            known = [self.plans[p] for p in dict.fromkeys(self.plan_for_root.get(i) for i in ids) if p]
+        live: set[str] = set()  # pending plans with a disruption still behind them
+        for incident in self._incidents():
+            d = incident.disruption
+            if not d.affected_container_ids:
+                continue
+            known = [p for p in self.plans.values() if d.disruption_id in p.get("disruption_ids", [])]
             plan = next((p for p in known if p["status"] == "pending"), None)
             decided = {cid for p in known if p["status"] != "pending" for cid in p["container_ids"]}
-            pending = sorted(
-                {cid for i in group for cid in i.disruption.affected_container_ids}
-                - set(self.assigned) - decided
-            )
-            pending = [cid for cid in pending if cid in boxes]
+            pending = [cid for cid in sorted(set(d.affected_container_ids) - set(self.assigned) - decided)
+                       if cid in boxes]
             if not pending:
+                if plan is not None:  # still open, but another plan has moved its boxes
+                    plan.update(status="closed", closed_reason="its containers were already moved by another plan")
                 continue
             built = self.planner.plan([boxes[cid] for cid in pending], ctx)
             if plan is None:
                 plan = {"plan_id": f"PLN-{len(self.plans) + 1:04d}", "version": 0, "status": "pending",
                         "created_at": ctx.now.isoformat()}
                 self.plans[plan["plan_id"]] = plan
-            for other in known:  # a plan whose situation merged into this one
-                if other["status"] == "pending" and other is not plan:
-                    live[other["plan_id"]] = plan["plan_id"]
-            live[plan["plan_id"]] = plan["plan_id"]
-            for disruption_id in ids:
-                self.plan_for_root[disruption_id] = plan["plan_id"]
-            if plan.get("rows") != built["rows"] or plan.get("disruption_ids") != ids:
+            live.add(plan["plan_id"])
+            self.plan_for_root[d.disruption_id] = plan["plan_id"]
+            if plan.get("rows") != built["rows"]:
                 plan["version"] += 1
                 plan["updated_at"] = ctx.now.isoformat()
-            root_view = next(i.disruption for i in group if i.disruption_id == ids[0])
-            linked = f" + {len(ids) - 1} linked" if len(ids) > 1 else ""
-            plan.update(built, disruption_ids=ids, container_ids=pending,
-                        title=f"{TYPE_LABEL[root_view.type]} · {root_view.location}{linked}")
+            place = load_geo()["places"].get(d.location, {}).get("name", d.location)
+            plan.update(built, disruption_ids=[d.disruption_id], container_ids=pending,
+                        title=f"{TYPE_LABEL[d.type]} · {place}")
         for plan in self.plans.values():
-            if plan["status"] != "pending" or live.get(plan["plan_id"]) == plan["plan_id"]:
-                continue
-            plan["status"] = "closed"
-            target = live.get(plan["plan_id"])
-            plan["closed_reason"] = (
-                f"merged into {target}" if target else "the disruption cleared before anyone had to act"
-            )
+            if plan["status"] == "pending" and plan["plan_id"] not in live:
+                plan.update(status="closed", closed_reason="the disruption cleared before anyone had to act")
         self.emit("routera", self.snapshot())
 
     # --- the human decision ---------------------------------------------------------------------
@@ -431,7 +417,7 @@ class Orchestrator:
                 "containers": len(fleet),
                 "at_risk": len(at_risk),
                 "min_days_left": min((f["days_left"] for f in at_risk), default=None),
-                "on_table_inr": sum(p["saved_inr"] for p in plans if p["status"] == "pending"),
+                "on_table_inr": on_table(plans),
                 "protected_inr": sum(p["saved_inr"] for p in plans if p["status"] == "approved"),
                 "pending_plans": sum(p["status"] == "pending" for p in plans),
                 "rebooked": len(self.assigned),

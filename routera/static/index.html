@@ -480,7 +480,7 @@ footer.foot { margin-top: 20px; color: var(--faint); font-size: 12px; text-align
 
     <section class="panel decide">
       <header>
-        <h3>Decide</h3><span class="tag">one plan per situation · re-planned live</span>
+        <h3>Decide</h3><span class="tag">one plan per disruption · re-planned live</span>
         <div class="right plantabs" id="plantabs"></div>
       </header>
       <div class="body" id="plan"></div>
@@ -757,7 +757,6 @@ function disHTML(item) {
     <div class="meta">${sevHTML(d.severity)}<span class="chip">${Math.round(d.confidence * 100)}% sure</span>
       ${d.expected_delay_days && !waiting ? `<span class="chip warn">+${d.expected_delay_days} d</span>` : ""}
       ${n ? `<span class="chip acc">${n} container${n > 1 ? "s" : ""} · ${Math.round(d.affected_weight_kg / 1000)} t</span>` : ""}
-      ${(item.linked || []).length ? `<span class="chip" title="Shares containers with ${esc(item.linked.join(", "))}">🔗 ${item.linked.length} linked</span>` : ""}
       ${item.summary_by && item.summary_by !== "template" ? `<span class="chip">summary: ${esc(item.summary_by)}</span>` : ""}</div>
   </article>`;
 }
@@ -985,7 +984,8 @@ function applyRoutera(r, quiet = false) {
     if (!old && p.status === "pending") {
       toast(`New plan ${p.plan_id} · saves ${inr(p.saved_inr)}`, p.headline, "var(--accent)");
       flash("#st-decide");
-      if (!S.plan || before.get(S.plan)?.status !== "pending") S.plan = p.plan_id;
+      // show the new plan, unless someone is halfway through changing routes on the current one
+      if (!S.plan || before.get(S.plan)?.status !== "pending" || !Object.keys(S.overrides[S.plan] || {}).length) S.plan = p.plan_id;
       const ph = $("#phone"); ph.classList.remove("buzz"); void ph.offsetWidth; ph.classList.add("buzz");
     } else if (old && old.status === "pending" && p.status === "closed") {
       toast(`${p.plan_id} closed`, p.closed_reason, "var(--good)");

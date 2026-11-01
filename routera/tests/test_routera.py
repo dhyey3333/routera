@@ -108,13 +108,15 @@ def test_nashik_mid_strike_plan_avoids_struck_trucks_the_ghat_and_the_full_cold_
     o = run("nashik_corridor_strike", steps=9)  # strike live, ghat shut, cold store full
     ctx = o.context()
     assert "KASARA_GHAT" in ctx.blocked and "CS-NSK" in ctx.blocked and ctx.struck
-    [plan] = pending(o)
-    assert plan["saved_inr"] > 0 and moves(plan)
-    for row in moves(plan):
+    plans = pending(o)
+    assert plans and sum(p["saved_inr"] for p in plans) > 0
+    rows = [row for plan in plans for row in moves(plan)]
+    assert rows
+    for row in rows:
         route = ROUTES[row["choice"]["route_id"]]
         assert unavailable(route, ctx.blocked, ctx.struck, {}) is None, row["container_id"]
         assert row["value_saved_inr"] >= 0
-    chosen = {r["choice"]["route_id"] for r in moves(plan)}
+    chosen = {r["choice"]["route_id"] for r in rows}
     assert not chosen & {"N-JNPT-LK", "N-JNPT-SG", "N-HOLD-LK", "N-VASHI"}
 
 
@@ -134,11 +136,43 @@ def test_gulf_closure_plan_skips_jebel_ali_blocked_markets_and_failed_lots() -> 
                 assert choice["destination"] != "SGSIN"
 
 
-def test_gulf_ripple_global_and_domestic_disruptions_make_one_plan() -> None:
+def test_each_disruption_gets_its_own_plan_with_only_its_own_containers() -> None:
     o = run("gulf_ripple")
     plans = pending(o)
-    assert len(plans) == 1
-    assert len(plans[0]["disruption_ids"]) > 1
+    assert len(plans) > 1
+    hits = {i.disruption_id: set(i.disruption.affected_container_ids) for i in o._incidents()}
+    for plan in plans:
+        [disruption_id] = plan["disruption_ids"]
+        assert set(plan["container_ids"]) <= hits[disruption_id]
+        assert "linked" not in plan["title"] and "_" not in plan["title"]
+
+
+def test_a_box_hit_by_two_disruptions_moves_once_and_counts_once() -> None:
+    o = run("gulf_ripple")
+    seen: dict[str, list[dict[str, Any]]] = {}
+    for plan in pending(o):
+        for row in plan["rows"]:
+            seen.setdefault(row["container_id"], []).append(plan)
+    shared = {cid: plans for cid, plans in seen.items() if len(plans) > 1}
+    assert shared  # this scenario has boxes hit twice
+    naive = sum(p["saved_inr"] for p in pending(o))
+    assert o.snapshot()["kpis"]["on_table_inr"] < naive  # not double-counted
+    plan = next(p for p in pending(o) if moves(p) and {r["container_id"] for r in moves(p)} & set(shared))
+    moved = {r["container_id"] for r in moves(plan)}
+    o.approve(plan["plan_id"], "Sunil P.")
+    for other in pending(o):
+        assert not moved & set(other["container_ids"])  # gone from every other plan
+    assert len(o.bookings) == len(moved)
+    assert o.context().used  # and later plans see the route slots it took
+
+
+def test_a_plan_whose_boxes_were_all_moved_elsewhere_closes_with_the_true_reason() -> None:
+    o = run("gulf_ripple")
+    for plan in sorted(pending(o), key=lambda p: -len(p["rows"])):
+        if plan["status"] == "pending" and moves(plan):
+            o.approve(plan["plan_id"], "Sunil P.")
+    reasons = {p["closed_reason"] for p in o.plans.values() if p["status"] == "closed"}
+    assert "the disruption cleared before anyone had to act" not in reasons
 
 
 # --- the human decision and the chain -------------------------------------------------------------

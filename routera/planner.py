@@ -37,6 +37,8 @@ class Context:
     slow: dict[str, float] = field(default_factory=dict)  # congested place -> extra days
     doc_delay: dict[str, float] = field(default_factory=dict)  # facility -> paperwork backlog days
     delay: dict[str, float] = field(default_factory=dict)  # container -> wait-as-booked delay
+    used: dict[str, int] = field(default_factory=dict)  # route -> slots taken by approved moves
+    loaded: dict[str, float] = field(default_factory=dict)  # market -> tonnes already sent by approved moves
 
 
 def fmt_inr(value: float) -> str:
@@ -180,8 +182,8 @@ class Planner:
     def plan(self, containers: Iterable[ContainerRef], ctx: Context) -> dict[str, Any]:
         boxes = list(containers)
         life = {c.container_id: self.tracker.estimate(c, ctx.now).days_left for c in boxes}
-        added_t: dict[str, float] = defaultdict(float)
-        used: dict[str, int] = defaultdict(int)
+        added_t: dict[str, float] = defaultdict(float, ctx.loaded)
+        used: dict[str, int] = defaultdict(int, ctx.used)
         crowd_t = sum(c.weight_kg for c in boxes) / 1000  # without ROUTERA everyone dumps at once
         rows = []
         for c in sorted(boxes, key=lambda b: (life[b.container_id], b.container_id)):  # most vulnerable first

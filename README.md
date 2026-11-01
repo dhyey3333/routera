@@ -30,7 +30,7 @@ This opens http://localhost:8000 and plays the India-inside Nashik corridor scen
 | What | Command (`make` target) |
 |---|---|
 | Control room, port 8000 | `python -m routera` (`make routera`) |
-| Tests: engine, app and Sentinel (365) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
+| Tests: engine, app and Sentinel (367) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
 | Lint | `python -m ruff check routera agents/sentinel` (`make routera-lint`) |
 | Sentinel console only, port 8001 | `python -m agents.sentinel.api --demo` (`make sentinel-demo`) |
 
@@ -77,7 +77,7 @@ and explainable.
 | **Paperwork** | `routera/paperwork.py` | The team's document model ([routera_compliance](https://github.com/kokilacg30/routera_compliance)), fitted to ROUTERA: 12 trade documents with their standards (UN/CEFACT, ISPM 12, WCO, FIATA). Each move gets a change set (keep, regenerate, new, superseded) and a critical path (the slowest document). Approval drafts the filing pack and logs its sha256 on the chain. A field ROUTERA does not know, such as the new buyer, is left for a human, never invented. Cross-document checks cover weight, HS code, value and consignee. Each pack downloads as a ZIP with a cover sheet (summary, human checklist, legal basis), every document as JSON and a DRAFT-stamped PDF (`routera/filing.py`, reportlab), and a manifest of sha256 hashes. |
 | **Live map** | `routera/geo.py`, `data/geo.json`, `routera/tools/build_geo.py` | Every container, placed from its ETA and moving with the clock, on an OpenStreetMap base. Click a box to see its booked route and every alternative, priced now on the live closures; click a route to change the plan. Real ships (AIS) and real alerts (GDACS, weather) are drawn on top. Road paths come from OSRM and sea lanes from searoute, generated once into `geo.json`. With a TomTom key, live mode adds traffic colours, live road times and live alternative roads. The fleet itself stays simulated. |
 | **Escalation** | `routera/orchestrator.py` | From the team's approval policy: a pending plan waits on the operations lead for 2 h, then the export manager for 2 h, then the FPO director for 4 h, then it is an SLA breach. Each step is logged on the chain. **Silence is never consent**: a plan never approves itself. |
-| **Approval & Audit** | `routera/orchestrator.py`, `routera/audit.py` | One plan per situation: disruptions that share containers are grouped with union-find and re-planned live. Nothing moves until a human approves. Approval books SAP TM moves (simulated), drafts paperwork and logs the FPO payout. Every entry is sha256-chained to the previous one. |
+| **Approval & Audit** | `routera/orchestrator.py`, `routera/audit.py` | One plan per disruption, holding only the containers it hits, re-planned live. A box hit by two disruptions can sit in both plans until one of them moves it, and approved moves use up route slots and market room for later plans. Nothing moves until a human approves. Approval books SAP TM moves (simulated), drafts paperwork and logs the FPO payout. Every entry is sha256-chained to the previous one. |
 
 ## API (port 8000)
 
@@ -111,5 +111,5 @@ and explainable.
 |---|---|---|
 | `nashik_corridor_strike` | India-inside | Strike, Kasara ghat landslide, reefer excursion, full cold store and a Vashi price crash. The plan moves boxes to rail and Mundra and keeps the rest of the bookings. |
 | `gulf_closure` | Global | Jebel Ali shuts. Boxes at sea go to Singapore or Colombo. Blocked lots and Malaysia (no import permit) are never chosen. |
-| `gulf_ripple` | Global → India | The Gulf shock lands as domestic damage. It becomes one plan, not five. |
+| `gulf_ripple` | Global → India | The Gulf shock lands as domestic damage: each disruption gets its own plan. |
 | `red_sea_reroute`, `us_tariff_spike` | Global | Reroute and tariff on the same engine. |
