@@ -37,6 +37,7 @@ from routera.filing import build_zip, pdf_available, render_pdf
 from routera.geo import load_geo
 from routera.live_feeds import TrafficFeed, default_feeds, live_books
 from routera.orchestrator import Orchestrator
+from routera.phone import TelegramBot
 
 STATIC = Path(__file__).parent / "static"
 DEFAULT_PORT = 8000
@@ -64,7 +65,9 @@ class RouteraService(SentinelService):
         self._wake = threading.Event()
         self._due: dict[str, float] = {}
         self._refreshed: dict[str, float] = {}
+        self.bot: TelegramBot | None = None
         super().__init__(*args, **kwargs)
+        self.bot = TelegramBot.from_env(self)
 
     def _install(self, scenario: Scenario | None, rig: Rig) -> None:
         super()._install(scenario, rig)
@@ -73,6 +76,8 @@ class RouteraService(SentinelService):
         def emit(kind: str, data: dict[str, Any]) -> None:
             if rig is self.rig:
                 self._broadcast(kind, data)
+                if kind == "routera" and self.bot:
+                    self.bot.kick()
 
         chain = HashChainAudit(clock=rig.clock, on_append=lambda entry: emit("audit", entry))
         rig.audit.subscribe(lambda e: chain.log(e.actor, e.action, e.details, e.rationale))
@@ -82,7 +87,8 @@ class RouteraService(SentinelService):
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
-            return {**super().snapshot(), "routera": self.orchestrator.snapshot(), "live": self.live}
+            phone = self.bot.status() if self.bot else {"state": "off"}
+            return {**super().snapshot(), "routera": self.orchestrator.snapshot(), "live": self.live, "phone": phone}
 
     # --- Live mode: real feeds into the same Sentinel, planner and audit -------------------------
 
@@ -379,6 +385,9 @@ def main(argv: list[str] | None = None) -> int:
         service.autostart = (args.demo, args.speed)
     url = f"http://localhost:{args.port}"
     print(f"ROUTERA · SIMULATED FEEDS · {url}   (LLM: {llm.label})")
+    if service.bot:
+        service.bot.start()
+        print("Phone approvals are on: the control room shows how to connect (Approve & log panel).")
     if not args.no_browser:
         threading.Timer(1.5, webbrowser.open, args=(url,)).start()
     uvicorn.run(create_routera_app(service), host=args.host, port=args.port, log_level="warning")

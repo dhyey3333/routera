@@ -30,7 +30,7 @@ This opens http://localhost:8000 and plays the India-inside Nashik corridor scen
 | What | Command (`make` target) |
 |---|---|
 | Control room, port 8000 | `python -m routera` (`make routera`) |
-| Tests: engine, app and Sentinel (355) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
+| Tests: engine, app and Sentinel (365) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
 | Lint | `python -m ruff check routera agents/sentinel` (`make routera-lint`) |
 | Sentinel console only, port 8001 | `python -m agents.sentinel.api --demo` (`make sentinel-demo`) |
 
@@ -54,6 +54,12 @@ Click any item on a feed card to see it on the map, which containers it touches,
 
 The LLM is off by default (`SENTINEL_LLM=off`). With it off, the keyword rules classify the news
 and the summaries come from templates. See `agents/sentinel/README.md` to switch it on.
+
+### Approvals on your real phone
+
+Optional. A plan buzzes your phone in Telegram, with Approve, Reject and Why? buttons, and the big screen updates when you tap. Create a bot with @BotFather, set `TELEGRAM_BOT_TOKEN`, start the app, then send the `/pair` code shown in the Approve & log panel. The bot only makes outbound calls, so the app needs no public address.
+
+Only the paired private chat can decide, and only the plan version it was shown. Every decision is on the audit chain, as "Sunil P. via Telegram" (change it with `TELEGRAM_APPROVER`). Set `TELEGRAM_CHAT_ID` to skip pairing after a restart. The on-screen buttons keep working, whichever comes first counts, and route changes stay on the big screen.
 
 ## What is an agent and what is an algorithm
 

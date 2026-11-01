@@ -93,6 +93,7 @@ select.btn { padding-right: 8px; }
 .layer.india { color: var(--india); background: var(--india-soft); }
 .layer.global { color: var(--global); background: var(--global-soft); }
 .layer.live { color: #fff; background: var(--bad); animation: pulse 2s infinite; }
+[hidden] { display: none !important; }
 .feeds { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .feed { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); min-width: 0; }
 .feed .h { display: flex; align-items: center; gap: 7px; font-weight: 650; font-size: 13px; }
@@ -231,6 +232,11 @@ td.r, th.r { text-align: right; }
 .notice.warn { background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
 
 /* --- phone ----------------------------------------------------------------------------------- */
+.realphone { font-size: 12.5px; color: var(--muted); padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); margin-bottom: 4px; }
+.realphone b { color: var(--text); }
+.realphone code { font-size: 14px; font-weight: 700; color: var(--accent); }
+.realphone.on { border-color: var(--good); }
+.realphone.bad { border-color: var(--bad); }
 .phone { margin: 14px auto 6px; width: 100%; max-width: 300px; background: var(--phone); border-radius: 34px; padding: 10px; box-shadow: var(--shadow), inset 0 0 0 2px #ffffff14; position: relative; }
 .phone.buzz { animation: buzz .5s 2; }
 @keyframes buzz { 20%, 60% { transform: translateX(-3px) rotate(-1deg); } 40%, 80% { transform: translateX(3px) rotate(1deg); } }
@@ -489,6 +495,7 @@ footer.foot { margin-top: 20px; color: var(--faint); font-size: 12px; text-align
         </div>
       </header>
       <div class="body" id="approve-phone">
+        <div class="realphone" id="realphone"></div>
         <div class="phone" id="phone">
           <div class="notch"></div>
           <div class="screen">
@@ -692,6 +699,14 @@ const RENDER = {
     S.planKey = key;
     $("#plan").innerHTML = plan ? planHTML(plan) : emptyPlanHTML();
     tick();
+  },
+  realphone() {
+    const p = S.phoneBot || { state: "off" }, el = $("#realphone"), bot = p.bot ? `@${esc(p.bot)}` : "your bot";
+    el.className = `realphone ${p.state === "on" ? "on" : p.state === "error" ? "bad" : ""}`;
+    el.innerHTML = p.state === "on" ? `📱 <b>Your phone is connected</b> to ${bot}. New plans arrive there with Approve and Reject buttons.`
+      : p.state === "pairing" ? `📱 <b>Connect your phone:</b> in Telegram, open ${bot} and send <code>/pair ${esc(p.code || "")}</code>`
+      : p.state === "error" ? `📱 <b>Telegram problem:</b> ${esc(p.error || "can't reach it")}. Approve here on the screen instead.`
+      : `📱 This is a simulated phone. Add a <b>TELEGRAM_BOT_TOKEN</b> to get plans on your real phone.`;
   },
   feeds() {
     const feeds = Object.values(S.live.feeds || {});
@@ -983,6 +998,7 @@ function applyRoutera(r, quiet = false) {
 function loadSnapshot(s, reset) {
   S.scenario = s.scenario; S.scenarios = s.scenarios; S.replay = s.replay; S.llm = s.llm;
   S.signals = s.signals.slice(); S.published = s.published; S.live = s.live || { on: false, feeds: {} };
+  S.phoneBot = s.phone || S.phoneBot; mark("realphone");
   S.disruptions = new Map(s.disruptions.map((d) => [d.disruption.disruption_id, d]));
   if (reset) { S.overrides = {}; S.why = {}; S.phoneWhy = {}; S.plan = null; S.chain = []; S.chainOk = null; S.note = ""; S.r = null; }
   anchor(s.clock, true);
@@ -1001,6 +1017,7 @@ function connect() {
   on("snapshot", (s) => loadSnapshot(s, false));
   on("reset", (s) => { loadSnapshot(s, true); toast(S.live.on ? "● Live mode on" : "Replay started", s.scenario ? s.scenario.title : "", S.live.on ? "var(--bad)" : "var(--accent-2)"); });
   on("feeds", (l) => { S.live = l; mark("feeds", "header"); });
+  on("phone", (p) => { S.phoneBot = p; mark("realphone"); });
   on("step", (s) => {
     Object.assign(S.replay, { step: s.index, steps: s.steps, running: true });
     anchor(s.at);
@@ -1026,6 +1043,8 @@ function connect() {
     if (S.chain.length && S.chain[S.chain.length - 1].seq >= e.seq) return;
     S.chain.push(e); S.fresh.add("a" + e.seq);
     if (e.actor !== "sentinel") flash("#st-approve");
+    if (e.action === "plan.approved" && e.actor.includes("Telegram")) toast("📱 Approved from the phone", e.rationale, "var(--good)");
+    if (e.action === "plan.rejected" && e.actor.includes("Telegram")) toast("📱 Rejected from the phone", e.rationale, "var(--bad)");
     if (e.action === "plan.escalated") toast(`⏫ ${e.details.plan_id} escalated`, e.rationale, "var(--warn)");
     mark("chain", "pipeline");
   });
@@ -1675,7 +1694,7 @@ document.querySelector("#map-side").addEventListener("mouseout", (ev) => {
   if (line && o) line.setStyle(routeStyle(o, id === currentChoice()?.route_id));
 });
 
-mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet");
+mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet", "realphone");
 connect();
 </script>
 </body>
