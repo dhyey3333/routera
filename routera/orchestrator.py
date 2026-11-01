@@ -18,6 +18,7 @@ from agents.sentinel.matching import MatchTarget, match_containers
 from agents.sentinel.models import ContainerRef, ReeferTelemetryPayload
 from agents.sentinel.scoring import DelayEstimate
 from agents.sentinel.sentinel import DisruptionSentinel
+from agents.sentinel.summary import count
 from routera.audit import HashChainAudit
 from routera.compliance import FPO_BY_CROP, ComplianceRules
 from routera.geo import booked_key, load_geo
@@ -233,7 +234,7 @@ class Orchestrator:
                        f"{approver} approved {plan_id}: {moves}; saves {fmt_inr(plan['saved_inr'])}{checked}")
         self.chain.log("reroute", "booking.created", {"plan_id": plan_id, "bookings": created,
                        "system": "SAP TM (simulated)"},
-                       f"{len(created)} moves booked in SAP TM (simulated) for {plan_id}")
+                       f"{count(len(created), 'move')} booked in SAP TM (simulated) for {plan_id}")
         packs = {r["container_id"]: self.paperwork(plan_id, r["container_id"]) for r in plan["rows"]
                  if r["choice"] and r["choice"]["route_id"] != "STAY"}
         plan["packs"] = {cid: p["sha256"] for cid, p in packs.items()}
@@ -246,7 +247,8 @@ class Orchestrator:
                             "regenerate": papers["regenerate"], "new": papers["new"],
                             "superseded": papers["obsolete"], "critical_path_h": papers["hours"],
                             "fields_to_fill": to_fill},
-                           f"{drafted} documents drafted for {len(packs)} moves ({papers['regenerate']} regenerated, "
+                           f"{count(drafted, 'document')} drafted for {count(len(packs), 'move')} "
+                           f"({papers['regenerate']} regenerated, "
                            f"{papers['new']} new, {papers['obsolete']} superseded), ready in about "
                            f"{papers['hours']:g} h; {to_fill} field(s) left for a human; pack hashes logged")
         fpos = ", ".join(sorted({FPO_BY_CROP.get(r["crop"], "Grower FPO (SIM)") for r in plan["rows"]}))
@@ -322,7 +324,7 @@ class Orchestrator:
         built = self.planner.plan(boxes, ctx)
         moves = ", ".join(f"{s['count']} → {s['name']}" for s in built["split"]) or "no feasible moves"
         return {"place": place, "containers": len(boxes), "delay_days": delay.days, "moves": moves,
-                "headline": f"If this shut: {len(boxes)} containers at risk, about {delay.days:g} d of delay. "
+                "headline": f"If this shut: {count(len(boxes))} at risk, about {delay.days:g} d of delay. "
                             f"Plan: {moves}.",
                 "saved_inr": built["saved_inr"], "value_inr": built["value_inr"], "baseline_inr": built["baseline_inr"],
                 "routes": [{"container_id": r["container_id"], "route_id": r["choice"]["route_id"],

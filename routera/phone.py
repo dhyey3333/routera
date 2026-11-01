@@ -26,6 +26,7 @@ import urllib.request
 from collections.abc import Callable
 from typing import Any
 
+from agents.sentinel.summary import count
 from routera.planner import fmt_inr
 
 log = logging.getLogger("routera.phone")
@@ -144,8 +145,8 @@ class TelegramBot:
     def _final_text(plan: dict[str, Any]) -> str:
         title = f"<b>{html.escape(plan['title'])}</b>"
         if plan["status"] == "approved":
-            moved = len(plan.get("packs") or {})
-            return (f"✅ {title}\nApproved by {html.escape(str(plan.get('approved_by')))}. {moved} moves booked in "
+            moved = count(len(plan.get("packs") or {}), "move")
+            return (f"✅ {title}\nApproved by {html.escape(str(plan.get('approved_by')))}. {moved} booked in "
                     f"SAP TM (simulated). Saves {fmt_inr(plan['saved_inr'])}. Logged on the audit chain.")
         if plan["status"] == "rejected":
             return (f"❌ {title}\nRejected by {html.escape(str(plan.get('rejected_by')))}. "

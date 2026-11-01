@@ -38,6 +38,7 @@ from agents.sentinel.llm_client import LLM_MODES, build_llm_client
 from agents.sentinel.models import BusMessage, Disruption, LLMClient, NetworkRepository, UtcDatetime
 from agents.sentinel.sentinel import DisruptionSentinel
 from agents.sentinel.settings import SentinelConfig
+from agents.sentinel.summary import count
 
 SCENARIO_DIR = DATA_DIR / "scenarios"
 EXPECTED_DIR = DATA_DIR / "expected"
@@ -303,7 +304,7 @@ def check_disruption(view: Disruption | None, expected: Mapping[str, Any]) -> li
         and len(view.affected_container_ids) != expected["affected_count"]
     ):
         problems.append(
-            f"{name} affects {len(view.affected_container_ids)} containers, "
+            f"{name} affects {count(len(view.affected_container_ids))}, "
             f"expected {expected['affected_count']}"
         )
     if (
@@ -449,7 +450,7 @@ class _Printer:
             print(
                 f"  >> {data['topic']} {d['disruption_id']} {d['type']} {d['location']} "
                 f"{d['status']} · severity {d['severity']}/5 {d['priority']} · "
-                f"{len(d['affected_container_ids'])} containers · ~{d['expected_delay_days']:g} d "
+                f"{count(len(d['affected_container_ids']))} · ~{d['expected_delay_days']:g} d "
                 f"· conf {d['confidence']:.3f}"
             )
 
@@ -462,7 +463,7 @@ def _print_final(result: ReplayResult) -> None:
         print(
             f"  {d.disruption_id}  {d.type:<16} {d.location:<14} {state:<10} severity "
             f"{d.severity}/5 {d.priority:<6} conf {d.confidence:.3f}  "
-            f"{len(d.affected_container_ids):>2} containers  ~{d.expected_delay_days:g} d"
+            f"{count(len(d.affected_container_ids)):>13}  ~{d.expected_delay_days:g} d"
         )
         print(f"            {d.summary}")
 

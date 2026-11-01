@@ -46,7 +46,7 @@ from agents.sentinel.models import (
 )
 from agents.sentinel.normalise import Gazetteer
 from agents.sentinel.settings import SentinelConfig
-from agents.sentinel.summary import template_summary
+from agents.sentinel.summary import count, template_summary
 
 STATUS_LEVEL: dict[str, int] = {
     "resolved": -1,
@@ -269,7 +269,7 @@ class DisruptionTracker:
             rationale = (
                 f"new {view.status} {opened}: {incident.status_reason}; "
                 f"severity {view.severity}/5, "
-                f"{len(view.affected_container_ids)} containers"
+                f"{count(len(view.affected_container_ids))}"
             )
         return [self._decision("create", rationale, incident, signal)]
 
@@ -489,7 +489,7 @@ class DisruptionTracker:
             delay = scoring.with_missed_sailings(delay, primary.type, containers, now, cfg)
             score = scoring.severity(delay, containers, cfg)
             severity, priority, severity_reason = score.level, score.priority, score.reason
-            match_reason = f"{len(containers)} containers: {matching.describe(target, cfg)}"
+            match_reason = f"{count(len(containers))}: {matching.describe(target, cfg)}"
 
         rationale = [
             f"type {primary.type}: {primary.reason} [{primary.event_id}]",

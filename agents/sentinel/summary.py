@@ -16,6 +16,11 @@ from typing import Any, Literal
 
 from agents.sentinel.models import Disruption, LLMClient
 
+
+def count(n: int, noun: str = "container") -> str:
+    """'1 container', '12 containers'."""
+    return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
+
 log = logging.getLogger(__name__)
 
 MAX_SUMMARY_WORDS = 25
@@ -26,7 +31,7 @@ _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 def template_summary(d: Disruption) -> str:
     """Spec template: "{type} at {location}: {n} containers affected, ~{delay} days delay, ..."."""
     return (
-        f"{d.type} at {d.location}: {len(d.affected_container_ids)} containers affected, "
+        f"{d.type} at {d.location}: {count(len(d.affected_container_ids))} affected, "
         f"~{d.expected_delay_days:g} days delay, severity {d.severity}/5."
     )
 

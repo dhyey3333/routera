@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Any
 
 from agents.sentinel.models import ContainerRef
+from agents.sentinel.summary import count
 from routera.compliance import ComplianceRules
 from routera.market import HUMAN_FLOOR_RATIO, Market, realised_price
 from routera.paperwork import change_set
@@ -268,7 +269,7 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if switches:
         guardrails.append(f"Human approves: {switches} market switch{'es' if switches > 1 else ''}")
     if human_only:
-        guardrails.append(f"Human only: {human_only} container(s) below the floor price")
+        guardrails.append(f"Human only: {count(human_only)} below the floor price")
     if flagged["block"]:
         guardrails.append(f"Compliance blocks (verified law, cannot be overridden): {by_place(flagged['block'])}")
     if flagged["review"]:
@@ -281,14 +282,14 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
     if papers:
         guardrails.append(
-            f"Paperwork drafted by the agent: {paperwork['regenerate'] + paperwork['new']} documents for "
-            f"{len(papers)} moves, ready in about {paperwork['hours']:g} h; a human signs and files them")
+            f"Paperwork drafted by the agent: {count(paperwork['regenerate'] + paperwork['new'], 'document')} for "
+            f"{count(len(papers), 'move')}, ready in about {paperwork['hours']:g} h; a human signs and files them")
     moves = ", ".join(f"{s['count']} → {s['name']}" for s in split) or "no feasible moves"
     needs_approval = any(r["choice"] and r["choice"]["route_id"] != "STAY" for r in rows)
     if needs_approval:
-        headline = f"{len(rows)} containers at risk. Plan: {moves}. Saves {fmt_inr(value - baseline)}."
+        headline = f"{count(len(rows))} at risk. Plan: {moves}. Saves {fmt_inr(value - baseline)}."
     else:
-        headline = f"{len(rows)} containers affected. Nothing beats keeping the bookings; monitoring."
+        headline = f"{count(len(rows))} affected. Nothing beats keeping the bookings; monitoring."
     return {
         "needs_approval": needs_approval,
         "split": split,

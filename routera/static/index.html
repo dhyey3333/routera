@@ -669,7 +669,7 @@ const RENDER = {
     set("#ks-decide", k.pending_plans ? `${k.pending_plans} plan${k.pending_plans > 1 ? "s" : ""} waiting for a human` : "value on the table · nothing pending");
     set("#kv-approve", inr(k.protected_inr || 0));
     const ch = S.r?.chain;
-    set("#ks-approve", `protected · ${k.rebooked || 0} moves booked · chain ${ch ? (ch.ok ? "✓" : "✗") : ""} ${S.chain.length}`);
+    set("#ks-approve", `protected · ${countOf(k.rebooked || 0, "move")} booked · chain ${ch ? (ch.ok ? "✓" : "✗") : ""} ${S.chain.length}`);
   },
   sense() {
     $("#c-dis").textContent = [...S.disruptions.values()].filter((d) => !d.ignored).length;
@@ -780,6 +780,7 @@ function compChip(c) {
   return `<span class="chip good" title="${esc((c.note || "") + by)}">✓ clear</span>`;
 }
 const human = (s) => String(s).replaceAll("_", " ");
+const countOf = (n, noun = "container") => `${n} ${noun}${n === 1 ? "" : "s"}`;
 function paperChip(p) {
   if (!p) return "";
   const list = (a) => a.map(human).join(", ") || "none";
@@ -875,7 +876,7 @@ function planHTML(plan) {
       <thead><tr><th>Container</th><th>Shelf life</th><th>${pending ? "Plan (change it)" : "Decision"}</th><th class="r">Value · saved</th><th></th></tr></thead>
       <tbody>${table}</tbody></table></div>
     <div class="cols2">
-      <div class="box"><h4>Paperwork ${pending ? "to draft" : "drafted"}</h4>${moved.length ? `<p class="lead"><b>${P.regenerate + P.new} documents</b> for ${moved.length} move${moved.length === 1 ? "" : "s"}: ${P.regenerate} regenerated, ${P.new} new, ${P.obsolete} superseded, ${P.keep} kept. Ready in about <b>${P.hours} h</b>, all prepared in parallel.</p>
+      <div class="box"><h4>Paperwork ${pending ? "to draft" : "drafted"}</h4>${moved.length ? `<p class="lead"><b>${countOf(P.regenerate + P.new, "document")}</b> for ${moved.length} move${moved.length === 1 ? "" : "s"}: ${P.regenerate} regenerated, ${P.new} new, ${P.obsolete} superseded, ${P.keep} kept. Ready in about <b>${P.hours} h</b>, all prepared in parallel.</p>
         <ul class="packlist">${moved.map(({ r, c }) => `<li><b class="mono">${esc(r.container_id)}</b> → ${esc(c.destination_name)} · ${c.paperwork.regenerate.length + c.paperwork.new.length} docs<button class="btn small ghost" data-pack="${esc(r.container_id)}|${esc(c.route_id)}">Open pack</button></li>`).join("")}</ul>` : `<ul><li>No new documents needed.</li></ul>`}
         ${docs.length ? `<details style="margin-top:6px"><summary>Compliance drafts (${docs.length})</summary><ul>${docs.map((d) => `<li><details><summary><b>${esc(d.container_id)}</b> → ${esc(d.to)}: phyto / treatment request</summary><pre class="draft mono">${esc(d.draft)}</pre></details></li>`).join("")}</ul></details>` : ""}</div>
       <div class="box"><h4>Guardrails</h4><ul>${(plan.guardrails.length ? plan.guardrails : ["Nothing moves until a human approves"]).map((g) => `<li>${esc(g)}</li>`).join("")}<li>Compliance blocks cannot be overridden, even by the approver</li></ul></div>
@@ -1034,7 +1035,7 @@ function connect() {
     const st = d.disruption.status;
     if (old && old.disruption.status !== st && (st === "confirmed" || st === "active")) {
       const [icon, label] = TYPE[d.disruption.type] || ["•", d.disruption.type];
-      toast(`${icon} ${label} ${st}`, `${d.disruption.location}: ${d.disruption.affected_container_ids.length} containers affected`, "var(--india)");
+      toast(`${icon} ${label} ${st}`, `${d.disruption.location}: ${countOf(d.disruption.affected_container_ids.length)} affected`, "var(--india)");
     }
     mark("sense", "pipeline");
   });
@@ -1458,7 +1459,7 @@ function drawEvents() {
     const sure = d.status !== "candidate";
     const [, label] = TYPE[d.type] || ["", d.type];
     L.marker([place.lat, place.lon], { icon: L.divIcon({ className: "", html: `<span class="mk ${sure ? "" : "warn"}"></span>`, iconSize: [16, 16] }) })
-      .bindTooltip(`<b>${sure ? "" : "Possible "}${esc(sure ? label : label.toLowerCase())}</b> at ${esc(place.name)}<br>${Math.round(d.confidence * 100)}% sure${sure ? `, ${d.affected_container_ids.length} containers` : ", news only so far"}`).addTo(g);
+      .bindTooltip(`<b>${sure ? "" : "Possible "}${esc(sure ? label : label.toLowerCase())}</b> at ${esc(place.name)}<br>${Math.round(d.confidence * 100)}% sure${sure ? `, ${countOf(d.affected_container_ids.length)}` : ", news only so far"}`).addTo(g);
   }
   for (const [code, why] of Object.entries(S.r?.map?.blocked || {})) {
     const place = M.geo.places[code];
@@ -1603,7 +1604,7 @@ async function openDecision(place, btn) {
   try {
     const r = await api("/api/decisions/open", { place, approver: opsPerson(), reason: M.focus?.it?.title || "reported closure" });
     if (r.plan_id) {
-      toast(`Decision opened: ${r.plan_id}`, `${r.containers} containers. Nothing moves until someone approves.`, "var(--good)");
+      toast(`Decision opened: ${r.plan_id}`, `${countOf(r.containers)}. Nothing moves until someone approves.`, "var(--good)");
       S.plan = r.plan_id; M.focus = null; drawFocus(); selectBox(null); mark("plans");
       $(".decide").scrollIntoView({ behavior: "smooth", block: "start" });
     } else { toast("No plan needed", "No container on the books is affected.", "var(--muted)"); btn.disabled = false; }

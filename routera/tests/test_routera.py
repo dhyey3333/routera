@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Iterator
 from datetime import timedelta
 from typing import Any
@@ -145,6 +147,16 @@ def test_each_disruption_gets_its_own_plan_with_only_its_own_containers() -> Non
         [disruption_id] = plan["disruption_ids"]
         assert set(plan["container_ids"]) <= hits[disruption_id]
         assert "linked" not in plan["title"] and "_" not in plan["title"]
+
+
+def test_one_box_reads_as_one_box_everywhere() -> None:
+    o = run("nashik_corridor_strike")  # includes a reefer failure, which hits a single truck
+    reefer = next(p for p in pending(o) if p["title"].startswith("Reefer failure"))
+    assert reefer["headline"].startswith("1 container at risk.")
+    o.approve(reefer["plan_id"], "Sunil P.")
+    said = json.dumps({"state": o.snapshot(), "disruptions": [i.disruption.summary for i in o._incidents()]},
+                      default=str, ensure_ascii=False)
+    assert not re.search(r"(?<![\d,.])1 (containers|moves|documents)\b", said)
 
 
 def test_a_box_hit_by_two_disruptions_moves_once_and_counts_once() -> None:

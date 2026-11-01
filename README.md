@@ -30,7 +30,7 @@ This opens http://localhost:8000 and plays the India-inside Nashik corridor scen
 | What | Command (`make` target) |
 |---|---|
 | Control room, port 8000 | `python -m routera` (`make routera`) |
-| Tests: engine, app and Sentinel (367) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
+| Tests: engine, app and Sentinel (368) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
 | Lint | `python -m ruff check routera agents/sentinel` (`make routera-lint`) |
 | Sentinel console only, port 8001 | `python -m agents.sentinel.api --demo` (`make sentinel-demo`) |
 
