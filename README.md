@@ -25,7 +25,8 @@ python -m routera
 
 This opens http://localhost:8000 and plays the India-inside Nashik corridor scenario live at 60×
 (one simulated hour per real minute). Use the dropdown to pick another scenario and press
-**Replay**, or press **⚡ Feed the Sentinel** to inject your own event. Everything works offline.
+**Replay**, or press **Feed the Sentinel** to inject your own event. The engine and every button work
+offline; the map tiles, fonts and GSAP motion come from the internet, and the page runs without them.
 
 | What | Command (`make` target) |
 |---|---|
