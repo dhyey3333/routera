@@ -50,7 +50,7 @@ log = logging.getLogger("routera.live")
 
 def live_scenario(now: datetime) -> Scenario:
     return Scenario(
-        name=LIVE, title="LIVE: real weather, news and ships for Nashik grapes and Konkan mangoes",
+        name=LIVE, title="LIVE: real weather, alerts, traffic, news and ships, on a simulated fleet",
         simulated=True, layer="india", start=now, container_ids=[], steps=[],
         disclaimer="Feeds are REAL (Open-Meteo, GDACS, Google News; AIS and TomTom with free keys). The fleet is the "
                    "SIMULATED book moved to today; bookings stay simulated.",
@@ -387,7 +387,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ROUTERA · SIMULATED FEEDS · {url}   (LLM: {llm.label})")
     if service.bot:
         service.bot.start()
-        print("Phone approvals are on: the control room shows how to connect (Approve & log panel).")
+        print("Phone approvals are on: the control room shows how to connect (Sunil's phone panel).")
     if not args.no_browser:
         threading.Timer(1.5, webbrowser.open, args=(url,)).start()
     uvicorn.run(create_routera_app(service), host=args.host, port=args.port, log_level="warning")

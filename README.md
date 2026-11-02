@@ -41,7 +41,7 @@ offline; the map tiles, fonts and GSAP motion come from the internet, and the pa
 python -m routera --live
 ```
 
-You can also pick **🔴 LIVE** in the scenario dropdown. The same Sentinel, planner and audit chain then run on real data, polled in the background:
+You can also pick **LIVE** in the scenario dropdown. The same Sentinel, planner and audit chain then run on real data, polled in the background:
 
 | Feed | Source | Key | Becomes |
 |---|---|---|---|
@@ -51,14 +51,14 @@ You can also pick **🔴 LIVE** in the scenario dropdown. The same Sentinel, pla
 | Headlines on the corridor, JNPT, grapes, Red Sea / Hormuz | Google News RSS | none | news the Sentinel classifies (rules, or the LLM) |
 | Ships off Rotterdam, JNPT, Mundra and Jebel Ali | AIS via aisstream.io (`pip install websockets`) | `AISSTREAM_API_KEY` (free, GitHub sign-up) | `PORT_CONGESTION` when ships at anchor pass a threshold (source `ais_port`, reliability 0.80: an estimate, not an official notice). aisstream.io is crowd-sourced and barely covers Indian and Gulf waters, so those ports usually show 0 ships; Rotterdam, where the mangoes go, is well covered |
 
-Click any item on a feed card to see it on the map, which containers it touches, and what a closure there would mean. Only the feeds are real. The fleet is still the simulated container book (Nashik grapes, plus Konkan mangoes in `routera/data/containers_mango.json`), moved so its ETAs and cut-offs start today, and bookings stay simulated. Mangoes age at their own reefer setpoint (12 °C; colder means chilling injury, not longer life). They also need hot water treatment for the EU and irradiation for the US, which ROUTERA drafts as a booking request. All mango prices and treatment rules are illustrative. On a quiet day, live mode correctly shows "no decision needed". Use **⚡ Feed the Sentinel** to add an event on top.
+Click any item on a feed card to see it on the map, which containers it touches, and what a closure there would mean. Only the feeds are real. The fleet is still the simulated container book (grapes, shrimp, pomegranate, banana and onion, plus Konkan mangoes in `routera/data/containers_mango.json`), moved so its ETAs and cut-offs start today, and bookings stay simulated. Mangoes age at their own reefer setpoint (12 °C; colder means chilling injury, not longer life). They also need hot water treatment for the EU and irradiation for the US, which ROUTERA drafts as a booking request. All mango prices and treatment rules are illustrative. On a quiet day, live mode correctly shows "no decision needed". Use **Feed the Sentinel** to add an event on top.
 
 The LLM is off by default (`SENTINEL_LLM=off`). With it off, the keyword rules classify the news
 and the summaries come from templates. See `agents/sentinel/README.md` to switch it on.
 
 ### Approvals on your real phone
 
-Optional. A plan buzzes your phone in Telegram, with Approve, Reject and Why? buttons, and the big screen updates when you tap. Create a bot with @BotFather, set `TELEGRAM_BOT_TOKEN`, start the app, then send the `/pair` code shown in the Approve & log panel. The bot only makes outbound calls, so the app needs no public address.
+Optional. A plan buzzes your phone in Telegram, with Approve, Reject and Why? buttons, and the big screen updates when you tap. Create a bot with @BotFather, set `TELEGRAM_BOT_TOKEN`, start the app, then send the `/pair` code shown in the Sunil's phone panel. The bot only makes outbound calls, so the app needs no public address.
 
 Only the paired private chat can decide, and only the plan version it was shown. Every decision is on the audit chain, as "Sunil P. via Telegram" (change it with `TELEGRAM_APPROVER`). Set `TELEGRAM_CHAT_ID` to skip pairing after a restart. The on-screen buttons keep working, whichever comes first counts, and route changes stay on the big screen.
 
