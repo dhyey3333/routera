@@ -29,7 +29,7 @@ def locked_room() -> Iterator[TestClient]:
 
 def test_the_signed_in_name_and_role_approve_whatever_the_request_says(open_room: TestClient) -> None:
     c = open_room
-    assert "Who's on duty" in c.get("/").text
+    assert '<form id="signin"' in c.get("/").text
     assert c.get("/room", follow_redirects=False).headers["location"] == "/"
     assert c.get("/api/session").json() == {"signed_in": False, "code_required": False,
                                             "roles": {"ops": "Operations lead", "export": "Export manager",
