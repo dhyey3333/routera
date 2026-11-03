@@ -23,15 +23,30 @@ python -m pip install -r requirements.txt
 python -m routera
 ```
 
-This opens http://localhost:8000 and plays the India-inside Nashik corridor scenario live at 60×
-(one simulated hour per real minute). Use the dropdown to pick another scenario and press
-**Replay**, or press **Feed the Sentinel** to inject your own event. The engine and every button work
+This opens http://localhost:8000: a short intro that tells one real plan on the map, and the sign-in.
+Give your name and role and press **Enter the control room**. It plays the India-inside Nashik corridor
+scenario live at 60× (one simulated hour per real minute). Use the dropdown to pick another scenario and
+press **Replay**, or press **Feed the Sentinel** to inject your own event. The engine and every button work
 offline; the map tiles, fonts and GSAP motion come from the internet, and the page runs without them.
+
+### Signing in
+
+The name you sign in with goes on the audit log next to every decision you make, with your role
+("Asha K. (Export manager)"). These are not accounts: the team shares one access code. Set it before
+starting the app, and only the sign-in page is reachable until someone types it:
+
+```bash
+export ROUTERA_ACCESS_CODE="something-your-team-shares"
+```
+
+Without it the control room is open, as before, and signing in only records who's at the desk. Five wrong
+codes from one address lock it out for five minutes. A sign-in lasts one shift (12 hours) in a signed cookie;
+set `ROUTERA_SESSION_SECRET` to keep people signed in across restarts.
 
 | What | Command (`make` target) |
 |---|---|
 | Control room, port 8000 | `python -m routera` (`make routera`) |
-| Tests: engine, app and Sentinel (368) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
+| Tests: engine, app and Sentinel (372) | `python -m pytest routera/tests agents/sentinel/tests -q` (`make routera-test`) |
 | Lint | `python -m ruff check routera agents/sentinel` (`make routera-lint`) |
 | Sentinel console only, port 8001 | `python -m agents.sentinel.api --demo` (`make sentinel-demo`) |
 
@@ -84,12 +99,14 @@ and explainable.
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /` | Control room |
+| `GET /` | Intro and sign-in |
+| `GET /room` | Control room, once signed in |
+| `GET`, `POST`, `DELETE /api/session` | Who's on duty. `POST` body `{"name": "Asha K.", "role": "ops", "code": "..."}`, roles `ops`, `export`, `fpo`. With `ROUTERA_ACCESS_CODE` set, everything else answers 401 until this succeeds |
 | `GET /sentinel/stream` | Server-sent events: `snapshot`, `reset`, `step`, `signal`, `disruption`, `routera` (fleet, plans, KPIs), `audit` |
 | `POST /sentinel/events` | Inject a raw feed event |
 | `POST /sentinel/replay/{scenario}?speed=60` | Start a scenario |
 | `GET /api/state` | Full snapshot |
-| `POST /api/plans/{id}/approve` | Body `{"approver": "Sunil P.", "overrides": {"NSK-03": "N-RAIL-SG"}}`. A compliance block returns 403. |
+| `POST /api/plans/{id}/approve` | Body `{"overrides": {"NSK-03": "N-RAIL-SG"}}`. The approver is the signed-in person; `"approver"` in the body only counts when nobody is signed in. A compliance block returns 403. |
 | `POST /api/plans/{id}/reject` | Body `{"approver": "...", "reason": "..."}` |
 | `GET /api/plans/{id}/why?container=NSK-03` | "Ask why", answered from the plan's own numbers |
 | `GET /api/plans/{id}/paperwork?container=NSK-03` | The draft filing pack for one moved container (`&route=` previews another option on a pending plan) |

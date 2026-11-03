@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTERA · Sign in</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230A1130'/%3E%3Cpath d='M8 23V10a3 3 0 0 1 3-3h6a4.5 4.5 0 0 1 0 9h-5l8 7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='21' cy='23' r='2.2' fill='%23C8F751'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0A1130; --land: #141D4A; --land-line: #2F3D80; --grid: #26336E; --track: #2A3670;
+  --blue: #2F5BFF; --blue-deep: #1B3FCC; --coral: #FF5A3C; --coral-l: #FF8C74; --amber: #FFC24B; --lime: #C8F751;
+  --route: #7C96FF; --route-l: #A6B8FF; --soft: #A9B4DC; --soft-2: #C9D1EE; --on-blue: #F0F3FF; --ground: #F4F5F9;
+  --sans: "Hanken Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--ink); color: #fff; font: 15px/1.45 var(--sans); font-variant-numeric: tabular-nums; min-height: 100vh; }
+button, input { font: inherit; }
+[hidden] { display: none !important; }
+a:focus-visible, button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.mono { font-family: var(--mono); letter-spacing: .08em; }
+
+.page { position: relative; display: flex; flex-wrap: wrap; min-height: 100vh; overflow: hidden; }
+
+/* --- the story: a real plan from the engine, told on the map ------------------------------------ */
+.story { flex: 999 1 560px; min-width: 0; min-height: 640px; position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 28px 40px; }
+.map { position: absolute; top: 0; left: 14%; width: 100%; height: 100%; display: block; }
+.map .lbl { font-family: var(--mono); font-weight: 500; paint-order: stroke; stroke: var(--ink); stroke-width: 2.4px; }
+.map .city { font-size: 10px; font-weight: 700; fill: #fff; paint-order: stroke; stroke: var(--ink); stroke-width: 3px; }
+.top { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; }
+.brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px; letter-spacing: .1em; }
+.tagline { font-size: 11.5px; color: var(--soft); }
+.grow { flex: 1; min-height: 150px; }
+.words { position: relative; display: grid; max-width: 500px; pointer-events: none; }
+.block { grid-area: 1 / 1; }
+.kicker { font-size: 12px; letter-spacing: .1em; margin-bottom: 10px; }
+.block h1 { margin: 0; font-size: clamp(34px, 3.7vw, 54px); line-height: 1.04; font-weight: 700; letter-spacing: -.025em; }
+.block h1 > span { display: block; overflow: hidden; }
+.block h1 > span > span { display: block; }
+.read { display: flex; align-items: baseline; gap: 14px; margin-top: 16px; }
+.read b { font-size: 40px; font-weight: 300; letter-spacing: -.02em; white-space: nowrap; }
+.read span { color: var(--soft-2); font-size: 14.5px; line-height: 1.35; }
+.steps { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 26px; max-width: 620px; }
+.steps button { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--soft); text-align: left; font-weight: 600; font-size: 13px; cursor: pointer; }
+.steps button:hover, .steps button.on { color: #fff; }
+.steps i { display: block; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.steps i b { display: block; height: 100%; background: var(--c); transform-origin: left center; }
+.small { position: relative; margin-top: 10px; font-size: 10.5px; letter-spacing: .05em; color: #9AA6D2; }
+
+/* --- signing in --------------------------------------------------------------------------------- */
+.panel { flex: 1 1 400px; min-width: 0; position: relative; background: var(--blue); display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding: 32px 36px; }
+.event { font-size: 11.5px; color: var(--on-blue); }
+form { display: flex; flex-direction: column; gap: 18px; }
+form h2 { margin: 0 0 8px; font-size: 42px; line-height: 1.04; font-weight: 700; letter-spacing: -.025em; }
+form p { margin: 0; color: var(--on-blue); font-size: 15.5px; }
+.field { display: flex; flex-direction: column; gap: 7px; font-weight: 600; font-size: 14px; }
+.field input { height: 52px; padding: 0 14px; border: 2px solid transparent; border-radius: 12px; background: #fff; color: var(--ink); font-size: 16px; font-weight: 500; outline: none; }
+.field input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px var(--ink); }
+.field input::placeholder { color: #5E6890; }
+.roles { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--blue-deep); border-radius: 14px; }
+.roles .pill { position: absolute; top: 4px; left: 0; height: calc(100% - 8px); width: 0; background: var(--lime); border-radius: 10px; visibility: hidden; }
+.roles.slides .pill { visibility: visible; }
+.roles button { position: relative; min-height: 48px; padding: 4px 6px; border: 0; border-radius: 10px; background: transparent; color: #fff; font-weight: 700; font-size: 12.5px; line-height: 1.15; cursor: pointer; }
+.roles button[aria-pressed="true"] { color: var(--ink); }
+.roles:not(.slides) button[aria-pressed="true"] { background: var(--lime); }
+.note { background: var(--blue-deep); border-radius: 10px; padding: 9px 12px; font-size: 13.5px; color: var(--on-blue); }
+.note button { border: 0; background: none; padding: 0; color: #fff; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.err { background: var(--ink); color: #fff; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; font-weight: 500; }
+.go { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 0 20px; border: 0; border-radius: 14px; background: var(--lime); color: var(--ink); font-weight: 800; font-size: 17px; cursor: pointer; text-align: left; }
+.go:disabled { cursor: progress; }
+.go .fill { position: absolute; inset: 0; background: #fff; transform: scaleX(0); transform-origin: left center; }
+.go > span:not(.fill), .go svg { position: relative; }
+.go svg { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.foot { margin: 0; color: var(--on-blue); font-size: 13px; line-height: 1.4; }
+.wipe { position: fixed; inset: 0; z-index: 50; background: var(--ground); visibility: hidden; pointer-events: none; }
+
+/* No motion: the last step of the story, standing still. */
+.still [data-sig], .still [data-ring], .still [data-pulse], .still [data-tag], .still [data-tag2], .still [data-bracket] { visibility: hidden; }
+.still .block:not([data-block="3"]) { visibility: hidden; }
+.still [data-route] { stroke: var(--lime); }
+
+@media (max-width: 900px) {
+  .map { left: 0; }
+}
+@media (max-width: 720px) {
+  .story { padding: 20px 16px; min-height: 580px; }
+  .map { left: 24%; }
+  .panel { padding: 24px 16px; }
+  .steps { gap: 8px; }
+  .steps button { font-size: 12px; }
+  form h2 { font-size: 34px; }
+  .read b { font-size: 32px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="page" id="page">
+
+  <section class="story" aria-label="What ROUTERA does">
+    <svg class="map" id="map" viewBox="150 10 640 560" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map of India and the Indian Ocean. A landslide closes the road from Nashik to the port, and new routes draw out to Colombo, Bengaluru, Hyderabad, Delhi and Singapore.">
+      <path data-land fill="#141D4A" stroke="#2F3D80" stroke-width=".6" stroke-linejoin="round" d="M840.7,569.7 845.5,582.6 852.3,584.4 850,592.5 840,588.5 836.8,578 827,575.8 831.9,568.2 840.7,569.7ZM697.4,458 713.2,458.4 724.6,476.4 746,491.1 757.9,507.2 763.3,511.1 762.4,506.4 765.7,506.1 785.9,529.1 795.5,533.3 788.2,539.2 800.1,534.4 805.1,538 806.8,541.9 801.4,545.8 801.6,552 815.7,560.1 817.7,572.2 822.7,576.6 819.8,584.7 830.9,581.2 840.7,593 836.2,637 819.6,632.1 819,638.4 773.7,594 763.3,579.1 754.6,556.1 737.4,537 728.9,512.5 715.5,504.5 704.5,484.8 683.7,467.2 678.4,452.6 697.4,458ZM960,434.3 960,429.8 960,610.2 960,595.1 955.6,598.7 945.5,590.2 941.4,596.5 927.9,600.2 925.4,589.5 903.8,590.8 899.7,563.4 888.9,555.8 888.9,542.2 883.6,529.8 890.7,511.6 894.5,509.8 918.4,520.1 915.7,516.2 922.7,498.3 945.6,490.8 959.3,473.2 960,429.5 960,434.3ZM913.4,218.8 915.2,224.3 900.3,244.4 892.8,247.6 880.5,242.4 880,230 888.9,220.6 909.8,216.5 913.4,218.8ZM449.8,383.7 460.7,391 478.1,424.6 474.5,438.6 460.9,445.8 451.4,443 447.9,432.1 445.7,410.1 446.7,412.8 451.3,387.5 456.4,389.1 449.8,383.7ZM-90,-72.9 960,-72.9 960,181.5 952.8,168.5 950,171.5 953.2,182.7 946.3,182.9 938.8,189.9 935.4,186.6 934.6,190.5 929.2,188.7 924,193.5 906.2,197 902.3,203.4 907.8,211.3 901.8,214.4 894.9,203.8 899,194.7 892.8,191.3 886.2,195.4 877.2,187.9 877.5,192.2 867.1,194.4 857.5,203.3 850.2,202.5 847.8,214 839.7,219.7 834.3,235.4 847.5,252 845.3,254.9 882.3,293.6 891.7,338.6 888.3,337.8 888.9,349 884.8,359 858.9,374.3 855.1,370 854.2,374.2 849.1,373.2 851.4,375.9 847,375.9 851.8,378.8 848.9,383 842.1,377.1 848.6,386.5 845.7,387.9 837.5,380.7 842.5,390.5 826.7,402.9 821.6,403.4 825.4,379.6 813.9,371.9 803.8,371.8 805.8,366.3 803,362.1 797.3,365.9 796.9,357 788.9,345 775.9,337.1 763.4,337.7 764.4,325.1 759,322.9 750.3,326.4 749.8,345.5 737.5,375.5 738.8,392.6 747.5,392.2 756.4,426.3 772.5,431.5 801.2,464.1 801.6,495.2 814.3,518.7 809.7,516.4 802.2,521.2 769.4,495.9 769.5,490 760.7,478.5 751.8,438.4 730.6,408.9 724.6,409.4 723.6,400.7 730.6,377.6 728.5,380.1 727,369.8 733.2,352.8 729.5,352.5 728.6,329.5 723,316.2 721.6,320.5 717.2,302 713.8,283.2 715.9,274.3 710.6,275 702.7,260.8 701.5,272 696.5,275.3 692.8,271 694.9,276.3 680.8,288 680.2,281.9 677.6,286.3 674.1,286.4 673.4,280.5 669.9,285.1 670.6,275.2 663.4,283.2 668.8,258.1 660.7,230.2 659,236.5 652.4,228.9 657.4,231 660,227.8 655.6,220.1 648.7,217.6 647,221 646,212.6 642.4,215.8 641,209.6 640.9,213.9 634.6,205.9 628,180.6 622.2,172 614.2,176.6 609.1,160.5 604,162.7 608.8,165.8 606.5,174.1 609.2,180.4 603.4,189.1 603.1,183.8 598.7,184.4 599.8,178.7 593.5,190.1 592.3,181.8 590.3,190.8 585.8,184.8 585.8,191.9 581.2,193 579.6,184.3 578.8,191.8 571.9,192.2 572.9,184 569.1,180.2 572.4,184.3 569.2,189.1 552.9,198.7 554.6,207.3 551.3,213.6 543.2,220.4 528.7,222.6 527.7,225.3 531.6,224.8 511.6,246.4 485.4,265.7 483.9,274.4 469.3,278.1 464.7,287.4 454.4,288.2 450.8,298.5 454.6,324.2 450.9,322.3 455.2,326.3 445.4,359.4 447.6,375.5 439.7,376.5 434.1,387.7 441.2,393.8 426.3,395.2 420.9,406.9 412.8,411.8 398.3,398.5 395.2,382 374.2,339.2 365.7,307.9 350.1,276.1 343.1,240.7 345.1,234.6 342,233.6 344.8,230.4 340,221.4 343.4,207.8 339.2,195 346.7,190.3 338.1,191.2 338.3,183.7 342.1,182.5 332.7,181.9 330.6,189.2 333.8,193.9 330.3,200 310.8,206.7 284.6,181.6 302.7,177 307.4,168.7 295,174 282.2,169.2 276.3,160.8 281.7,156.3 273.5,160.4 272.5,156.2 263.5,155.8 257.6,141.7 250.5,140 246.4,128.4 219.9,134.7 210.9,131.2 171.2,136.1 157.7,130.6 135.7,130.9 110,124.9 100.9,103.2 91.8,103 71.4,113.3 55.6,109.7 37.1,95.3 22.8,90.6 1.1,53.5 -6.7,56.2 -15,48.5 -17.5,56.1 -30.3,56.5 -27.8,63.6 -34.1,66.5 -29.2,67.2 -18,93.6 2.3,110.8 1.2,122.1 12.1,141.1 15.1,121.8 18.9,119 23.2,123.1 24.1,136.8 19.6,148.4 31.8,154.4 62.2,151.1 96.2,115.8 95.6,137.4 99.6,146.3 108.3,155.2 131.6,161.7 147.4,181.4 127.1,212.1 122.6,209.1 117.9,214.7 117.2,234.6 102.4,238.9 95.7,251.3 82.2,253.6 76,266.7 61,267.2 38.7,275.9 33.6,280.7 33.3,289.1 24.1,294.2 -9.7,305.6 -20,315.1 -65.1,326.6 -74.4,335.1 -89.9,338.5 -90,57.1 -90,368 -84.2,373.7 -75.8,373.6 -62.8,367.2 -51.5,368.6 -38.9,361.7 1.7,355.9 11.9,348.6 18.8,351 15.5,373.5 20.8,373.9 14,375.3 12.4,390 -30.4,469.9 -59.3,502.6 -89.5,524.8 -90,639.9 -90,-72.9Z"/>
+      <path data-grid d="M150,100H800M150,250H800M150,400H800M150,550H800M300,10V580M500,10V580M700,10V580" fill="none" stroke="#26336E" stroke-width=".5" stroke-dasharray="1.5 4"/>
+
+      <path data-blocked d="M356.9,218.7 355.5,220.3 355.1,222 354.4,223.3 353.7,223.8 352.7,223.6 352.2,224.6 351.3,224.7 349.9,226.6 350,227.6 346.8,229.4 346.6,230.3 345.1,231.4 346.6,234.6 346.4,235.1 345.6,235.5 344.9,236.4 344.3,235.7" fill="none" stroke="#FF5A3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2.4"/>
+
+      <path data-route="N-RAIL-LK" d="M357.6,219.5 353.4,223.6 352,224.4 346.9,231 346.8,235.1 344.3,235.7 336,234.9 345,294.8 379.5,385.6 405,413.1 447.6,430.1" fill="none" stroke="#7C96FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-route="N-RAIL-SG" d="M357.6,219.5 353.4,223.6 352,224.4 346.9,231 346.8,235.1 344.3,235.7 336,234.9 345,294.8 379.5,385.6 405,413.1 451.5,448.7 600,437.9 721.9,448.6 759,490.9 780,510.3 804,524.9 807.6,522.3" fill="none" stroke="#7C96FF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-route="N-BLR" d="M356.9,218.7 359.3,220.7 359.7,221.4 360.7,221.9 362.1,223.3 365.2,223.9 368,226.1 369.7,228.5 370.2,231.9 371.2,233.2 372.7,236.9 373.6,238.1 375.1,239 377.8,242.8 377.9,244.6 377.2,246.1 377.4,247.3 378,248 377.9,250.5 378.6,251 379,251.8 380,255.9 379.9,256.3 382.7,260.3 383.9,262.9 384,265.6 384.6,266.4 385.4,268.8 385.9,268.9 386.2,271.4 389.2,277.4 388.8,278.7 392.4,285.1 393.6,290.9 394.7,293.6 394.5,294.4 395.4,295.6 395.7,296.4 395.3,298.5 395.6,299.6 395.4,300.6 395.7,301.3 396.5,302.2 397.1,305.4 395.6,309.8 396,311.5 396.9,312.4 397,313.1 398.6,315.3 399.5,317.1 400.9,318.4 403.3,319.9 405.2,324 407.1,327 410.8,330.5 413.3,331.7 413.4,332.4 413.9,332.6" fill="none" stroke="#7C96FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-route="N-HYD" d="M356.9,218.7 359.3,220.7 359.7,221.4 360.7,221.9 362.1,223.3 365.2,223.9 368,226.1 369.7,228.5 370.2,231.9 371.2,233.4 374.3,235 375.1,236.1 376.1,236.6 377.6,238.1 379.7,239.2 382.2,238 383.9,238.4 385.9,237.6 388.7,238.9 389.4,238.9 391,239.5 394.6,240 394.9,239.8 396.9,240.5 397.7,242.1 398.5,242.8 399,242.5 399.8,242.8 402,244.1 402.6,243.9 403.9,244.7 404.4,244.5 405.5,244.8 406.8,244.7 407.5,246.9 408.8,248.4 408.9,249.9 409.9,251.2 410.7,251.9 412.7,252.4 413.5,253.3 414,255.5 413.8,256.2 414.6,256.1 416.1,256.7 419.3,257.1 422.3,258 423.5,258.6 424,260.4 425.2,260.9 425.6,262.1 426.9,262.2 427.5,262" fill="none" stroke="#7C96FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path data-route="N-DEL" d="M356.9,218.7 358.7,217.5 359.7,216.4 359.8,215.8 360.8,215.1 361.5,214.1 364.5,212.9 366.3,210.9 367.4,210.1 368.4,210 368.5,209.4 370.1,208.1 372,204.1 371.6,203.5 371.9,200.6 372.4,199.4 372.7,197.9 374.3,196.7 375,194.6 375.7,193.8 376.2,191.8 377.4,190.2 378,188.5 381.7,184.4 381.6,183.7 382.6,180.6 383.2,179.8 384.3,179.3 385,178.4 384.7,176.9 386,176.3 386.9,176.4 387.5,175.4 387.4,174.8 387.7,174.4 387.9,171.7 387.1,168.3 387.5,168.4 387.6,167.6 386.9,166.1 387,164.3 386,158.1 386,155.2 385.5,154.3 385.6,153 384.6,149.3 387.5,145 388.5,142.9 388.4,141.8 388.8,141.4 389.5,139 392.9,132 393.3,128.4 393,127.2 393.7,125.7 393.3,124.6 393.3,123.8 393.9,121.3 393.5,117.4 393.9,114.4 393.7,112.2 395,110.4 396.5,106.6 399,105 400.1,103.1 401.4,101.9 402.4,97.9 404.3,95.4 404.9,93 406.9,88.3 407.2,86.4 408.6,84.7 409.4,84.4 409.7,83.8 409.5,80.9 408.3,79.1 408.2,78.3 407.7,77.6" fill="none" stroke="#7C96FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <circle data-sig cx="175" cy="60" r="2.4" fill="#A9B4DC"/>
+      <circle data-sig cx="620" cy="40" r="2.4" fill="#A9B4DC"/>
+      <circle data-sig cx="770" cy="240" r="2.4" fill="#A9B4DC"/>
+      <circle data-sig cx="600" cy="520" r="2.4" fill="#A9B4DC"/>
+      <circle data-sig cx="210" cy="480" r="2.4" fill="#A9B4DC"/>
+      <circle data-sig cx="165" cy="240" r="3" fill="#FF5A3C"/>
+
+      <g id="dots"><circle data-dot="0" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="1" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="2" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="3" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="4" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="5" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="6" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="7" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="8" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="9" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="10" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="11" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="12" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="13" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="14" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="15" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="16" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="17" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/><circle data-dot="18" cx="356.9" cy="218.7" r="2.3" fill="#FFC24B" stroke="#0A1130" stroke-width=".6"/></g>
+
+      <circle data-ring cx="356.9" cy="218.7" r="27" pathLength="100" transform="rotate(-90 356.9 218.7)" fill="none" stroke="#FFC24B" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="100"/>
+
+      <circle data-pulse cx="352.2" cy="224.5" r="5" fill="none" stroke="#FF5A3C" stroke-width="1.2"/>
+      <circle data-kasara cx="352.2" cy="224.5" r="3.6" fill="#FF5A3C" stroke="#fff" stroke-width="1"/>
+      <path data-bracket d="M340.2,218.5V212.5H346.2M358.2,212.5H364.2V218.5M364.2,230.5V236.5H358.2M346.2,236.5H340.2V230.5" fill="none" stroke="#fff" stroke-width=".9"/>
+
+      <g data-tag>
+        <path d="M340,224.5H326" fill="none" stroke="#fff" stroke-width=".6"/>
+        <text class="lbl" x="324" y="222" text-anchor="end" font-size="7.6" fill="#fff">KASARA GHAT</text>
+        <text class="lbl" x="324" y="231.5" text-anchor="end" font-size="7" fill="#FF8C74">ROAD SHUT, 95% SURE</text>
+      </g>
+      <g data-tag2>
+        <path d="M384,212H398" fill="none" stroke="#FFC24B" stroke-width=".6"/>
+        <text class="lbl" x="400" y="210" font-size="7.6" fill="#fff">19 CONTAINERS</text>
+        <text class="lbl" x="400" y="219.5" font-size="7" fill="#FFC24B">318 TONNES AT RISK</text>
+      </g>
+
+      <g data-dest><circle cx="447.6" cy="430.1" r="3.2" fill="#0A1130" stroke="#fff" stroke-width="1.1"/><text class="city" x="455" y="433.5">Colombo, 8</text></g>
+      <g data-dest><circle cx="413.9" cy="332.6" r="3.2" fill="#0A1130" stroke="#fff" stroke-width="1.1"/><text class="city" x="421" y="336">Bengaluru, 4</text></g>
+      <g data-dest><circle cx="427.5" cy="262" r="3.2" fill="#0A1130" stroke="#fff" stroke-width="1.1"/><text class="city" x="435" y="265.5">Hyderabad, 3</text></g>
+      <g data-dest><circle cx="407.7" cy="77.6" r="3.2" fill="#0A1130" stroke="#fff" stroke-width="1.1"/><text class="city" x="415" y="81">Delhi, 3</text></g>
+      <g data-dest><text class="city" x="640" y="433">Singapore, 1</text></g>
+
+      <g data-approved>
+        <rect x="470" y="150" width="150" height="34" rx="8" fill="#C8F751"/>
+        <circle cx="487" cy="167" r="9" fill="#0A1130"/>
+        <path data-check d="M482.5,167.2 485.8,170.5 491.8,163.8" fill="none" stroke="#C8F751" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="502" y="164" font-size="9.4" font-weight="800" fill="#0A1130">Approved by Sunil P.</text>
+        <text x="502" y="175" font-family="IBM Plex Mono, monospace" font-size="6.6" fill="#0A1130">PLN-0001, ON THE LOG</text>
+      </g>
+    </svg>
+
+    <header class="top" data-top>
+      <div class="brand">
+        <svg width="34" height="34" viewBox="0 0 30 30" aria-hidden="true"><path id="logo" d="M5 25 V8 a4 4 0 0 1 4-4 h8 a5.5 5.5 0 0 1 0 11 H11 l10 10" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle id="logodot" cx="21" cy="25" r="2.6" fill="#C8F751"/></svg>
+        ROUTERA
+      </div>
+      <span class="tagline mono">AGENTIC REROUTING FOR PERISHABLE EXPORTS</span>
+    </header>
+
+    <div class="grow"></div>
+
+    <div class="words">
+      <div class="block" data-block="0">
+        <div class="kicker mono" data-rest style="color:#FF8C74">01 SENSE</div>
+        <h1><span><span data-line>A landslide shuts</span></span><span><span data-line>the Nashik road.</span></span></h1>
+        <div class="read" data-rest><b data-read="sure" style="color:#FF8C74">95%</b><span>sure. The road authority confirmed it, so this one is official.</span></div>
+      </div>
+      <div class="block" data-block="1" aria-hidden="true">
+        <div class="kicker mono" data-rest style="color:#FFC24B">02 SHELF-LIFE CLOCK</div>
+        <h1><span><span data-line>One lost day</span></span><span><span data-line>becomes eight.</span></span></h1>
+        <div class="read" data-rest><b data-read="days" style="color:#FFC24B">+8 days</b><span>12 of 19 containers miss their ship and wait for the next one.</span></div>
+      </div>
+      <div class="block" data-block="2" aria-hidden="true">
+        <div class="kicker mono" data-rest style="color:#A6B8FF">03 DECIDE</div>
+        <h1><span><span data-line>Every way out,</span></span><span><span data-line>priced in a second.</span></span></h1>
+        <div class="read" data-rest><b data-read="value" style="color:#A6B8FF">₹2.08 Cr</b><span>with this plan, against ₹88.1 L if nobody acts.</span></div>
+      </div>
+      <div class="block" data-block="3" aria-hidden="true">
+        <div class="kicker mono" data-rest style="color:#C8F751">04 APPROVE AND LOG</div>
+        <h1><span><span data-line>Nothing moves until</span></span><span><span data-line>a person says yes.</span></span></h1>
+        <div class="read" data-rest><b data-read="saved" style="color:#C8F751">₹1.20 Cr</b><span>saved. Every step goes on a log that shows any tampering.</span></div>
+      </div>
+    </div>
+
+    <div class="steps" role="group" aria-label="Story steps" data-steps>
+      <button type="button" data-step="0" style="--c:#FF5A3C"><i><b data-prog></b></i>Sense</button>
+      <button type="button" data-step="1" style="--c:#FFC24B"><i><b data-prog></b></i>Shelf-life clock</button>
+      <button type="button" data-step="2" style="--c:#7C96FF"><i><b data-prog></b></i>Decide</button>
+      <button type="button" data-step="3" style="--c:#C8F751"><i><b data-prog></b></i>Approve and log</button>
+    </div>
+    <div class="small mono" data-small>REAL OUTPUT OF THE ENGINE ON THE KASARA GHAT CLOSURE. SIMULATED FLEET AND PRICES.</div>
+  </section>
+
+  <aside class="panel" id="panel">
+    <div class="event mono" data-in>SAP HACKFEST 2026 · TEAM CODE CATALYST</div>
+
+    <form id="signin" novalidate>
+      <div data-in>
+        <h2>Who's on duty?</h2>
+        <p>Your name goes on the audit log, next to every decision you make.</p>
+      </div>
+
+      <label class="field" data-in data-field="name">Your name
+        <input id="name" type="text" autocomplete="name" placeholder="Sunil P." maxlength="40" required>
+      </label>
+
+      <div class="field" data-in>
+        <span id="role-label">Your role</span>
+        <div class="roles" id="roles" role="group" aria-labelledby="role-label">
+          <span class="pill" id="rolepill"></span>
+          <button type="button" data-role="ops" aria-pressed="true">Operations lead</button>
+          <button type="button" data-role="export" aria-pressed="false">Export manager</button>
+          <button type="button" data-role="fpo" aria-pressed="false">FPO director</button>
+        </div>
+      </div>
+
+      <label class="field" data-in data-field="code" id="code-row">Team access code
+        <input id="code" type="password" autocomplete="current-password" placeholder="Shared by your team lead">
+      </label>
+
+      <div class="note" id="signed" data-in hidden>Signed in on this browser as <b id="signed-name"></b>. <button type="button" id="signout">Not you? Sign out</button></div>
+
+      <div class="err" id="err" role="alert" hidden></div>
+
+      <button type="submit" class="go" id="go" data-in>
+        <span class="fill" aria-hidden="true"></span>
+        <span>Enter the control room</span>
+        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+
+    <p class="foot" data-in>Real feeds, simulated fleet: containers, prices and SAP TM bookings in this prototype are simulated.<span id="open-note" hidden> This server has no team access code set, so signing in only records who's at the desk.</span></p>
+  </aside>
+
+  <div class="wipe" id="wipe" aria-hidden="true"></div>
+</div>
+<noscript><p style="position:fixed;inset:auto 16px 16px;background:#fff;color:#0A1130;padding:12px;border-radius:10px">ROUTERA needs JavaScript to sign you in.</p></noscript>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const calm = matchMedia("(prefers-reduced-motion: reduce)");
+const moves = () => Boolean(window.gsap) && !calm.matches;
+function store(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* storage off */ } }
+function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+const nameIn = $("#name"), codeIn = $("#code"), err = $("#err"), go = $("#go");
+let role = "ops", me = { signed_in: false, code_required: true }, leaving = false, story = null, at = [0];
+
+// --- who's at the desk --------------------------------------------------------------------------
+function pickRole(id, duration = 0) {
+  role = id;
+  $$("[data-role]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.role === id)));
+  movePill(duration);
+}
+function movePill(duration = 0) {  // the lime pill slides under the chosen role
+  const pill = $("#rolepill"), btn = $(`[data-role="${role}"]`);
+  if (!window.gsap || !btn) return;
+  $("#roles").classList.add("slides");
+  const to = { x: btn.offsetLeft, width: btn.offsetWidth };
+  if (!duration || !moves()) gsap.set(pill, to);
+  else gsap.to(pill, { ...to, duration, ease: "back.out(1.5)", overwrite: true });
+}
+$("#roles").addEventListener("click", (e) => { const b = e.target.closest("[data-role]"); if (b) pickRole(b.dataset.role, 0.42); });
+addEventListener("resize", () => movePill(0));
+
+function showSession() {
+  const signed = me.signed_in;
+  $("#code-row").hidden = !me.code_required || signed;
+  $("#open-note").hidden = me.code_required;
+  $("#signed").hidden = !signed;
+  if (signed) { $("#signed-name").textContent = me.name; nameIn.value = me.name; pickRole(me.role); }
+}
+async function whoAmI() {
+  nameIn.value = load("routera.approver") || "";
+  try { me = await (await fetch("/api/session")).json(); } catch (e) { return; }
+  showSession();
+}
+$("#signout").addEventListener("click", async () => {
+  try { await fetch("/api/session", { method: "DELETE" }); } catch (e) { /* the cookie expires anyway */ }
+  me = { ...me, signed_in: false };
+  showSession();
+  nameIn.value = ""; nameIn.focus();
+});
+
+function fail(message, field) {
+  err.textContent = message; err.hidden = false;
+  if (field) { field.focus(); if (field === codeIn) field.select(); }
+  const row = field ? field.closest(".field") : err;
+  if (moves()) gsap.fromTo(row, { x: -8 }, { x: 0, duration: 0.5, ease: "elastic.out(1.1, 0.25)", clearProps: "transform" });
+}
+[nameIn, codeIn].forEach((el) => el.addEventListener("input", () => { err.hidden = true; }));
+
+$("#signin").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (leaving) return;
+  const name = nameIn.value.trim();
+  if (!name) return fail("Please add your name. It goes on the audit log.", nameIn);
+  const needCode = me.code_required && !me.signed_in;
+  if (needCode && !codeIn.value.trim()) return fail("Please add the team access code.", codeIn);
+  go.disabled = true;
+  let res, data;
+  try {
+    res = await fetch("/api/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, role, code: codeIn.value }) });
+    data = await res.json().catch(() => ({}));
+  } catch (x) { go.disabled = false; return fail("Can't reach ROUTERA. Check the connection and try again.", null); }
+  if (!res.ok) { go.disabled = false; return fail(data.detail || `Sign-in failed (HTTP ${res.status})`, res.status === 422 ? nameIn : codeIn); }
+  store("routera.approver", data.name);
+  leave();
+});
+
+// Going in: the panel leaves, the map dives into the Nashik corridor and the page turns.
+function leave() {
+  leaving = true;
+  let done = false;
+  const finish = () => { if (!done) { done = true; location.assign("/room"); } };
+  if (!moves()) { finish(); return; }
+  if (story) story.pause();
+  const svg = $("#map"), view = { x: 150, y: 10, w: 640, h: 560 };
+  gsap.timeline({ onComplete: finish })
+    .to(go, { scale: 0.97, duration: 0.12, ease: "power2.out" }, 0)
+    .to(go, { scale: 1, duration: 0.3, ease: "back.out(3)" }, 0.12)
+    .to($$("#panel > *"), { y: -14, autoAlpha: 0, duration: 0.35, stagger: 0.05, ease: "power2.in" }, 0.2)
+    .to("#panel", { xPercent: 100, duration: 0.7, ease: "power4.in" }, 0.4)
+    .to($$(".block, [data-steps], [data-small], [data-top]"), { autoAlpha: 0, duration: 0.35 }, 0.25)
+    .to(view, { x: 322, y: 188, w: 72, h: 63, duration: 1.2, ease: "power3.inOut", onUpdate: () => svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`) }, 0.35)
+    .set("#wipe", { visibility: "visible", yPercent: 100 }, 0.95)
+    .to("#wipe", { yPercent: 0, duration: 0.6, ease: "power4.inOut" }, 0.95);
+  setTimeout(finish, 2600);
+}
+
+// The arrow nudges and a white fill sweeps across the button.
+go.addEventListener("mouseenter", () => hoverGo(true));
+go.addEventListener("mouseleave", () => hoverGo(false));
+function hoverGo(on) {
+  if (!moves()) return;
+  gsap.to(".go .fill", { scaleX: on ? 1 : 0, duration: 0.45, ease: "power3.out", transformOrigin: on ? "left center" : "right center", overwrite: true });
+  gsap.to(".go svg", { x: on ? 6 : 0, duration: 0.35, ease: "back.out(2.2)", overwrite: true });
+}
+
+// --- the story: four steps on a loop, from one real plan ------------------------------------------
+function enter() {
+  const logo = $("#logo"), length = logo.getTotalLength();
+  gsap.timeline({ defaults: { ease: "power4.out" } })
+    .from("#panel", { xPercent: 100, duration: 1.1 }, 0)
+    .from($$("[data-in]"), { y: 26, autoAlpha: 0, duration: 0.8, stagger: 0.07 }, 0.35)
+    .fromTo(logo, { strokeDasharray: length, strokeDashoffset: length }, { strokeDashoffset: 0, duration: 1.1, ease: "power2.inOut" }, 0.1)
+    .from("#logodot", { scale: 0, transformOrigin: "center", duration: 0.5, ease: "back.out(3)" }, 0.95)
+    .from("[data-land]", { autoAlpha: 0, duration: 1.4, ease: "power1.out" }, 0)
+    .from("[data-grid]", { autoAlpha: 0, duration: 1.6, ease: "power1.out" }, 0.3)
+    .from($$("[data-steps], [data-small]"), { autoAlpha: 0, y: 12, duration: 0.7, stagger: 0.1 }, 0.5);
+}
+function tell() {
+  const NX = 356.9, NY = 218.7, KX = 352.2, KY = 224.5;
+  const inr = (v) => (v >= 1e7 ? `₹${(v / 1e7).toFixed(2)} Cr` : `₹${(v / 1e5).toFixed(1)} L`);
+  const blocks = $$("[data-block]"), prog = $$("[data-prog]");
+  const D = [4.6, 3.9, 4.6, 5];
+  at = [0, 4.6, 8.5, 13.1];
+  const tl = story = gsap.timeline({ repeat: -1, repeatDelay: 0.3, defaults: { ease: "power3.out" }, delay: 0.9 });
+  gsap.set(blocks, { autoAlpha: 0 });
+  gsap.set(prog, { scaleX: 0 });
+  const count = (el, from, to, fmt, when, duration, opens) => {
+    const box = { v: from };
+    tl.call(() => { el.textContent = fmt(from); }, null, opens);  // starts low, every telling
+    tl.fromTo(box, { v: from }, { v: to, duration, ease: "power2.out", onUpdate: () => { el.textContent = fmt(box.v); } }, when);
+  };
+  blocks.forEach((block, i) => {
+    const lines = $$("[data-line]", block), rest = $$("[data-rest]", block);
+    tl.set(block, { autoAlpha: 1 }, at[i]);
+    tl.call(showStep, [i], at[i]);
+    tl.fromTo(lines, { yPercent: 115 }, { yPercent: 0, duration: 0.9, ease: "power4.out", stagger: 0.1 }, at[i] + 0.05);
+    tl.fromTo(rest, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.12 }, at[i] + 0.3);
+    tl.to(lines, { yPercent: -115, duration: 0.42, ease: "power3.in", stagger: 0.05 }, at[i] + D[i] - 0.52);
+    tl.to(rest, { autoAlpha: 0, duration: 0.28 }, at[i] + D[i] - 0.45);
+    tl.set(block, { autoAlpha: 0 }, at[i] + D[i] - 0.02);
+    tl.fromTo(prog[i], { scaleX: 0 }, { scaleX: 1, duration: D[i], ease: "none" }, at[i]);
+  });
+
+  // 1. Sense: the noise fades on the way in, one official signal lands, and the road goes red
+  const sigs = $$("[data-sig]");
+  gsap.set(sigs, { autoAlpha: 0 });
+  sigs.forEach((sig, i) => {
+    const real = i === sigs.length - 1, when = 0.25 + i * 0.2;
+    tl.fromTo(sig, { autoAlpha: 0, attr: { cx: sig.getAttribute("cx"), cy: sig.getAttribute("cy") } }, { autoAlpha: 1, duration: 0.15 }, when);
+    tl.to(sig, { attr: { cx: KX, cy: KY }, duration: 0.85, ease: "power1.in" }, when);
+    tl.to(sig, { autoAlpha: 0, duration: 0.2 }, when + (real ? 0.8 : 0.42));
+  });
+  const hit = 0.25 + (sigs.length - 1) * 0.2 + 0.82, pin = { svgOrigin: `${KX} ${KY}` };
+  count($('[data-read="sure"]'), 0, 95, (v) => `${Math.round(v)}%`, hit - 0.5, 0.9, at[0]);
+  tl.fromTo("[data-kasara]", { ...pin, scale: 0 }, { scale: 1, duration: 0.5, ease: "back.out(3)" }, hit);
+  gsap.set("[data-pulse]", { autoAlpha: 0 });
+  tl.set("[data-pulse]", { autoAlpha: 0 }, 0);
+  tl.fromTo("[data-pulse]", { ...pin, scale: 1, autoAlpha: 0.9 }, { scale: 4, autoAlpha: 0, duration: 1.1, ease: "power1.out", repeat: 2, immediateRender: false }, hit);
+  tl.fromTo("[data-blocked]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4 }, hit + 0.1);
+  tl.fromTo("[data-bracket]", { ...pin, scale: 3.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.7, ease: "power4.out" }, hit + 0.1);
+  tl.fromTo("[data-tag]", { autoAlpha: 0, x: 8 }, { autoAlpha: 1, x: 0, duration: 0.45 }, hit + 0.4);
+  tl.to("[data-tag], [data-bracket]", { autoAlpha: 0, duration: 0.3 }, at[1] - 0.2);
+
+  // 2. The clock: the boxes appear, the ring drains, one lost day becomes eight
+  const dots = $$("[data-dot]");
+  const spots = dots.map((_, i) => { const a = i * 2.4, reach = 4.5 + i * 0.95; return [NX + Math.cos(a) * reach, NY + Math.sin(a) * reach]; });
+  gsap.set(dots, { autoAlpha: 0 });
+  dots.forEach((dot, i) => {
+    tl.fromTo(dot, { autoAlpha: 0, fill: "#FFC24B", attr: { cx: NX, cy: NY } }, { autoAlpha: 1, attr: { cx: spots[i][0], cy: spots[i][1] }, duration: 0.6, ease: "back.out(2.4)" }, at[1] + 0.1 + i * 0.03);
+  });
+  tl.fromTo("[data-tag2]", { autoAlpha: 0, x: -8 }, { autoAlpha: 1, x: 0, duration: 0.45 }, at[1] + 0.5);
+  tl.fromTo("[data-ring]", { autoAlpha: 0, strokeDashoffset: 0 }, { autoAlpha: 1, duration: 0.3 }, at[1] + 0.3);
+  tl.to("[data-ring]", { strokeDashoffset: 62, duration: 2.6, ease: "none" }, at[1] + 0.5);
+  count($('[data-read="days"]'), 1, 8, (v) => `+${Math.round(v)} ${Math.round(v) === 1 ? "day" : "days"}`, at[1] + 1, 1.4, at[1]);
+  tl.to("[data-tag2], [data-ring]", { autoAlpha: 0, duration: 0.3 }, at[2] - 0.2);
+
+  // 3. Decide: the routes draw themselves and the value climbs
+  const order = ["N-RAIL-LK", "N-BLR", "N-HYD", "N-DEL", "N-RAIL-SG"].map((id) => $(`[data-route="${id}"]`));
+  const lengths = new Map(order.map((r) => [r, r.getTotalLength()]));
+  order.forEach((route, i) => {
+    const length = lengths.get(route);
+    tl.fromTo(route, { autoAlpha: 1, stroke: "#7C96FF", strokeDasharray: length, strokeDashoffset: length }, { strokeDashoffset: 0, duration: 1.5, ease: "power2.inOut" }, at[2] + 0.2 + i * 0.26);
+  });
+  $$("[data-dest]").forEach((dest, i) => {
+    tl.fromTo(dest, { autoAlpha: 0, y: 6 }, { autoAlpha: 1, y: 0, duration: 0.45, ease: "back.out(2.2)" }, at[2] + 1.2 + i * 0.24);
+  });
+  count($('[data-read="value"]'), 8807208, 20837363, inr, at[2] + 0.7, 2.2, at[2]);
+
+  // 4. Approve: a tick, the routes turn lime, and the boxes finally move
+  const check = $("[data-check]"), checkLength = check.getTotalLength();
+  tl.fromTo("[data-approved]", { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.5, ease: "back.out(2)" }, at[3] + 0.3);
+  tl.fromTo(check, { strokeDasharray: checkLength, strokeDashoffset: checkLength }, { strokeDashoffset: 0, duration: 0.45, ease: "power2.out" }, at[3] + 0.6);
+  tl.to(order, { stroke: "#C8F751", duration: 0.5, stagger: 0.07, ease: "power1.out" }, at[3] + 0.7);
+  tl.to(dots, { fill: "#C8F751", duration: 0.4, stagger: 0.015, ease: "power1.out" }, at[3] + 0.7);
+  count($('[data-read="saved"]'), 0, 12030155, inr, at[3] + 0.4, 1.5, at[3]);
+  const legs = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4].map((n) => order[n]);  // 8 Colombo, 4 Bengaluru, 3 Hyderabad, 3 Delhi, 1 Singapore
+  const box = { t: 0 }, smooth = (t) => t * t * (3 - 2 * t);
+  tl.fromTo(box, { t: 0 }, {
+    t: 1, duration: 3.2, ease: "none",
+    onUpdate: () => dots.forEach((dot, i) => {
+      const local = Math.max(0, Math.min(1, box.t * 1.4 - (i / dots.length) * 0.4));
+      const route = legs[i], p = route.getPointAtLength(lengths.get(route) * smooth(local));
+      const blend = Math.min(1, local * 7), [sx, sy] = spots[i];
+      dot.setAttribute("cx", sx + (p.x - sx) * blend);
+      dot.setAttribute("cy", sy + (p.y - sy) * blend);
+    }),
+  }, at[3] + 1);
+
+  // and clear the board for the next telling
+  tl.to([...order, ...$$("[data-dest]"), ...dots, "[data-approved]", "[data-kasara]", "[data-blocked]"], { autoAlpha: 0, duration: 0.35, ease: "power1.in" }, at[3] + D[3] - 0.35);
+}
+function showStep(i) {  // which words are read out, and which step is lit
+  $$("[data-block]").forEach((b, j) => b.setAttribute("aria-hidden", String(j !== i)));
+  $$("[data-step]").forEach((b, j) => b.classList.toggle("on", j === i));
+}
+$("[data-steps]").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-step]");
+  if (!b || !story) return;
+  showStep(Number(b.dataset.step));  // a seek skips the timeline's own calls
+  story.seek(at[Number(b.dataset.step)] + 0.001).play();
+});
+document.addEventListener("visibilitychange", () => { if (story && !leaving) (document.hidden ? story.pause() : story.play()); });
+
+function start() {
+  movePill(0);
+  if (!moves()) {
+    $("#page").classList.add("still");
+    showStep(3);
+    $$("[data-prog]").forEach((p) => { p.style.transform = "scaleX(1)"; });
+    return;
+  }
+  gsap.config({ nullTargetWarn: false });
+  enter();
+  tell();
+}
+whoAmI();
+let started = false;
+const begin = () => { if (!started) { started = true; start(); } };
+addEventListener("load", begin);
+setTimeout(begin, 2500);  // the motion library is optional: never wait on it for long
+</script>
+</body>
+</html>

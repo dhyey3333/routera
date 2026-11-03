@@ -4,19 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ROUTERA Control Room</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230E2240'/%3E%3Cpath d='M8 23V10a3 3 0 0 1 3-3h6a4.5 4.5 0 0 1 0 9h-5l8 7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='21' cy='23' r='2.2' fill='%237FC79B'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230A1130'/%3E%3Cpath d='M8 23V10a3 3 0 0 1 3-3h6a4.5 4.5 0 0 1 0 9h-5l8 7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='21' cy='23' r='2.2' fill='%23C8F751'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #F4F5F2; --panel: #FFFFFF; --panel-2: #F7F8F5; --panel-3: #EEF0EB; --line: #E2E5DF; --line-2: #D9DDD6;
-  --text: #14202F; --text-2: #2C3847; --muted: #566273; --faint: #7A8796;
-  --rail: #0E2240; --rail-on: #1F3D69; --rail-hover: #1A3358; --rail-line: #27436E; --rail-text: #C9D5E6; --rail-dim: #9FB2CC; --mint: #7FC79B;
-  --accent: #17407D; --accent-hover: #0F2F60; --accent-2: #2F6DB5; --accent-soft: #E9EEF6; --selected: #EEF3FA;
-  --good: #2D7A4F; --good-ink: #1C5C3B; --good-soft: #E7F1EA;
-  --warn: #B26A00; --warn-ink: #7A4B00; --warn-soft: #FBF0DC;
-  --bad: #C8452B; --bad-ink: #A33218; --bad-soft: #FBEBE5; --bad-line: #F0CFC3;
-  --ship: #2B8C9E; --phone: #14202F;
+  --bg: #F4F5F9; --panel: #FFFFFF; --panel-2: #F8F9FC; --panel-3: #EEF0F7; --line: #E3E6F0; --line-2: #DDE1EC;
+  --text: #0A1130; --text-2: #2C3656; --muted: #515B7A; --faint: #69728F;
+  --ink: #0A1130; --ink-2: #141D4A; --ink-3: #1B2558; --ink-line: #26336E; --ink-text: #C9D1EE; --ink-dim: #A9B4DC;
+  --accent: #2F5BFF; --accent-hover: #1E45E0; --accent-ink: #1E3FB0; --accent-soft: #E8EDFF; --selected: #EEF2FF; --picked: #DFE6FF;
+  --lime: #C8F751; --coral: #FF5A3C; --amber: #FFC24B; --route: #7C96FF;
+  --good: #3F9142; --good-ink: #0B6B3E; --good-soft: #E9F9C9; --good-chip: #2C4A00;
+  --warn: #C67A00; --warn-ink: #7A4B00; --warn-soft: #FFF0CC;
+  --bad: #D93A1F; --bad-ink: #A32A10; --bad-soft: #FFE3DC; --bad-line: #FFD0C4;
+  --phone: #0A1130;
+  /* the map is dark, so the routes carry the colour */
+  --map-bg: #0A1130; --map-plan: #7C96FF; --map-alt: #A6B8FF; --map-booked: #C8F751; --map-other: #6E7BB0; --map-lane: #4A5894;
+  --map-block: #FF5A3C; --map-review: #FFC24B; --map-good: #C8F751; --map-warn: #FFC24B; --map-bad: #FF5A3C; --ship: #4FC3D9;
   --sans: "Hanken Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
   color-scheme: light;
@@ -26,48 +30,51 @@ html { scroll-behavior: smooth; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--text); font: 14px/1.4 var(--sans); font-variant-numeric: tabular-nums; min-height: 100vh; }
 button, select, input, textarea { font: inherit; color: inherit; }
-a { color: var(--accent); }
+a { color: var(--accent-ink); }
 .mono { font-family: var(--mono); font-size: 12.5px; font-weight: 500; }
+.label { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 [hidden] { display: none !important; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .preload .rail, .preload .main { visibility: hidden; animation: reveal 0s 2.5s forwards; }
 @keyframes reveal { to { visibility: visible; } }
 @keyframes breathe { 50% { opacity: .35; transform: scale(.8); } }
+.glider { position: absolute; top: 0; left: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; }
+.slides > .glider { visibility: visible; }
 
 /* --- the rail --------------------------------------------------------------------------------- */
 .app { display: flex; min-height: 100vh; }
-.rail { flex: 0 0 224px; position: sticky; top: 0; height: 100vh; overflow: hidden auto; background: var(--rail); color: #fff; display: flex; flex-direction: column; gap: 22px; padding: 22px 14px 18px; }
-.logo { display: flex; align-items: center; gap: 10px; padding: 0 8px; font-weight: 700; font-size: 18px; letter-spacing: .08em; }
-.rail nav { display: flex; flex-direction: column; gap: 2px; }
-.nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--rail-text); text-decoration: none; white-space: nowrap; flex: none; }
+.rail { flex: 0 0 224px; position: sticky; top: 0; height: 100vh; overflow: hidden auto; background: var(--ink); color: #fff; display: flex; flex-direction: column; gap: 22px; padding: 22px 14px 18px; }
+.logo { display: flex; align-items: center; gap: 10px; padding: 0 8px; font-weight: 700; font-size: 18px; letter-spacing: .1em; }
+.rail nav { position: relative; display: flex; flex-direction: column; gap: 2px; }
+.rail nav .glider { background: var(--accent); border-radius: 9px; }
+.nav { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 9px; color: var(--ink-text); text-decoration: none; white-space: nowrap; flex: none; transition: color .25s; }
 .nav > span { display: flex; align-items: center; gap: 12px; }
 .nav svg { fill: none; stroke: currentColor; stroke-width: 1.8; flex: none; }
-.nav:hover { background: var(--rail-hover); color: #fff; }
-.nav.on { background: var(--rail-on); color: #fff; font-weight: 600; }
+.nav:hover { background: var(--ink-3); color: #fff; }
+.nav.on { background: var(--accent); color: #fff; font-weight: 600; }
+.slides > .nav.on, .slides > .nav:hover { background: transparent; }
 .nav:focus-visible { outline-color: #fff; }
-.badge { min-width: 22px; text-align: center; border-radius: 11px; background: #3E5678; color: #fff; font-size: 12px; font-weight: 700; padding: 1px 6px; }
+.badge { min-width: 22px; text-align: center; border-radius: 11px; background: #3E4C80; color: #fff; font-size: 12px; font-weight: 700; padding: 1px 6px; }
 .badge.on { background: var(--bad); }
-.where { border-top: 1px solid var(--rail-line); padding: 16px 8px 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.where { border-top: 1px solid var(--ink-line); padding: 16px 8px 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
 .where > div { display: flex; align-items: center; gap: 8px; }
-.where .where-h { color: var(--rail-dim); font-size: 12px; font-weight: 600; }
+.where .where-h, .books-h { color: var(--ink-dim); }
 .pip { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: none; display: inline-block; }
 .pip.on { background: var(--good); animation: breathe 2.2s ease-in-out infinite; }
 .pip.bad { background: var(--bad); }
-.pip.off { background: transparent; border: 1.5px solid var(--rail-dim); }
-.rail .pip.on { background: var(--mint); }
-.goods { margin-top: auto; flex: none; border-top: 1px solid var(--rail-line); padding: 14px 4px 0; }
-.goods-h { color: var(--rail-dim); font-size: 12px; font-weight: 600; margin: 0 4px 8px; }
-.goods-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
-.goodstile { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 7px 0 6px; border-radius: 10px; background: #16305A; transition: opacity .3s; }
-.goodstile svg { display: block; width: 38px; height: 38px; }
-.goodstile b { margin-top: 3px; font-size: 14px; font-weight: 700; line-height: 1.1; }
-.goodstile span { font-size: 10px; color: var(--rail-text); white-space: nowrap; }
-.goodstile.none { opacity: .4; }
+.pip.off { background: transparent; border: 1.5px solid var(--ink-dim); }
+.rail .pip.on { background: var(--lime); }
+.rail .pip.bad { background: var(--coral); }
+.books { margin-top: auto; flex: none; border-top: 1px solid var(--ink-line); padding: 16px 8px 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.books-h { margin-bottom: 2px; }
+.book { display: flex; justify-content: space-between; gap: 8px; }
+.book span { color: var(--ink-text); }
+.book b { font-weight: 600; }
 
 /* --- the desk --------------------------------------------------------------------------------- */
-.main { flex: 1 1 0; min-width: 0; padding: 18px 22px 28px; display: flex; flex-direction: column; gap: 14px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+.main { flex: 1 1 0; min-width: 0; padding: 0 22px 28px; display: flex; flex-direction: column; gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; min-width: 0; }
 .card-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; }
 .card-h h3 { margin: 0; font-size: 15px; font-weight: 700; }
 .pad { padding: 12px 14px; }
@@ -76,22 +83,29 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .empty { color: var(--muted); text-align: center; padding: 26px 14px; font-size: 13px; }
 .empty > b:first-child { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
 
-.head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+/* what just came in, always moving */
+.tape { margin: 0 -22px; height: 34px; overflow: hidden; background: var(--ink-2); color: #fff; display: flex; align-items: center; flex: none; }
+.tape-track { display: flex; width: max-content; min-width: 200%; }
+.tape .run { flex: 1 0 auto; display: flex; }
+.tape .it { display: inline-flex; align-items: center; gap: 9px; padding: 0 22px; font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; white-space: nowrap; }
+.tape .it i { width: 6px; height: 6px; border-radius: 50%; background: var(--c); flex: none; }
+
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 4px; }
 .head-t { flex: 1 1 260px; min-width: 0; }
 .head-h { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
-.head-h h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.head-h h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
 .head-s { color: var(--muted); font-size: 13px; }
-.head-s b { font-weight: 600; color: var(--text-2); }
-.layer { font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 10px; white-space: nowrap; }
+.head-s b { font-weight: 600; color: var(--text); }
+.layer { font-size: 12px; font-weight: 700; padding: 1px 9px; border-radius: 10px; white-space: nowrap; }
 .layer.india { color: var(--warn-ink); background: var(--warn-soft); }
-.layer.global { color: var(--accent); background: var(--accent-soft); }
+.layer.global { color: var(--accent-ink); background: var(--accent-soft); }
 .layer.live { color: #fff; background: var(--bad); }
 .search { position: relative; z-index: 30; flex: 1 1 260px; max-width: 420px; min-width: 0; }
-.search label { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; }
+.search label { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 11px; }
 .search svg { flex: none; fill: none; stroke: var(--muted); stroke-width: 2; }
 .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; }
 .search label:focus-within { border-color: var(--accent); }
-.hits { position: absolute; top: 48px; left: 0; right: 0; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; padding: 4px; display: grid; gap: 2px; box-shadow: 0 8px 24px #14202F1F; }
+.hits { position: absolute; top: 48px; left: 0; right: 0; background: var(--panel); border: 1px solid var(--line-2); border-radius: 11px; padding: 4px; display: grid; gap: 2px; box-shadow: 0 10px 28px #0A11302B; }
 .hits button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; min-height: 44px; padding: 5px 9px; border: 0; border-radius: 7px; background: transparent; text-align: left; cursor: pointer; }
 .hits button:hover, .hits button:focus-visible { background: var(--selected); }
 .hits small { display: block; color: var(--muted); font-size: 12px; }
@@ -99,14 +113,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .who-box { display: flex; align-items: center; gap: 10px; }
 .sim { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border-radius: 15px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
 .sim .pip { background: var(--warn); width: 7px; height: 7px; }
-.sim.real { background: var(--good-soft); color: var(--good-ink); }
-.sim.real .pip { background: var(--good); animation: breathe 2.2s ease-in-out infinite; }
+.sim.real { background: var(--good-soft); color: var(--good-chip); }
+.sim.real .pip { background: #3F7D00; animation: breathe 2.2s ease-in-out infinite; }
 .me-i { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex: none; }
 .me-t { line-height: 1.2; }
 .me-t b { display: block; font-weight: 600; }
 .me-t small { color: var(--muted); font-size: 12px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); display: inline-block; flex: none; }
-.dot.live { background: var(--good); animation: breathe 2.2s ease-in-out infinite; }
+.dot.live { background: #3F7D00; animation: breathe 2.2s ease-in-out infinite; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--panel); color: var(--text); font-weight: 600; cursor: pointer; white-space: nowrap; text-decoration: none; }
 .btn:hover { background: var(--panel-3); }
@@ -118,33 +132,47 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .btn.ghost { background: transparent; }
 .btn.ghost:hover { background: var(--panel-3); }
 .btn.small { min-height: 32px; padding: 0 10px; font-size: 12.5px; border-radius: 8px; }
-.btn.big { min-height: 46px; font-size: 14.5px; font-weight: 700; }
+.btn.big { min-height: 50px; font-size: 15px; font-weight: 800; border-radius: 11px; }
 .btn.wide { width: 100%; }
+.btn.sheen { position: relative; overflow: hidden; }
+.btn.sheen .fill { position: absolute; inset: 0; background: var(--ink); transform: scaleX(0); transform-origin: left center; }
+.btn.sheen > span:not(.fill) { position: relative; }
+.btn.sheen.slides:hover { background: var(--accent); }
 .iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex: none; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
 .iconbtn:hover { background: var(--panel-3); color: var(--text); }
 .iconbtn svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 .runbar { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 14px 12px; overflow: hidden; }
 .runbar select { flex: 1 1 240px; min-width: 0; height: 40px; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--panel); font-weight: 500; }
-.seg { display: inline-flex; background: var(--panel-3); border-radius: 9px; padding: 3px; }
-.seg button { min-height: 34px; padding: 0 11px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; font-weight: 600; font-size: 13px; }
+.seg { position: relative; display: inline-flex; background: var(--panel-3); border-radius: 10px; padding: 3px; }
+.seg .glider { background: var(--panel); border-radius: 8px; box-shadow: 0 1px 3px #0A11301F; }
+.seg button { position: relative; min-height: 34px; padding: 0 11px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-weight: 600; font-size: 13px; }
 .seg button[aria-pressed="true"] { background: var(--panel); color: var(--text); }
+.seg.slides button[aria-pressed="true"] { background: transparent; }
 .ticker { flex: 1 1 100%; min-width: 0; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ticker b { color: var(--text-2); font-weight: 600; }
 .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: transparent; }
-.progress i { display: block; height: 100%; width: 0; background: var(--accent-2); transition: width .4s; }
+.progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }
 
+/* the numbers: solid colour only where something needs a person */
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
-.kpi b { display: block; font-size: 20px; font-weight: 700; line-height: 1.15; }
-.kpi span { display: block; color: var(--muted); font-size: 12.5px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 13px 15px; min-width: 0; transition: background-color .6s ease, border-color .6s ease, color .6s ease; }
+.kpi b { display: block; font-size: 23px; font-weight: 700; line-height: 1.12; letter-spacing: -.01em; transition: color .6s ease; }
+.kpi span { display: block; color: var(--muted); font-size: 12.5px; transition: color .6s ease; }
 .kpi.boxes { display: flex; align-items: center; gap: 12px; }
 .kpi b.risk { color: var(--bad-ink); }
 .kpi b.safe { color: var(--good-ink); }
+.kpi.alarm { background: var(--bad); border-color: var(--bad); }
+.kpi.alarm b, .kpi.alarm b.risk, .kpi.alarm span { color: #fff; }
+.kpi.ask { background: var(--accent); border-color: var(--accent); }
+.kpi.ask b, .kpi.ask span { color: #fff; }
+.kpi.won { background: var(--lime); border-color: var(--lime); }
+.kpi.won b, .kpi.won b.safe { color: var(--ink); }
+.kpi.won span { color: #33405F; }
 
 .feeds { display: flex; flex-wrap: wrap; padding: 4px 6px; }
-.feed { flex: 1 1 190px; min-width: 0; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; border-radius: 8px; }
-.feed-h { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; min-height: 26px; }
+.feed { flex: 1 1 190px; min-width: 0; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; border-radius: 9px; }
+.feed-h { display: flex; align-items: center; gap: 6px; color: var(--muted); min-height: 26px; }
 .feed-h .pip { width: 6px; height: 6px; }
 .feed-h .iconbtn { margin-left: auto; }
 .feed-v { font-weight: 600; font-size: 13.5px; }
@@ -152,50 +180,59 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .feed ul { list-style: none; margin: 5px 0 0; padding: 0; max-height: 58px; overflow: auto; font-size: 12px; }
 .feed li { margin: 0 0 3px; color: var(--muted); }
 .feed .fi { all: unset; cursor: pointer; color: var(--text-2); }
-.feed .fi:hover, .feed .fi:focus-visible { color: var(--accent); text-decoration: underline; }
+.feed .fi:hover, .feed .fi:focus-visible { color: var(--accent-ink); text-decoration: underline; }
 .feed .ext { margin-left: 4px; color: var(--faint); text-decoration: none; }
 .flag { display: inline-block; width: 7px; height: 7px; margin-right: 4px; border-radius: 50%; background: var(--bad); }
 
 .desk { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 2.05fr) minmax(300px, 1.1fr); grid-template-rows: clamp(620px, calc(100vh - 32px), 780px); gap: 14px; scroll-margin-top: 12px; }
 .stack { display: flex; flex-direction: column; gap: 14px; min-height: 0; min-width: 0; }
-.tabs { display: flex; gap: 2px; background: var(--panel-3); border-radius: 9px; padding: 3px; }
-.tabs button { min-height: 30px; padding: 0 9px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.tabs { position: relative; display: flex; gap: 2px; background: var(--panel-3); border-radius: 9px; padding: 3px; }
+.tabs .glider { background: var(--panel); border-radius: 7px; box-shadow: 0 1px 3px #0A11301F; }
+.tabs button { position: relative; min-height: 30px; padding: 0 9px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tabs button[aria-selected="true"], .tabs button[aria-pressed="true"] { background: var(--panel); color: var(--text); }
+.tabs.slides button[aria-selected="true"] { background: transparent; }
 .count { font-size: 11.5px; font-weight: 500; color: var(--muted); margin-left: 4px; }
 
 .sense { flex: 0 1 auto; max-height: 58%; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .sense-body { overflow: auto; padding: 0 10px 10px; min-height: 0; display: grid; gap: 8px; }
-.dis { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel-2); }
-.dis.hot { background: var(--bad-soft); border-color: var(--bad-line); }
-.dis.maybe { background: var(--warn-soft); border-color: #EFDDB8; }
+.dis { --mark: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 13px; background: var(--panel-2); transition: background-color .7s ease, border-color .7s ease, color .7s ease; }
+.dis.hot { --mark: var(--bad); background: var(--bad); border-color: var(--bad); color: #fff; }
+.dis.maybe { background: var(--warn-soft); border-color: #F2DDA6; }
 .dis.quiet { opacity: .72; }
 .dis-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .dis-state { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12.5px; color: var(--muted); }
-.dis.hot .dis-state { color: var(--bad-ink); }
+.dis.hot .dis-state { color: #fff; }
 .dis.maybe .dis-state { color: var(--warn-ink); }
-.dis h2 { margin: 7px 0 3px; font-size: 18px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
-.dis p { margin: 0 0 8px; color: #4D3B35; font-size: 13px; }
+.dis h2 { margin: 8px 0 4px; font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; overflow: hidden; }
+.dis h2 > span { display: block; }
+.dis p { margin: 0 0 9px; color: #4D3B35; font-size: 13px; }
+.dis.hot p { color: #fff; }
 .dis.calm p, .dis.quiet p { color: var(--muted); }
-.pill { display: inline-flex; align-items: center; background: var(--panel); border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.pill { display: inline-flex; align-items: center; background: var(--panel); color: var(--text); border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .dis-pills { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
-.dis-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 8px; color: var(--muted); font-size: 11.5px; }
+.dis-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 9px; color: var(--muted); font-size: 11.5px; }
+.dis.hot .dis-foot { color: #fff; }
 .dis-foot .btn { margin-left: auto; }
+.dis.hot .btn.ghost { color: #fff; border-color: #FFFFFF99; }
+.dis.hot .btn.ghost:hover { background: #FFFFFF26; }
 .sev { display: inline-flex; gap: 2px; align-items: center; }
 .sev i { width: 5px; height: 5px; border-radius: 50%; background: var(--line-2); }
 .sev i.on { background: var(--bad); }
+.dis.hot .sev i { background: #FFFFFF66; }
+.dis.hot .sev i.on { background: #fff; }
 .sig { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 2px 8px; padding: 7px 4px; border-top: 1px solid var(--panel-3); font-size: 12.5px; }
 .sig .t { color: var(--faint); }
 .sig .src { color: var(--muted); font-size: 11.5px; }
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 0; border-radius: 10px; font-size: 12px; font-weight: 600; background: var(--panel-3); color: #3C4654; white-space: nowrap; }
-.chip.good { background: var(--good-soft); color: var(--good-ink); }
+.chip.good { background: var(--good-soft); color: var(--good-chip); }
 .chip.warn { background: var(--warn-soft); color: var(--warn-ink); }
 .chip.bad { background: var(--bad-soft); color: var(--bad-ink); }
-.chip.acc { background: var(--accent-soft); color: var(--accent); }
+.chip.acc { background: var(--accent-soft); color: var(--accent-ink); }
 button.chip { cursor: pointer; }
 button.chip:hover { background: var(--line-2); }
 
 .stack.picking .sense { max-height: 30%; }
-.side { flex: 1 1 0; min-height: 190px; overflow: auto; padding: 14px; font-size: 13px; }
+.side { flex: 1 1 0; min-height: 190px; overflow: auto; padding: 15px; font-size: 13px; }
 .side h3 { margin: 0 0 10px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 .side h3 .iconbtn { margin-left: auto; }
 .side .lead { color: var(--muted); margin: 0 0 10px; font-size: 12.5px; }
@@ -204,13 +241,13 @@ button.chip:hover { background: var(--line-2); }
 .side li { margin: 3px 0; }
 .ifrow { display: flex; gap: 11px; margin-bottom: 12px; }
 .ifrow svg { flex: none; fill: none; stroke: var(--accent); stroke-width: 1.8; }
-.ifrow b { display: block; font-size: 16px; font-weight: 700; line-height: 1.2; }
+.ifrow b { display: block; font-size: 17px; font-weight: 700; line-height: 1.2; }
 .ifrow small { color: var(--muted); font-size: 12.5px; }
 .hint { border-top: 1px solid var(--panel-3); padding-top: 10px; }
-.opt { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; min-height: 50px; text-align: left; padding: 7px 9px; margin-bottom: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
+.opt { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; min-height: 50px; text-align: left; padding: 7px 9px; margin-bottom: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; transition: border-color .2s; }
 .opt:hover { border-color: var(--accent); }
 .opt.now { border-color: var(--accent); background: var(--selected); }
-.opt.off { cursor: default; background: #FDF6F3; border-color: var(--bad-line); }
+.opt.off { cursor: default; background: #FFF4F1; border-color: var(--bad-line); }
 .opt.off:hover { border-color: var(--bad-line); }
 .opt-n { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--panel-3); color: #3C4654; font-size: 12px; font-weight: 700; }
 .opt.now .opt-n { background: var(--accent); color: #fff; }
@@ -230,25 +267,43 @@ button.chip:hover { background: var(--line-2); }
 .notice.muted { background: var(--panel-3); color: var(--muted); }
 .side .notice { margin: 8px 0; }
 
-.mapcard { display: flex; flex-direction: column; min-height: 0; overflow: hidden; scroll-margin-top: 12px; }
-#map { flex: 1; min-height: 0; background: #E8EFF2; z-index: 0; }
-#map .mapfail { padding: 60px 20px; text-align: center; color: var(--muted); }
-.basetiles { filter: saturate(.6) contrast(.96) brightness(1.03); }
-.maplegend { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 7px 14px; border-top: 1px solid var(--panel-3); color: var(--text-2); font-size: 12px; }
+/* the map, on a dark ground */
+.mapcard { display: flex; flex-direction: column; min-height: 0; overflow: hidden; scroll-margin-top: 12px; background: var(--ink); border-color: var(--ink); color: #fff; }
+.mapcard .tabs { background: var(--ink-3); }
+.mapcard .tabs button { color: var(--ink-dim); }
+.mapcard .tabs button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.mapcard .btn.ghost { color: #fff; border-color: var(--ink-line); }
+.mapcard .btn.ghost:hover { background: var(--ink-3); }
+#map { flex: 1; min-height: 0; background: var(--map-bg); z-index: 0; }
+#map.leaflet-container { background: var(--map-bg); }
+#map .mapfail { padding: 60px 20px; text-align: center; color: var(--ink-text); }
+.basetiles { filter: invert(1) grayscale(1) brightness(.55) contrast(1.35) sepia(1) hue-rotate(185deg) saturate(2.6) brightness(.8); }
+.maplegend { display: flex; flex-wrap: wrap; gap: 4px 13px; padding: 8px 14px; border-top: 1px solid var(--ink-3); color: var(--ink-text); font-size: 12px; }
 .maplegend span { display: inline-flex; align-items: center; gap: 5px; }
 .maplegend i { display: inline-block; width: 16px; height: 0; border-top: 3px solid; border-radius: 2px; }
 .maplegend i.dash { border-top-style: dashed; border-top-width: 2.5px; border-radius: 0; }
 .maplegend i.round { width: 8px; height: 8px; border: 0; border-radius: 50%; }
-.mapnote { flex: 1 1 100%; color: var(--muted); }
+.mapnote { flex: 1 1 100%; color: var(--ink-dim); }
 .leaflet-container { font: inherit; }
-.leaflet-tooltip { background: var(--panel); color: var(--text); border: 1px solid var(--line-2); box-shadow: 0 4px 14px #14202F1F; border-radius: 8px; font-size: 12px; max-width: 280px; white-space: normal; }
-.leaflet-tooltip.maplabel { background: transparent; border: 0; box-shadow: none; color: var(--text); font-size: 11px; font-weight: 600; padding: 0 2px; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; white-space: nowrap; }
+#map .leaflet-bar a { background: var(--ink-2); color: #fff; border-bottom-color: var(--ink-line); }
+#map .leaflet-bar a:hover { background: var(--ink-3); }
+#map .leaflet-bar { border-color: var(--ink-line); }
+#map .leaflet-control-attribution { background: #0A1130CC; color: var(--ink-dim); }
+#map .leaflet-control-attribution a { color: #fff; }
+.leaflet-tooltip { background: var(--panel); color: var(--text); border: 1px solid var(--line-2); box-shadow: 0 6px 18px #0A113040; border-radius: 9px; font-size: 12px; max-width: 280px; white-space: normal; }
+.leaflet-tooltip.maplabel { background: transparent; border: 0; box-shadow: none; color: #fff; font-size: 11px; font-weight: 600; padding: 0 2px; text-shadow: 0 0 3px var(--ink), 0 0 3px var(--ink), 0 0 2px var(--ink); white-space: nowrap; }
 .leaflet-tooltip.maplabel::before { display: none; }
-.mk { display: block; width: 16px; height: 16px; border-radius: 50%; color: var(--bad); background: var(--bad); border: 2px solid #fff; animation: mapping 1.7s ease-out infinite; }
-.mk.warn { color: var(--warn); background: var(--warn); }
+.mk { display: block; width: 16px; height: 16px; border-radius: 50%; color: var(--coral); background: var(--coral); border: 2px solid #fff; animation: mapping 1.7s ease-out infinite; }
+.mk.warn { color: var(--amber); background: var(--amber); }
 .mk.shut { border-radius: 4px; }
 @keyframes mapping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); } 100% { box-shadow: 0 0 0 16px transparent; } }
-.gd { display: block; font-size: 12px; line-height: 12px; text-align: center; }
+.gd { display: block; font-size: 12px; line-height: 12px; text-align: center; text-shadow: 0 0 2px var(--ink); }
+/* the thin square that locks onto the box you picked */
+.trk { pointer-events: none; }
+.trk svg { position: absolute; left: -17px; top: -17px; overflow: visible; fill: none; stroke: var(--lime); stroke-width: 1.5; }
+.trk span { position: absolute; left: 21px; top: -15px; display: flex; flex-direction: column; font-family: var(--mono); line-height: 1.2; white-space: nowrap; text-shadow: 0 0 3px var(--ink), 0 0 3px var(--ink), 0 0 2px var(--ink); }
+.trk b { color: var(--lime); font-size: 11px; font-weight: 500; }
+.trk small { color: #fff; font-size: 10px; }
 
 .plancard { display: flex; flex-direction: column; min-height: 0; overflow: hidden; scroll-margin-top: 12px; }
 .plantabs { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -259,60 +314,66 @@ button.chip:hover { background: var(--line-2); }
 .plantab .st.approved { background: var(--good); }
 .plantab .st.rejected { background: var(--bad); }
 .planbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.planscroll { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+.planscroll { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 12px; display: flex; flex-direction: column; gap: 13px; }
 .planscroll > * { flex: none; }
 .planid { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; }
 .plan-t h4 { margin: 0 0 2px; font-size: 14px; font-weight: 700; }
 .plan-t p { margin: 0; color: var(--muted); font-size: 12.5px; }
-.figure { font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; color: var(--good-ink); }
+.figure { font-size: 42px; font-weight: 300; line-height: 1.05; letter-spacing: -.03em; color: var(--good-ink); }
 .figure.neg { color: var(--bad-ink); }
 .figure-s { color: var(--muted); font-size: 13px; }
-.cmp { display: grid; gap: 7px; }
+.cmp { display: grid; gap: 8px; }
 .cmp .lab { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--muted); }
-.cmp .lab.me { color: var(--text); font-weight: 600; }
-.bar { height: 8px; background: var(--panel-3); border-radius: 4px; overflow: hidden; }
-.bar i { display: block; height: 100%; border-radius: 4px; }
-.stackbar { display: flex; gap: 2px; height: 26px; border-radius: 6px; overflow: hidden; }
-.stackbar div { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; min-width: 0; }
+.cmp .lab.me { color: var(--text); font-weight: 700; }
+.bar { height: 9px; background: var(--panel-3); border-radius: 5px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 5px; }
+.stackbar { display: flex; gap: 2px; height: 28px; border-radius: 7px; overflow: hidden; }
+.stackbar div { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; min-width: 0; }
 .legend { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 3px 10px; font-size: 12.5px; }
 .legend li { display: flex; align-items: center; gap: 6px; }
 .legend i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
 .rules { margin: 0; padding: 0 0 0 16px; color: var(--muted); font-size: 12.5px; display: grid; gap: 2px; }
-.planfoot { flex: none; padding: 12px 16px 14px; border-top: 1px solid var(--panel-3); display: flex; flex-direction: column; gap: 8px; }
+.planfoot { flex: none; padding: 12px 16px 14px; border-top: 1px solid var(--panel-3); display: flex; flex-direction: column; gap: 9px; }
 .esc { color: var(--muted); font-size: 12.5px; }
 .esc b { color: var(--text); }
-.who { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; }
-.who input { flex: 1; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); color: var(--text); }
+.who { color: var(--muted); font-size: 12.5px; }
+.who b { color: var(--text); }
 .edited-by { display: flex; align-items: center; gap: 8px; }
 .planbtns { display: flex; flex-wrap: wrap; gap: 8px; }
 .planbtns [data-approve] { flex: 1 1 150px; }
-.planbtns [data-reject] { flex: 0 1 84px; padding: 0 10px; }
-.done { background: var(--good-soft); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text-2); }
-.done b.head-line { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--good-ink); }
+.planbtns [data-reject] { flex: 0 1 88px; padding: 0 10px; }
+.done { background: var(--lime); color: var(--ink); border-radius: 12px; padding: 13px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.done b.head-line { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; }
 
 .lower { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 1fr); gap: 14px; align-items: start; }
 .lists { overflow: hidden; scroll-margin-top: 12px; }
-.ltabs { display: flex; gap: 4px; padding: 8px 10px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
-.ltabs button { min-height: 42px; padding: 0 12px; border: 0; border-bottom: 2.5px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ltabs { position: relative; display: flex; gap: 4px; padding: 8px 10px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.ltabs .glider { top: auto; bottom: 0; height: 3px; background: var(--accent); border-radius: 2px 2px 0 0; }
+.ltabs button { min-height: 44px; padding: 0 12px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; white-space: nowrap; transition: color .25s; }
+.ltabs button:hover { color: var(--text); }
 .ltabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
-.tablewrap { overflow-x: auto; }
+.ltabs.slides button[aria-selected="true"] { border-bottom-color: transparent; }
+.tablewrap { position: relative; overflow-x: auto; }
+.tablewrap table { position: relative; z-index: 1; }
+.rowhl { position: absolute; left: 0; top: 0; width: 0; height: 0; background: var(--selected); visibility: hidden; pointer-events: none; z-index: 0; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tablewrap table { min-width: 830px; }
-th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; padding: 9px 8px; white-space: nowrap; }
+th { text-align: left; color: var(--muted); padding: 9px 8px; white-space: nowrap; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; }
 td { padding: 7px 8px; border-top: 1px solid var(--panel-3); vertical-align: middle; }
 td.r, th.r { text-align: right; white-space: nowrap; }
 tr.row { cursor: pointer; }
 tr.row:hover td { background: var(--panel-2); }
-tr.row.on td { background: var(--selected); }
+.tablewrap.hl tr.row:hover td { background: transparent; }
+tr.row.on td, .tablewrap.hl tr.row.on td { background: var(--picked); }
 tr.row.edited td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
 .idbtn { border: 0; background: transparent; padding: 0; color: var(--text); font-family: var(--mono); font-size: 13px; font-weight: 500; cursor: pointer; }
-.idbtn:hover { color: var(--accent); text-decoration: underline; }
+.idbtn:hover { color: var(--accent-ink); text-decoration: underline; }
 .lifetxt { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
 .lifebar { display: block; height: 5px; margin-top: 3px; background: var(--panel-3); border-radius: 3px; overflow: hidden; }
 .lifebar i { display: block; height: 100%; border-radius: 3px; }
 .pick { width: 100%; min-width: 170px; max-width: 250px; height: 32px; padding: 0 6px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); font-size: 12.5px; font-weight: 600; }
-.pos { color: var(--good-ink); font-weight: 600; }
-.neg { color: var(--bad-ink); font-weight: 600; }
+.pos { color: var(--good-ink); font-weight: 700; }
+.neg { color: var(--bad-ink); font-weight: 700; }
 .chips { display: flex; flex-wrap: wrap; gap: 3px; }
 .whyrow td { background: var(--bg); color: var(--text-2); padding: 10px 14px; }
 .whyrow .by { color: var(--muted); font-size: 12px; margin-left: 6px; }
@@ -326,9 +387,9 @@ tr.row.edited td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
 .draft { white-space: pre-wrap; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0 2px; font-size: 11.5px; }
 .subtabs { display: inline-flex; margin-bottom: 10px; }
 .fleetgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; }
-.boxcard { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--panel); }
-.boxcard.risk { background: #FDF6F3; border-color: var(--bad-line); }
-.boxcard.booked { background: #F4F9F5; border-color: #CFE2D6; }
+.boxcard { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: 11px; padding: 8px 10px; background: var(--panel); }
+.boxcard.risk { background: #FFF4F1; border-color: var(--bad-line); }
+.boxcard.booked { background: #F6FDE6; border-color: #DDF2A6; }
 .boxcard .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .boxcard .lifetxt { font-size: 13px; }
 .boxcard .tags { grid-column: 1 / -1; display: flex; gap: 4px; flex-wrap: wrap; }
@@ -337,7 +398,7 @@ tr.row.edited td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
 .ring.good .arc { stroke: var(--good); } .ring.warn .arc { stroke: var(--warn); } .ring.bad .arc { stroke: var(--bad); }
 .lifetxt.good { color: var(--good-ink); } .lifetxt.warn { color: var(--warn-ink); } .lifetxt.bad { color: var(--bad-ink); }
 .verify { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 9px 11px; border-radius: 10px; margin-bottom: 10px; font-size: 12.5px; background: var(--panel-2); }
-.verify.ok { background: var(--good-soft); color: var(--good-ink); font-weight: 600; }
+.verify.ok { background: var(--good-soft); color: var(--good-chip); font-weight: 600; }
 .verify.broken { background: var(--bad-soft); color: var(--bad-ink); font-weight: 600; }
 .verify .btn { margin-left: auto; }
 .entry { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 2px 10px; padding: 9px 0; border-top: 1px solid var(--panel-3); font-size: 13px; }
@@ -352,11 +413,12 @@ tr.row.edited td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
 .phonecard { overflow: hidden; scroll-margin-top: 12px; }
 .realphone { font-size: 12.5px; color: var(--muted); padding: 9px 11px; border-radius: 10px; background: var(--panel-2); }
 .realphone b { color: var(--text); }
-.realphone code { font-family: var(--mono); font-size: 13px; color: var(--accent); }
-.realphone.on { background: var(--good-soft); color: var(--text-2); }
+.realphone code { font-family: var(--mono); font-size: 13px; color: var(--accent-ink); }
+.realphone.on { background: var(--good-soft); color: var(--good-chip); }
+.realphone.on b { color: var(--good-chip); }
 .realphone.bad { background: var(--bad-soft); color: var(--text-2); }
 .phone { margin: 12px auto 2px; width: 100%; max-width: 290px; background: var(--phone); border-radius: 30px; padding: 10px; }
-.notch { width: 84px; height: 14px; background: #0A1220; border-radius: 0 0 10px 10px; margin: -10px auto 0; }
+.notch { width: 84px; height: 14px; background: #050A1E; border-radius: 0 0 10px 10px; margin: -10px auto 0; }
 .screen { background: var(--panel); border-radius: 22px; overflow: hidden; height: 400px; display: flex; flex-direction: column; margin-top: 2px; }
 .appbar { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; flex: none; }
@@ -364,16 +426,16 @@ tr.row.edited td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
 .appbar small { color: var(--muted); font-size: 11px; }
 .thread { flex: 1; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--panel-3); }
 .msg { max-width: 92%; padding: 8px 10px; border-radius: 12px; font-size: 12.5px; background: var(--panel); align-self: flex-start; flex: none; }
-.msg.me { align-self: flex-end; background: var(--good-soft); color: var(--good-ink); }
+.msg.me { align-self: flex-end; background: var(--good-soft); color: var(--good-chip); }
 .msg .t { display: block; text-align: right; color: var(--faint); font-size: 10px; margin-top: 3px; }
-.msg.me .t { color: inherit; opacity: .65; }
+.msg.me .t { color: inherit; opacity: .75; }
 .msg b.big { display: block; font-size: 20px; color: var(--good-ink); }
 .msg .btns { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
 .msg .btns button { flex: 1; min-height: 32px; border: 1px solid var(--line-2); background: var(--panel); border-radius: 8px; padding: 0 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .msg .btns button.go { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); padding: 0; width: min(520px, calc(100vw - 32px)); box-shadow: 0 18px 48px #14202F33; }
-dialog::backdrop { background: #0E224080; }
+dialog { border: 1px solid var(--line); border-radius: 13px; background: var(--panel); color: var(--text); padding: 0; width: min(520px, calc(100vw - 32px)); box-shadow: 0 20px 52px #0A113040; }
+dialog::backdrop { background: #0A113099; }
 dialog header { padding: 14px 16px; border-bottom: 1px solid var(--line); }
 dialog header b { font-size: 15px; }
 dialog header p { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
@@ -382,7 +444,7 @@ dialog textarea { width: 100%; min-height: 70px; padding: 9px 11px; border-radiu
 dialog footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
 .presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .presets button { min-height: 34px; border: 1px solid var(--line-2); background: var(--panel); border-radius: 17px; padding: 0 12px; font-size: 13px; font-weight: 500; cursor: pointer; }
-.presets button:hover { border-color: var(--accent); color: var(--accent); }
+.presets button:hover { border-color: var(--accent); color: var(--accent-ink); }
 dialog.wide { width: min(760px, calc(100vw - 32px)); }
 dialog.wide .body { max-height: min(68vh, 640px); overflow: auto; }
 .doc { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--panel-2); }
@@ -394,20 +456,18 @@ dialog.wide .body { max-height: min(68vh, 640px); overflow: auto; }
 .cites { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
 .doc .pdf { margin-left: auto; font-size: 12px; }
 .packmeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 12.5px; }
-.toasts { position: fixed; right: 18px; top: 14px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; width: min(360px, calc(100vw - 32px)); }
-.toast { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px #14202F26; font-size: 13px; }
-.toast i { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: var(--c, var(--accent)); }
+.toasts { position: fixed; right: 18px; top: 44px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; width: min(360px, calc(100vw - 32px)); }
+.toast { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 10px; background: var(--ink); color: #fff; border: 1px solid var(--ink); border-radius: 12px; padding: 11px 14px; box-shadow: 0 10px 28px #0A113040; font-size: 13px; }
+.toast i { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: var(--c, var(--route)); }
 .toast b { display: block; font-weight: 700; }
-.toast span { color: var(--muted); }
+.toast span { color: var(--ink-text); }
 footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-top: 4px; }
 
 @media (min-width: 901px) and (max-height: 780px) {
   .rail { gap: 12px; padding: 12px 14px; }
   .nav { min-height: 36px; }
   .where { gap: 6px; padding-top: 10px; }
-  .goods { padding-top: 10px; }
-  .goodstile { padding: 4px 0; }
-  .goodstile svg { width: 30px; height: 30px; }
+  .books { gap: 3px; padding-top: 10px; }
 }
 @media (max-width: 1240px) {
   .desk { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: none; }
@@ -421,10 +481,11 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
   .rail nav { flex-direction: row; gap: 4px; width: 100%; overflow-x: auto; scrollbar-width: none; }
   .nav { min-height: 40px; }
   .where { display: none; }
-  .goods { width: 100%; margin-top: 0; padding: 0; border-top: 0; }
-  .goods-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .goodstile svg { width: 30px; height: 30px; }
-  .main { padding: 12px 16px 24px; }
+  .books { width: 100%; margin-top: 0; padding: 0; border-top: 0; flex-direction: row; flex-wrap: wrap; gap: 2px 14px; }
+  .books-h { width: 100%; margin: 0; }
+  .book { gap: 6px; }
+  .main { padding: 0 16px 24px; }
+  .tape { margin: 0 -16px; }
 }
 @media (max-width: 720px) {
   .desk { grid-template-columns: minmax(0, 1fr); }
@@ -434,9 +495,9 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
   .side { flex: none; }
   .planscroll { overflow: visible; }
   .search { max-width: none; flex-basis: 100%; }
-  .who-box { gap: 8px; }
+  .who-box { gap: 8px; flex-wrap: wrap; }
   .sim { padding: 0 9px; font-size: 12px; }
-  .hide-sm, .goodstile span { display: none; }
+  .hide-sm { display: none; }
   .btn { padding: 0 12px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
@@ -446,10 +507,11 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
 <div class="app">
 <aside class="rail">
   <div class="logo" data-in="nav">
-    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M5 25 V8 a4 4 0 0 1 4-4 h8 a5.5 5.5 0 0 1 0 11 H11 l10 10" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21" cy="25" r="2.6" fill="#7FC79B"/></svg>
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M5 25 V8 a4 4 0 0 1 4-4 h8 a5.5 5.5 0 0 1 0 11 H11 l10 10" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21" cy="25" r="2.6" fill="#C8F751"/></svg>
     ROUTERA
   </div>
   <nav aria-label="Main" id="nav">
+    <span class="glider" aria-hidden="true"></span>
     <a data-in="nav" class="nav on" href="#top" data-go="top"><span><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7v9H3z"/><path d="M10 20v-6h4v6"/></svg>Control room</span></a>
     <a data-in="nav" class="nav" href="#live-map" data-go="map"><span><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>Live routes</span></a>
     <a data-in="nav" class="nav" href="#plan-card" data-go="plan"><span><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 20h18z"/><path d="M12 10v5M12 17.5v.5"/></svg>Decisions</span><span class="badge" id="nav-badge">0</span></a>
@@ -458,26 +520,20 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
     <a data-in="nav" class="nav" href="#phone-card" data-go="phone"><span><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg>Phone</span></a>
   </nav>
   <div class="where" data-in="nav">
-    <div class="where-h">What's live right now</div>
+    <div class="where-h label">What's live right now</div>
     <div><span class="pip" id="w-feeds"></span><span id="w-feeds-t">Connecting…</span></div>
     <div><span class="pip off"></span>SAP TM bookings: simulated</div>
     <div><span class="pip" id="w-phone"></span><span id="w-phone-t">Phone: simulated</span></div>
     <div><span class="pip" id="w-llm"></span><span id="llm-who">Sentinel: rules only</span></div>
   </div>
-  <section class="goods" aria-label="What's on the books (simulated)">
-    <div class="goods-h">What's on the books (simulated)</div>
-    <div class="goods-grid">
-      <div class="goodstile none" data-good="grapes" data-name="grapes"><svg viewBox="0 0 56 56" aria-hidden="true"><path d="M28 5c-1 4 0 7 0 11" fill="none" stroke="#9A7B4F" stroke-width="2.4" stroke-linecap="round"/><path d="M28 11c6-7 16-6 21 0-6 4-14 6-21 0Z" fill="#5FAE7E"/><path d="M28 11c7 0 14 0 21 0" fill="none" stroke="#2F7A52" stroke-width="1"/><g fill="#8560B8" stroke="#C3A7EA" stroke-width="1.1"><circle cx="17" cy="22" r="6.4"/><circle cx="28.5" cy="21" r="6.4"/><circle cx="40" cy="22" r="6.4"/><circle cx="22.5" cy="32" r="6.4"/><circle cx="34" cy="32" r="6.4"/><circle cx="28.5" cy="42.5" r="6.4"/></g><path d="M14 20c1-1.500 2-2.200 3.400-2.500M25.500 19c1-1.500 2-2.200 3.400-2.500M37 20c1-1.500 2-2.200 3.400-2.500M19.500 30c1-1.500 2-2.200 3.400-2.500M31 30c1-1.500 2-2.200 3.400-2.500M25.500 40.500c1-1.500 2-2.200 3.400-2.500" fill="none" stroke="#E6D8F7" stroke-width="1.3" stroke-linecap="round"/></svg><b id="g-grapes">0</b><span>Grapes</span></div>
-      <div class="goodstile none" data-good="mangoes" data-name="mangoes"><svg viewBox="0 0 56 56" aria-hidden="true"><path d="M9 25C13 13 29 7 41 13c11 6 12 21 4 29-8 8-20 9-28 3 3-4 2-8-3-12-4-2-6-5-5-8Z" fill="#F2AE3F"/><path d="M9 25C13 13 29 7 41 13c4 2 7 6 8 10-9-7-20-8-29-2-4 3-9 6-11 4Z" fill="#E4623C"/><path d="M21 34c2-4 6-7 11-8" fill="none" stroke="#FFE7B3" stroke-width="2.200" stroke-linecap="round"/><path d="M32 10c0-3 1-5 3-7" fill="none" stroke="#9A7B4F" stroke-width="2.400" stroke-linecap="round"/><path d="M34 7c5-6 14-6 19 0-6 4-14 5-19 0Z" fill="#5FAE7E"/></svg><b id="g-mangoes">0</b><span>Mangoes</span></div>
-      <div class="goodstile none" data-good="shrimp" data-name="shrimp"><svg viewBox="0 0 56 56" aria-hidden="true"><path d="M44 11c3-3 6-5 9-6M43 14c4 0 8-1 11-3" fill="none" stroke="#F7BFAA" stroke-width="1.3" stroke-linecap="round"/><path d="M26 25l6 3M23 31l6 2M24 37l6 0M28 41l4-3" fill="none" stroke="#F7BFAA" stroke-width="1.5" stroke-linecap="round"/><path d="M41 15C27 10 13 19 13 31c0 11 11 17 20 13" fill="none" stroke="#F28C6C" stroke-width="12" stroke-linecap="round"/><path d="M33 9c-1 3-1 7 1 10M24 12c0 4 0 7 2 10M16 19c1 3 3 6 6 7M12 29c3 2 6 2 8 2M15 39c3-1 5-3 6-5M23 45c1-3 2-5 2-7" fill="none" stroke="#D5613F" stroke-width="1.3" stroke-linecap="round"/><path d="M32 44l11-6-2 7 5 3-13 2Z" fill="#D5613F"/><circle cx="41" cy="13" r="1.8" fill="#14202F"/></svg><b id="g-shrimp">0</b><span>Shrimp</span></div>
-      <div class="goodstile none" data-good="pomegranate" data-name="pomegranates"><svg viewBox="0 0 56 56" aria-hidden="true"><path d="M21 15l2-10 5 5 5-5 2 10Z" fill="#A33218"/><circle cx="28" cy="32" r="18" fill="#D4502F"/><path d="M28 32h18a18 18 0 0 1-11 16.600Z" fill="#FBE3D6"/><g fill="#B81E3A"><circle cx="34" cy="36" r="2"/><circle cx="39.500" cy="35" r="2"/><circle cx="36" cy="41" r="2"/><circle cx="41" cy="40" r="1.800"/></g><path d="M16 27c2-4 5-7 9-8" fill="none" stroke="#F4A58C" stroke-width="2.2" stroke-linecap="round"/></svg><b id="g-pomegranate">0</b><span>Pomegranate</span></div>
-      <div class="goodstile none" data-good="banana" data-name="bananas"><svg viewBox="0 0 56 56" aria-hidden="true"><g fill="#F4D262" stroke="#B98F1E" stroke-width="1.1" stroke-linejoin="round"><path d="M27 9c5 8 13 14 25 15 2 1 2 4 0 4-14 1-26-5-31-16Z"/><path d="M22 11c1 12 10 25 26 28 2 1 2 4 0 4-19 0-31-14-32-30Z"/><path d="M17 13c-3 13 2 29 18 35 2 1 1 4-1 4C15 49 5 31 10 13Z"/></g><path d="M9 15l5-9 14 1 1 6c-7 3-14 3-20 2Z" fill="#8A6A1F"/></svg><b id="g-banana">0</b><span>Banana</span></div>
-      <div class="goodstile none" data-good="onion" data-name="onions"><svg viewBox="0 0 56 56" aria-hidden="true"><path d="M24 17c1-5 0-8-2-12M28 16V3M32 17c-1-5 0-8 2-12" fill="none" stroke="#E2AC6F" stroke-width="2.200" stroke-linecap="round"/><path d="M23 49l-1 4M28 50v4M33 49l1 4" fill="none" stroke="#E2AC6F" stroke-width="1.500" stroke-linecap="round"/><path d="M28 14c12 6 21 15 19 25-2 8-11 11-19 11S11 47 9 39c-2-10 7-19 19-25Z" fill="#C4663F"/><path d="M28 15c-7 9-10 22-5 34M28 15c7 9 10 22 5 34M28 15c-13 7-17 19-13 30M28 15c13 7 17 19 13 30" fill="none" stroke="#EDB48F" stroke-width="1.200" stroke-linecap="round"/></svg><b id="g-onion">0</b><span>Onion</span></div>
-    </div>
+  <section class="books" aria-label="On the books (simulated)" data-in="nav">
+    <div class="books-h label">On the books (simulated)</div>
+    <div id="books"></div>
   </section>
 </aside>
 
 <main class="main" id="top">
+  <div class="tape" id="tape" role="region" aria-label="Latest signals and feeds"><div class="tape-track" id="tape-track"></div></div>
   <header class="head" data-in="card">
     <div class="head-t">
       <div class="head-h"><h1>Control room</h1><span class="layer india" id="layer">Idle</span></div>
@@ -490,7 +546,8 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
     <div class="who-box">
       <span class="sim" id="sim-box" title="Fleet, prices, capacities and SAP TM bookings are always simulated"><span class="pip"></span><span id="sim">Simulated feeds</span></span>
       <div class="me-i" id="me-i" aria-hidden="true">SP</div>
-      <div class="me-t"><b id="me-n">Sunil P.</b><small>Operations lead</small></div>
+      <div class="me-t"><b id="me-n">Sunil P.</b><small id="me-r">Operations lead</small></div>
+      <button type="button" class="btn small ghost" id="signout" title="Sign out of the control room">Sign out</button>
       <span class="dot" id="conn" title="Connecting…"></span>
     </div>
   </header>
@@ -498,6 +555,7 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
   <section class="card runbar" data-in="card" aria-label="Scenario and replay">
     <select id="scenario" aria-label="Scenario"></select>
     <div class="seg" id="speed" role="group" aria-label="Replay speed">
+      <span class="glider" aria-hidden="true"></span>
       <button type="button" data-speed="60" aria-pressed="true" title="1 simulated hour per real minute">60×</button>
       <button type="button" data-speed="300" aria-pressed="false" title="5 simulated hours per real minute">300×</button>
       <button type="button" data-speed="0" aria-pressed="false" title="No waiting">Instant</button>
@@ -511,7 +569,7 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
 
   <section class="kpis" aria-label="Key numbers">
     <div class="kpi boxes" data-in="kpi">
-      <svg width="38" height="30" viewBox="0 0 38 30" aria-hidden="true" style="flex:none"><rect x="1" y="4" width="36" height="22" rx="2" fill="#17407D"/><path d="M7 8v14M12 8v14M17 8v14M22 8v14" stroke="#6F93C8" stroke-width="1.6"/><rect x="27" y="7" width="7" height="16" rx="1" fill="#E9EEF6"/><path d="M30.500 10.500v9M27.800 12.500l5.400 5M33.200 12.500l-5.400 5" stroke="#17407D" stroke-width="1" stroke-linecap="round"/></svg>
+      <svg width="38" height="30" viewBox="0 0 38 30" aria-hidden="true" style="flex:none"><rect x="1" y="4" width="36" height="22" rx="2" fill="#2F5BFF"/><path d="M7 8v14M12 8v14M17 8v14M22 8v14" stroke="#A6B8FF" stroke-width="1.6"/><rect x="27" y="7" width="7" height="16" rx="1" fill="#E8EDFF"/><path d="M30.500 10.500v9M27.800 12.500l5.400 5M33.200 12.500l-5.400 5" stroke="#2F5BFF" stroke-width="1" stroke-linecap="round"/></svg>
       <div><b id="kv-watch">0</b><span>containers on watch</span></div>
     </div>
     <div class="kpi" id="st-sense" data-in="kpi"><b id="kv-sense">0</b><span id="ks-sense">open disruptions</span></div>
@@ -529,6 +587,7 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
         <header class="card-h">
           <h3>What's happening</h3>
           <div class="tabs" role="tablist">
+            <span class="glider" aria-hidden="true"></span>
             <button type="button" role="tab" data-tab="dis" aria-selected="true">Disruptions<span class="count" id="c-dis">0</span></button>
             <button type="button" role="tab" data-tab="sig" aria-selected="false">Signals<span class="count" id="c-sig">0</span></button>
           </div>
@@ -551,12 +610,12 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
       </header>
       <div id="map"></div>
       <div class="maplegend">
-        <span><i style="border-color:var(--accent)"></i>The plan</span>
-        <span><i style="border-color:var(--good)"></i>Booked, moving</span>
-        <span><i style="border-color:var(--faint)"></i>Other options</span>
-        <span><i class="dash" style="border-color:var(--warn)"></i>Needs a person</span>
-        <span><i class="dash" style="border-color:var(--bad)"></i>Blocked or at risk</span>
-        <span><i class="round" style="background:var(--good)"></i>Container, colour is shelf life</span>
+        <span><i style="border-color:var(--map-plan)"></i>The plan</span>
+        <span><i style="border-color:var(--map-booked)"></i>Booked, moving</span>
+        <span><i style="border-color:var(--map-other)"></i>Other options</span>
+        <span><i class="dash" style="border-color:var(--map-review)"></i>Needs a person</span>
+        <span><i class="dash" style="border-color:var(--map-block)"></i>Blocked or at risk</span>
+        <span><i class="round" style="background:var(--map-good)"></i><i class="round" style="background:var(--map-warn)"></i><i class="round" style="background:var(--map-bad)"></i>Container, colour is shelf life</span>
         <span><i class="round" style="background:var(--ship)"></i>Real ship</span>
         <span>▲ Real alert</span>
         <span class="mapnote" id="map-note"></span>
@@ -573,8 +632,9 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
   </section>
 
   <section class="lower">
-    <article class="card lists" id="lists" data-in="card">
+    <article class="card lists" id="lists" data-in="later">
       <div class="ltabs" role="tablist" aria-label="Lists">
+        <span class="glider" aria-hidden="true"></span>
         <button type="button" role="tab" data-ltab="rows" aria-selected="true">Containers<span class="count" id="c-rows">0</span></button>
         <button type="button" role="tab" data-ltab="docs" aria-selected="false">Paperwork<span class="count" id="c-docs">0</span></button>
         <button type="button" role="tab" data-ltab="fleet" aria-selected="false">Shelf-life clocks<span class="count" id="c-fleet">0</span></button>
@@ -584,6 +644,7 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
       <div id="plan-docs" class="pad docsbox" hidden></div>
       <div id="fleet-wrap" class="pad" hidden>
         <div class="tabs subtabs" role="tablist">
+          <span class="glider" aria-hidden="true"></span>
           <button type="button" role="tab" data-fleet="risk" aria-selected="true">At risk<span class="count" id="c-risk">0</span></button>
           <button type="button" role="tab" data-fleet="all" aria-selected="false">All<span class="count" id="c-all">0</span></button>
         </div>
@@ -592,7 +653,7 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
       <div id="approve-chain" class="pad" hidden></div>
     </article>
 
-    <aside class="card phonecard" id="phone-card" data-in="card" aria-label="Phone approval">
+    <aside class="card phonecard" id="phone-card" data-in="later" aria-label="Phone approval">
       <header class="card-h"><h3>Sunil's phone</h3></header>
       <div class="pad" style="padding-top:0">
         <div class="realphone" id="realphone"></div>
@@ -693,30 +754,53 @@ const HEADLINE = {
 };
 const SOURCE = { road_authority: "Road authority", transport_union: "Transport union", weather: "Weather service", news: "News", mandi_prices: "Mandi prices", reefer_telemetry: "Reefer sensor", port_authority: "Port authority", gdacs: "GDACS", tomtom: "TomTom live traffic", ais_port: "AIS ships", ops_port: "Operations", ops_road: "Operations" };
 const STATE = { candidate: "Possible disruption", confirmed: "Confirmed disruption", active: "Active disruption", resolving: "Clearing up", resolved: "Resolved", ignored: "Ignored" };
-const ALLOC = ["#17407D", "#2F6DB5", "#4F8A8B", "#7B5EA7", "#B0702A", "#6C7A89"];
-const ACTOR = { sentinel: "var(--accent)", disruption_sentinel: "var(--accent)", reroute: "var(--accent-2)", compliance: "var(--warn)", approval_audit: "var(--good)" };
+// Each destination keeps its own colour, plan after plan, and one plan never shows a colour twice.
+const PALETTE = ["#2F5BFF", "#00998F", "#8B4DE8", "#C67A00", "#D6338E"];  // checked for colour-blind separation
+const DEST = new Map([["LKCMB", PALETTE[0]], ["MKT-BLR", PALETTE[1]], ["MKT-HYD", PALETTE[2]], ["MKT-AZADPUR", PALETTE[3]], ["SGSIN", PALETTE[4]]]);
+const KEEP_COLOR = "#8A94AD", SPARE_COLOR = "#5B6785";
+function lum(hex) {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+function colourSegs(segs) {
+  const used = new Set();
+  for (const g of segs) {
+    if (g.stay) { g.color = KEEP_COLOR; continue; }
+    const mine = DEST.get(g.key);
+    if (mine && !used.has(mine)) { g.color = mine; used.add(mine); }
+  }
+  for (const g of segs) {
+    if (g.color) continue;
+    g.color = PALETTE.find((c) => !used.has(c)) || SPARE_COLOR;
+    used.add(g.color);
+    if (!DEST.has(g.key) && g.color !== SPARE_COLOR) DEST.set(g.key, g.color);
+  }
+  for (const g of segs) g.ink = lum(g.color) > 0.19 ? "#0A1130" : "#FFFFFF";  // whichever reads better on it
+}
+const ACTOR = { sentinel: "var(--accent)", disruption_sentinel: "var(--accent)", reroute: "var(--accent-ink)", compliance: "var(--warn)", approval_audit: "var(--good)" };
 const WHO = { sentinel: "Sentinel", disruption_sentinel: "Sentinel", reroute: "Reroute", compliance: "Compliance", approval_audit: "Audit" };
 const OPEN = new Set(["candidate", "confirmed", "active", "resolving"]);
 const ROWS_SHOWN = 8;
 const ICON = {
-  warn: `<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2 1 21h22z"/><path d="M12 9v6M12 17.5v1" stroke="#fff" stroke-width="2"/></svg>`,
+  warn: `<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2 1 21h22z"/><path d="M12 9v6M12 17.5v1" style="stroke: var(--mark)" stroke-width="2"/></svg>`,
   refresh: `<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 5v6h-6"/></svg>`,
   close: `<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
   clock: `<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`,
   fall: `<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6c4 7 9 2 16 12"/><path d="M20 12v6h-6"/></svg>`,
   doc: `<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>`,
-  tick: `<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2D7A4F"/><path data-check d="M6.5 12.5 10.5 16.5 18 8.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  tick: `<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#0A1130"/><path data-check d="M6.5 12.5 10.5 16.5 18 8.5" fill="none" stroke="#C8F751" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 };
 function store(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* storage off */ } }
 function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 
 // --- motion: GSAP when it loaded; the page works the same without it --------------------------
 const GSAP = "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js";
+const CLEAR = "opacity,visibility,transform";  // never "all": that also wipes the styles an element was drawn with
 const calm = matchMedia("(prefers-reduced-motion: reduce)");
 const moves = () => Boolean(window.gsap) && !calm.matches && !document.hidden;
 function enter(targets, vars = {}) {
   if (!moves() || !targets.length) return;
-  gsap.from(targets, { autoAlpha: 0, y: 8, duration: 0.4, stagger: 0.03, ease: "power3.out", clearProps: "all", ...vars });
+  gsap.from(targets, { autoAlpha: 0, y: 8, duration: 0.4, stagger: 0.03, ease: "power3.out", clearProps: CLEAR, ...vars });
 }
 function countTo(el, from, to, fmt, duration = 0.9) {
   if (!el) return;
@@ -735,8 +819,8 @@ function setNum(sel, value, fmt = (v) => String(Math.round(v))) {
   shown.set(sel, value);
   countTo($(sel), from ?? 0, value, fmt);
 }
-function flash(sel) {
-  if (moves()) gsap.fromTo(sel, { backgroundColor: "#DCE7F5" }, { backgroundColor: "#FFFFFF", duration: 1.2, ease: "power2.out", clearProps: "backgroundColor" });
+function flash(sel) {  // a ring ripples out of a tile that just changed, whatever its colour
+  if (moves()) gsap.fromTo(sel, { boxShadow: "0 0 0 0 rgba(47, 91, 255, 0.5)" }, { boxShadow: "0 0 0 12px rgba(47, 91, 255, 0)", duration: 1, ease: "power2.out", clearProps: "boxShadow" });
 }
 function pop(el) { if (moves()) gsap.fromTo(el, { scale: 0.97 }, { scale: 1, duration: 0.3, ease: "back.out(3)", clearProps: "transform" }); }
 function buzz() {
@@ -744,18 +828,66 @@ function buzz() {
 }
 function openDialog(el) {
   el.showModal();
-  if (moves()) gsap.from(el.firstElementChild, { y: 14, autoAlpha: 0, duration: 0.28, ease: "power3.out", clearProps: "all" });  // never the dialog itself: GSAP re-parents fixed elements to measure them, and that closes a modal
+  if (moves()) gsap.from(el.firstElementChild, { y: 14, autoAlpha: 0, duration: 0.28, ease: "power3.out", clearProps: CLEAR });  // never the dialog itself: GSAP re-parents fixed elements to measure them, and that closes a modal
 }
+// Highlights slide to the choice instead of jumping: the rail, the replay speed and the tabs.
+function glide(box, target, duration = 0.45) {
+  const pill = box && box.querySelector(":scope > .glider");
+  if (!window.gsap || !pill || !target || !target.offsetWidth) return;
+  if (!duration && gsap.isTweening(pill)) return;
+  box.classList.add("slides");
+  const to = box.classList.contains("ltabs") ? { x: target.offsetLeft, width: target.offsetWidth }
+    : { x: target.offsetLeft, y: target.offsetTop, width: target.offsetWidth, height: target.offsetHeight };
+  if (!duration || !moves() || !pill.placed) { gsap.set(pill, to); pill.placed = true; }
+  else gsap.to(pill, { ...to, duration, ease: "back.out(1.35)", overwrite: true });
+}
+function glideAll(duration = 0) {
+  glide($("#nav"), $("#nav .nav.on"), duration);
+  glide($("#speed"), $('#speed [aria-pressed="true"]'), duration);
+  glide($(".sense .tabs"), $('.sense [aria-selected="true"]'), duration);
+  glide($(".ltabs"), $('.ltabs [aria-selected="true"]'), duration);
+  glide($("#fleet-wrap .subtabs"), $('#fleet-wrap [aria-selected="true"]'), duration);
+}
+// The desk comes in once: the rail, the tape, the numbers, then the cards. The lists wait to be scrolled to.
 function intro() {
   if (!moves()) return;
   gsap.config({ nullTargetWarn: false });
+  glideAll(0);
   gsap.timeline({ defaults: { ease: "power3.out" } })
-    .from("[data-in=nav]", { x: -16, autoAlpha: 0, duration: 0.5, stagger: 0.045, clearProps: "all" }, 0)
-    .from(".goodstile", { y: 12, autoAlpha: 0, duration: 0.5, stagger: 0.07, clearProps: "all" }, 0.3)
-    .from("[data-in=kpi]", { y: 14, autoAlpha: 0, duration: 0.55, stagger: 0.06, clearProps: "all" }, 0.1)
-    .from("[data-in=card]", { y: 18, autoAlpha: 0, duration: 0.65, stagger: 0.07, clearProps: "all" }, 0.2);
-  gsap.to(".goodstile svg", { y: -2.5, duration: 2.2, yoyo: true, repeat: -1, ease: "sine.inOut", stagger: { each: 0.37, from: "random" } });
+    .from(".rail", { x: -30, autoAlpha: 0, duration: 0.7, ease: "power4.out", clearProps: CLEAR }, 0)
+    .from("[data-in=nav]", { x: -16, autoAlpha: 0, duration: 0.5, stagger: 0.045, clearProps: CLEAR }, 0.2)
+    .from("#nav > .glider", { opacity: 0, duration: 0.5, clearProps: "opacity" }, 0.55)
+    .from("#tape", { yPercent: -100, autoAlpha: 0, duration: 0.6, clearProps: CLEAR }, 0.1)
+    .from("[data-in=kpi]", { y: 22, autoAlpha: 0, scale: 0.96, duration: 0.65, stagger: 0.06, ease: "back.out(1.5)", clearProps: CLEAR }, 0.3)
+    .from("[data-in=card]", { y: 26, autoAlpha: 0, duration: 0.7, stagger: 0.08, clearProps: CLEAR }, 0.2);
+  revealLater();
 }
+function revealLater() {
+  const later = $$("[data-in=later]");
+  if (!("IntersectionObserver" in window)) return;
+  gsap.set(later, { autoAlpha: 0, y: 34 });
+  const io = new IntersectionObserver((seen) => seen.forEach((e) => {
+    if (!e.isIntersecting) return;
+    io.unobserve(e.target);
+    gsap.to(e.target, { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out", clearProps: CLEAR });
+    if (e.target.id === "lists") enter($$("#plan-rows tr.row, #fleet .boxcard", e.target), { y: 10, duration: 0.4, stagger: 0.03, delay: 0.2 });
+  }), { threshold: 0.06 });
+  later.forEach((el) => io.observe(el));
+}
+// The tape: what just came in, always moving, paused under the pointer.
+let tapeTween = null;
+function runTape() {
+  const track = $("#tape-track"), at = tapeTween ? tapeTween.progress() : 0;
+  if (tapeTween) tapeTween.kill();
+  tapeTween = null;
+  if (!moves() || !track.offsetWidth) return;
+  tapeTween = gsap.fromTo(track, { xPercent: 0 }, { xPercent: -50, duration: Math.max(24, track.offsetWidth / 110), ease: "none", repeat: -1 }).progress(at);
+}
+$("#tape").addEventListener("mouseenter", () => tapeTween?.pause());
+$("#tape").addEventListener("mouseleave", () => tapeTween?.play());
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !tapeTween) runTape(); });
+addEventListener("resize", () => glideAll(0));
+document.fonts?.ready.then(() => glideAll(0));
 (function loadMotion() {
   let started = false;
   const go = () => {
@@ -763,6 +895,7 @@ function intro() {
     started = true;
     document.documentElement.classList.remove("preload");
     intro();
+    runTape();
   };
   const js = document.createElement("script");
   js.src = GSAP; js.onload = go; js.onerror = go;
@@ -803,6 +936,7 @@ let frame = 0;
 function mark(...parts) {
   parts.forEach((p) => dirty.add(p));
   if (parts.some((p) => p === "plans" || p === "fleet" || p === "sense" || p === "feeds")) dirty.add("map");
+  if (parts.some((p) => p === "sense" || p === "feeds" || p === "pipeline")) dirty.add("tape");
   if (!frame) frame = setTimeout(flush, 16);  // not rAF: keeps rendering in a background tab
 }
 function flush() {
@@ -811,6 +945,7 @@ function flush() {
   for (const p of parts) {
     try { RENDER[p](); } catch (e) { console.error(`render ${p}`, e); }
   }
+  glideAll(0);  // counts change the width of the tabs
 }
 function paint(el, html) {  // leave the DOM alone when nothing changed, so scroll and focus survive
   if (el.painted === html) return false;
@@ -863,14 +998,22 @@ const RENDER = {
     set("#ks-decide", k.pending_plans ? `on the table · ${countOf(k.pending_plans, "plan")} waiting for a person` : "on the table · nothing waiting");
     setNum("#kv-approve", k.protected_inr || 0, inr);
     set("#ks-approve", `protected · ${countOf(k.rebooked || 0, "move")} booked`);
+    $("#st-life").classList.toggle("alarm", (k.at_risk ?? 0) > 0);
+    $("#st-decide").classList.toggle("ask", (k.pending_plans ?? 0) > 0);
+    $("#st-approve").classList.toggle("won", (k.protected_inr ?? 0) > 0);
     const crops = {};
     for (const f of S.r?.fleet || []) crops[f.crop] = (crops[f.crop] || 0) + 1;
-    for (const el of $$(".goodstile")) {
-      const n = crops[el.dataset.good] || 0;
-      setNum(`#g-${el.dataset.good}`, n);
-      el.classList.toggle("none", n === 0);
-      el.title = `${countOf(n, "simulated container")} of ${el.dataset.name}`;
-    }
+    const books = Object.entries(crops).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const rows = books.map(([crop]) => `<div class="book" title="Simulated containers of ${esc(human(crop))}"><span>${esc(cap(human(crop)))}</span><b id="bk-${esc(crop)}">0</b></div>`).join("");
+    if (paint($("#books"), rows || `<div class="book"><span>Nothing on the books yet</span></div>`)) books.forEach(([crop]) => shown.delete(`#bk-${crop}`));
+    books.forEach(([crop, n]) => setNum(`#bk-${crop}`, n));
+  },
+  tape() {
+    const items = S.signals.slice(-10).reverse().map((x) => [x.status !== "accepted" ? "#7A84B8" : x.disruption_id ? "var(--coral)" : "var(--amber)", `${SOURCE[x.source] || human(x.source)}: ${plainTitle(x.title || x.event_id)}`]);
+    for (const f of Object.values(S.live?.feeds || {})) items.push([f.ok ? "var(--lime)" : "var(--coral)", `${f.label}: ${f.summary}`]);
+    if (!items.length) items.push(["var(--lime)", `Watching ${countOf(S.r?.kpis?.containers ?? 0)}`], ["#7A84B8", "Fleet, prices and SAP TM bookings are simulated"]);
+    const run = items.map(([c, t]) => `<span class="it" style="--c:${c}"><i></i>${esc(String(t).toUpperCase())}</span>`).join("");
+    if (paint($("#tape-track"), `<span class="run">${run}</span><span class="run" aria-hidden="true">${run}</span>`)) runTape();
   },
   sense() {
     $("#c-dis").textContent = [...S.disruptions.values()].filter((d) => !d.ignored).length;
@@ -883,6 +1026,7 @@ const RENDER = {
     const items = [...S.disruptions.values()].sort((a, b) => disRank(b) - disRank(a) || b.disruption.severity - a.disruption.severity || b.disruption.last_updated.localeCompare(a.disruption.last_updated));
     paint(el, items.length ? items.map(disHTML).join("") : `<div class="empty"><b>All quiet</b>No disruptions. The Sentinel is listening to news, ports, unions, roads, reefers and mandis.</div>`);
     enter($$(".dis.new", el), { y: -8, duration: 0.5 });
+    if (moves()) gsap.from($$(".dis.new h2 > span", el), { yPercent: 110, duration: 0.85, delay: 0.1, ease: "power4.out", clearProps: "transform" });
     S.fresh.clear();
   },
   plans() {
@@ -926,11 +1070,11 @@ const RENDER = {
     const el = $("#feeds");
     const tops = new Map($$(".feed ul", el).map((u) => [u.parentElement.dataset.feed, u.scrollTop]));
     paint(el, feeds.length ? feeds.map((f) => `<div class="feed ${fresh.has(f.name) ? "fresh" : ""}" data-feed="${esc(f.name)}">
-      <div class="feed-h"><span class="pip ${f.ok ? "on" : "bad"}"></span>${esc(f.label)}<button type="button" class="iconbtn" data-refresh="${esc(f.name)}" title="Fetch this feed now" aria-label="Refresh ${esc(f.label)}">${ICON.refresh}</button></div>
+      <div class="feed-h label"><span class="pip ${f.ok ? "on" : "bad"}"></span>${esc(f.label)}<button type="button" class="iconbtn" data-refresh="${esc(f.name)}" title="Fetch this feed now" aria-label="Refresh ${esc(f.label)}">${ICON.refresh}</button></div>
       <div class="feed-v">${esc(f.summary)}${f.error ? ` <span class="chip bad" title="${esc(f.error)}">error</span>` : ""}</div>
       <div class="age" data-age="${esc(f.name)}"></div>
       ${f.items.length ? `<ul>${feedItems(f).map(({ i, n, flagged }) => `<li>${flagged ? `<i class="flag" title="Worth a look: the Sentinel or the road feed flagged it"></i>` : ""}<button type="button" class="fi" data-fi="${esc(f.name)}|${n}" title="See this on the map and what it touches">${esc(plainTitle(i.title))}</button>${i.outlet ? ` · ${esc(i.outlet)}` : ""}${i.link ? `<a class="ext" href="${esc(i.link)}" target="_blank" rel="noopener" aria-label="Read the article">↗</a>` : ""}</li>`).join("")}</ul>` : ""}
-    </div>`).join("") : `<div class="feed"><div class="feed-h"><span class="pip on"></span>Connecting to the real feeds…</div><div class="feed-v">Weather, disaster alerts, traffic, news and ships</div></div>`);
+    </div>`).join("") : `<div class="feed"><div class="feed-h label"><span class="pip on"></span>Connecting to the real feeds…</div><div class="feed-v">Weather, disaster alerts, traffic, news and ships</div></div>`);
     $$(".feed ul", el).forEach((u) => { u.scrollTop = tops.get(u.parentElement.dataset.feed) || 0; });
     feedAges();
     if (moves()) $$(".feed.fresh", el).forEach((f) => gsap.fromTo(f, { backgroundColor: "#E7F1EA" }, { backgroundColor: "rgba(255,255,255,0)", duration: 1.6, ease: "power1.out", clearProps: "backgroundColor" }));
@@ -1003,7 +1147,7 @@ function disHTML(item) {
   const title = d.status === "candidate" ? `Possible ${label.toLowerCase()}: ${place}` : (urgent || handled) && open && HEADLINE[d.type] ? HEADLINE[d.type](place) : `${label} at ${place}`;
   return `<article class="dis ${tone}${S.fresh.has(d.disruption_id) ? " new" : ""}">
     <div class="dis-top"><span class="dis-state">${tone === "hot" || tone === "maybe" ? ICON.warn : ""}${waiting ? "News only, not official" : handled && open ? "Handled, still in force" : esc(STATE[status] || status)}</span><span class="pill">${Math.round(d.confidence * 100)}% sure</span></div>
-    <h2>${esc(title)}</h2>
+    <h2><span>${esc(title)}</span></h2>
     <p>${waiting ? `${item.reports} news report${item.reports === 1 ? "" : "s"}. News never confirms on its own, so nothing moves until an official source agrees.` : esc(disStory(item))}</p>
     <div class="dis-pills">${n ? `<span class="pill">Hits ${countOf(n)}</span><span class="pill">${Math.round(d.affected_weight_kg / 1000)} tonnes</span>` : ""}${d.expected_delay_days && !waiting ? `<span class="pill">+${d.expected_delay_days} days</span>` : ""}</div>
     <div class="dis-foot">${sevHTML(d.severity)}<span>${item.layer === "india" ? "India" : "Global"}</span><span class="mono">${esc(d.disruption_id)}</span>${item.summary_by && item.summary_by !== "template" ? `<span>Summary: ${esc(item.summary_by)}</span>` : ""}<button type="button" class="btn small ghost" data-dis="${esc(d.disruption_id)}">Show on map</button></div>
@@ -1029,6 +1173,7 @@ function compChip(c) {
   return `<span class="chip good" title="${esc((c.note || "") + by)}">Clear</span>`;
 }
 const human = (s) => String(s).replaceAll("_", " ");
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const plainTitle = (t) => String(t).replace(/^⚠️?\s*/, "");
 const countOf = (n, noun = "container") => `${n} ${noun}${n === 1 ? "" : "s"}`;
 const boxCount = (n) => `${n} box${n === 1 ? "" : "es"}`;
@@ -1065,12 +1210,11 @@ function planTotals(plan) {
   for (const { r, c } of rows) {
     if (!c) continue;
     const stay = c.route_id === "STAY", k = stay ? "STAY" : c.destination;
-    split[k] = split[k] || { name: stay ? "Keep booking" : c.destination_name, stay, count: 0, t: 0 };
+    split[k] = split[k] || { key: k, name: stay ? "Keep booking" : c.destination_name, stay, count: 0, t: 0 };
     split[k].count += 1; split[k].t += r.weight_kg / 1000;
   }
   const segs = Object.values(split).sort((a, b) => b.count - a.count);
-  let shade = 0;
-  for (const g of segs) g.color = g.stay ? "#8A94A1" : ALLOC[shade++ % ALLOC.length];
+  colourSegs(segs);
   const moved = rows.filter((x) => x.c && x.c.paperwork);
   const P = { regenerate: 0, new: 0, obsolete: 0, keep: 0, hours: 0 };
   for (const { c } of moved) {
@@ -1086,9 +1230,9 @@ function planHTML(plan) {
   let foot;
   if (pending) {
     foot = `${escHTML(plan)}
-      <label class="who">Approver <input id="approver" value="${esc(load("routera.approver") || "Sunil P.")}" aria-label="Approver name"></label>
+      <div class="who">Approving as <b>${esc(ME.name)}</b>, ${esc(ME.role)}. Your name goes on the audit log.</div>
       ${t.edited ? `<div class="edited-by"><span class="chip warn">${countOf(t.edited, "change")} by you</span><button type="button" class="btn small ghost" data-reset>Undo</button></div>` : ""}
-      <div class="planbtns"><button type="button" class="btn primary big" data-approve>${plan.needs_approval || t.edited ? `Approve ${countOf(t.moves, "move")}` : "Acknowledge and log"}</button><button type="button" class="btn big" data-reject>Reject</button></div>`;
+      <div class="planbtns"><button type="button" class="btn primary big sheen" data-approve><span class="fill" aria-hidden="true"></span><span>${plan.needs_approval || t.edited ? `Approve ${countOf(t.moves, "move")}` : "Acknowledge and log"}</span></button><button type="button" class="btn big" data-reject>Reject</button></div>`;
   } else if (plan.status === "approved") {
     foot = `<div class="done"><b class="head-line">${ICON.tick}Approved by ${esc(plan.approved_by)}</b><span>At ${hm(plan.approved_at)} IST. ${countOf(bookings.length, "move")} booked in SAP TM (simulated), paperwork drafted, ${inr(plan.saved_inr)} credited to the grower FPOs (simulated).</span></div>`;
   } else if (plan.status === "rejected") {
@@ -1101,10 +1245,10 @@ function planHTML(plan) {
       <div class="plan-t"><h4>${esc(plan.title)}</h4><p>${esc(plan.headline)}</p></div>
       <div><div class="figure num ${t.saved < 0 ? "neg" : ""}" id="plan-saved">${inr(t.saved)}</div><div class="figure-s">saved, compared with doing nothing${t.edited ? ", with your changes" : ""}</div></div>
       <div class="cmp">
-        <div><div class="lab"><span>Nobody acts</span><span>${inr(t.base)}</span></div><div class="bar"><i data-bar="base" style="width:${(100 * t.base) / max}%;background:#8A94A1"></i></div></div>
+        <div><div class="lab"><span>Nobody acts</span><span>${inr(t.base)}</span></div><div class="bar"><i data-bar="base" style="width:${(100 * t.base) / max}%;background:#8A94AD"></i></div></div>
         <div><div class="lab me"><span>With this plan</span><span>${inr(t.value)}</span></div><div class="bar"><i data-bar="value" style="width:${(100 * t.value) / max}%;background:var(--accent)"></i></div></div>
       </div>
-      <div><div class="stackbar">${t.segs.map((g) => `<div style="flex:${g.count} 1 0;background:${g.color}" title="${esc(g.name)}: ${g.count}">${g.count}</div>`).join("")}</div>
+      <div><div class="stackbar">${t.segs.map((g) => `<div style="flex:${g.count} 1 0;background:${g.color};color:${g.ink}" title="${esc(g.name)}: ${g.count}">${g.count}</div>`).join("")}</div>
         <ul class="legend">${t.segs.map((g) => `<li><i style="background:${g.color}"></i><span><b>${g.count}</b> to ${esc(g.name)}, ${g.t.toFixed(0)} t</span></li>`).join("")}</ul></div>
       <ul class="rules">${(plan.guardrails.length ? plan.guardrails : ["Nothing moves until a human approves"]).map((g) => `<li>${esc(g)}</li>`).join("")}<li>Compliance blocks cannot be overridden, even by the approver</li></ul>
     </div><div class="planfoot">${foot}</div>`;
@@ -1137,7 +1281,7 @@ function rowsHTML(plan) {
       ${why ? `<tr class="whyrow"><td colspan="8">${esc(why.text)}<span class="by">${why.by === "template" ? "Explained from plan data" : "Phrased by " + esc(why.by)}</span></td></tr>` : ""}`;
   }).join("");
   const more = !S.q && found.length > ROWS_SHOWN ? `<div class="showall"><button type="button" class="btn small" data-showall>${S.showAll ? "Show fewer" : `Show all ${found.length}`}</button></div>` : "";
-  return `<div class="tablewrap"><table>
+  return `<div class="tablewrap"><div class="rowhl" aria-hidden="true"></div><table>
       <thead><tr><th>Container</th><th>Shelf life</th><th>${pending ? "New route (change it)" : "Decision"}</th><th>Arrives with</th><th class="r">Worth</th><th class="r">Saved</th><th>Status</th><th></th></tr></thead>
       <tbody>${body || `<tr><td colspan="8" class="empty">Nothing matches.</td></tr>`}</tbody></table></div>${more}`;
 }
@@ -1172,12 +1316,17 @@ function planMotion(plan, t, fresh, justApproved) {
     if (moves()) gsap.from($$("#plan-rows [data-lifebar]"), { scaleX: 0, transformOrigin: "left center", duration: 0.8, stagger: 0.03, clearProps: "transform" });
   }
   if (plan.status !== "pending" && fresh && moves()) {
-    gsap.from(".planfoot > *", { y: 12, autoAlpha: 0, duration: 0.5, ease: "power3.out", clearProps: "all" });
+    gsap.from(".planfoot > *", { y: 12, autoAlpha: 0, duration: 0.5, ease: "power3.out", clearProps: CLEAR });
     const check = $("#plan [data-check]");
     if (check) {
       const length = check.getTotalLength();
       gsap.fromTo(check, { strokeDasharray: length, strokeDashoffset: length }, { strokeDashoffset: 0, duration: 0.55, delay: 0.2, ease: "power2.out" });
     }
+  }
+  if (justApproved && moves()) {  // the lime card wipes in, the protected tile springs, the phone buzzes
+    gsap.from("#plan .done", { clipPath: "inset(0 100% 0 0 round 12px)", duration: 0.75, ease: "power3.inOut", clearProps: "clipPath" });
+    gsap.fromTo("#st-approve", { scale: 0.94 }, { scale: 1, duration: 0.7, delay: 0.35, ease: "back.out(2.6)", clearProps: "transform" });
+    buzz();
   }
   if (justApproved) showList("chain");
   else if (fresh && plan.status === "pending" && S.listTab === "chain") showList("rows");
@@ -1188,6 +1337,7 @@ function showList(tab) {
   S.listTab = tab;
   $$("[data-ltab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.ltab === tab)));
   for (const [name, sel] of Object.entries(LISTS)) $(sel).hidden = name !== tab;
+  glide($(".ltabs"), $(`[data-ltab="${tab}"]`));
   mark("chain", "fleet");
   if (tab === "rows") enter($$("#plan-rows tr.row"), { y: 6, duration: 0.3, stagger: 0.025 });
   if (tab === "fleet") enter($$("#fleet .boxcard"), { y: 6, duration: 0.3, stagger: 0.015 });
@@ -1283,12 +1433,13 @@ function feedAges() {  // real time, not the simulated clock: these feeds are li
 setInterval(feedAges, 1000);
 
 // --- live stream ------------------------------------------------------------------------------
+const TONE = { "var(--good)": "var(--lime)", "var(--bad)": "var(--coral)", "var(--warn)": "var(--amber)", "var(--accent)": "var(--route)", "var(--accent-2)": "var(--route)", "var(--muted)": "var(--ink-dim)" };
 function toast(title, text, color = "var(--accent)") {
   const el = document.createElement("div"), box = $("#toasts");
-  el.className = "toast"; el.style.setProperty("--c", color);
+  el.className = "toast"; el.style.setProperty("--c", TONE[color] || color);
   el.innerHTML = `<i></i><div><b>${esc(title)}</b><span>${esc(text)}</span></div>`;
   box.prepend(el);
-  if (moves()) gsap.from(el, { x: 26, autoAlpha: 0, duration: 0.35, ease: "power3.out", clearProps: "all" });
+  if (moves()) gsap.from(el, { x: 26, autoAlpha: 0, duration: 0.35, ease: "power3.out", clearProps: CLEAR });
   setTimeout(() => {
     if (moves()) gsap.to(el, { x: 26, autoAlpha: 0, duration: 0.25, ease: "power2.in", onComplete: () => el.remove() });
     else el.remove();
@@ -1381,17 +1532,31 @@ function connect() {
 async function api(path, body) {
   const res = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) location.assign("/");  // signed out, or the server restarted: sign in again
   if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
   return data;
 }
+// Who's on duty: set at sign-in, and on the audit log next to every decision.
+const ME = { name: load("routera.approver") || "Sunil P.", role: "Operations lead" };
 function showMe() {
-  const name = opsPerson();
-  $("#me-n").textContent = name;
-  $("#me-i").textContent = name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  $("#me-n").textContent = ME.name;
+  $("#me-r").textContent = ME.role;
+  $("#me-i").textContent = ME.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
+async function whoAmI() {
+  try {
+    const s = await (await fetch("/api/session")).json();
+    if (!s.signed_in) { location.assign("/"); return; }
+    ME.name = s.name; ME.role = s.role_label;
+  } catch (e) { return; }  // offline: keep the name shown
+  showMe(); S.planKey = ""; mark("plans");
+}
+$("#signout").addEventListener("click", async () => {
+  try { await fetch("/api/session", { method: "DELETE" }); } catch (e) { /* the cookie runs out anyway */ }
+  location.assign("/");
+});
 async function approve(planId) {
   const approver = opsPerson();
-  store("routera.approver", approver);
   try {
     const r = await api(`/api/plans/${planId}/approve`, { approver, overrides: S.overrides[planId] || {} });
     delete S.overrides[planId];
@@ -1454,9 +1619,9 @@ document.addEventListener("click", async (ev) => {
   if (!t) return;
   if (t.dataset.rowbox && ev.target.closest("select, a, input")) return;
   const d = t.dataset;
-  if (d.tab) { S.senseTab = d.tab; $$("[data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b === t))); mark("sense"); }
+  if (d.tab) { S.senseTab = d.tab; $$("[data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b === t))); glide($(".sense .tabs"), t); mark("sense"); }
   else if (d.ltab) showList(d.ltab);
-  else if (d.fleet) { S.fleetTab = d.fleet; $$("[data-fleet]").forEach((b) => b.setAttribute("aria-selected", String(b === t))); mark("fleet"); }
+  else if (d.fleet) { S.fleetTab = d.fleet; $$("[data-fleet]").forEach((b) => b.setAttribute("aria-selected", String(b === t))); glide($("#fleet-wrap .subtabs"), t); mark("fleet"); }
   else if (d.plan) { S.plan = d.plan; mark("plans"); }
   else if (d.why) why(S.plan, d.why);
   else if (d.layer) toggleLayer(d.layer, t);
@@ -1474,6 +1639,7 @@ document.addEventListener("click", async (ev) => {
   else if (d.dis) showDisruption(d.dis);
   else if (d.showall !== undefined) { S.showAll = !S.showAll; mark("plans"); }
   else if (d.refresh) {
+    if (moves()) gsap.fromTo(t.querySelector("svg"), { rotation: 0 }, { rotation: 360, duration: 0.7, ease: "power2.inOut", transformOrigin: "50% 50%" });
     try { await api(`/api/feeds/${encodeURIComponent(d.refresh)}/refresh`, {}); toast("Refreshing", "Fetching this feed now", "var(--good)"); }
     catch (e) { toast("Not yet", e.message, "var(--warn)"); }
   }
@@ -1507,9 +1673,25 @@ document.addEventListener("change", (ev) => {
     mark("plans");
   }
 });
-document.addEventListener("input", (ev) => {
-  if (ev.target.id === "approver") { store("routera.approver", ev.target.value); showMe(); }
-});
+// The approve button fills with ink from the left, and one highlight glides between the table rows.
+function sheen(btn, on) {
+  if (!moves() || btn.disabled) return;
+  btn.classList.add("slides");
+  gsap.to(btn.querySelector(".fill"), { scaleX: on ? 1 : 0, duration: 0.42, ease: "power3.out", transformOrigin: on ? "left center" : "right center", overwrite: true });
+}
+$("#plan").addEventListener("mouseover", (e) => { const b = e.target.closest("[data-approve]"); if (b && !b.contains(e.relatedTarget)) sheen(b, true); });
+$("#plan").addEventListener("mouseout", (e) => { const b = e.target.closest("[data-approve]"); if (b && !b.contains(e.relatedTarget)) sheen(b, false); });
+function rowGlide(tr) {
+  const wrap = $("#plan-rows .tablewrap"), hl = wrap && wrap.querySelector(".rowhl");
+  if (!hl || !moves()) return;
+  wrap.classList.add("hl");
+  if (!tr) { hl.shown = false; gsap.to(hl, { autoAlpha: 0, duration: 0.2, overwrite: true }); return; }
+  const table = tr.closest("table"), to = { y: table.offsetTop + tr.offsetTop, height: tr.offsetHeight, width: table.offsetWidth };
+  if (!hl.shown) { hl.shown = true; gsap.set(hl, to); gsap.to(hl, { autoAlpha: 1, duration: 0.15, overwrite: "auto" }); }
+  else gsap.to(hl, { ...to, autoAlpha: 1, duration: 0.26, ease: "power3.out", overwrite: true });
+}
+$("#plan-rows").addEventListener("mouseover", (e) => { const tr = e.target.closest("tr.row"); if (tr) rowGlide(tr); });
+$("#plan-rows").addEventListener("mouseleave", () => rowGlide(null));
 
 // Search: names what's on the books right away, and narrows the lists below.
 function searchHits() {
@@ -1528,7 +1710,12 @@ $("#search").addEventListener("keydown", (ev) => {
 });
 
 // Rail: jump to a part of the desk, and keep the highlight honest while scrolling.
-function setNav(go) { $$(".nav").forEach((a) => a.classList.toggle("on", a.dataset.go === go)); }
+function setNav(go) {
+  if (S.navShown === go) return;
+  S.navShown = go;
+  $$(".nav").forEach((a) => a.classList.toggle("on", a.dataset.go === go));
+  glide($("#nav"), $("#nav .nav.on"));
+}
 $("#nav").addEventListener("click", (ev) => {
   const a = ev.target.closest("[data-go]");
   if (!a) return;
@@ -1550,6 +1737,7 @@ addEventListener("scroll", () => {
 $$("#speed button").forEach((b) => b.addEventListener("click", () => {
   S.speed = Number(b.dataset.speed);
   $$("#speed button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  glide($("#speed"), b);
 }));
 $("#replay").addEventListener("click", async () => {
   const name = $("#scenario").value || "nashik_corridor_strike";
@@ -1680,11 +1868,30 @@ function moveDots() {
     const cls = `${shelf}|${ring}`;
     if (M.cls.get(id) !== cls) {
       M.cls.set(id, cls);
-      dot.setStyle({ fillColor: cssVar(`--${shelf}`), radius: ring === "sel" ? 8 : 5, weight: ring === "line" ? 1 : 2.5,
-                     color: ring === "sel" ? cssVar("--accent") : ring === "line" ? "#FFFFFF" : cssVar(`--${ring}`) });
+      dot.setStyle({ fillColor: cssVar(`--map-${shelf}`), radius: ring === "sel" ? 8 : 5, weight: ring === "line" ? 1 : 2.5,
+                     color: ring === "sel" ? "#FFFFFF" : ring === "line" ? cssVar("--map-bg") : cssVar(ring === "good" ? "--map-booked" : "--map-bad") });
     }
   }
   for (const [id, dot] of M.dots) if (!seen.has(id)) { dot.remove(); M.dots.delete(id); M.cls.delete(id); }
+  if (M.track) {  // the bracket follows its box, and counts its shelf life down
+    const dot = M.dots.get(M.sel), left = M.track.getElement()?.querySelector("[data-trk]"), v = lifeNow(M.sel);
+    if (dot) M.track.setLatLng(dot.getLatLng());
+    if (left && v != null) left.textContent = `${life(v)} left`;
+  }
+}
+// A thin square locks onto the box you picked, with its id and shelf life beside it.
+function trackOn(id) {
+  if (!M.map) return;
+  if (M.track) { M.track.remove(); M.track = null; }
+  const dot = id && M.dots.get(id), f = id && S.fleet.get(id);
+  if (!dot || !f) return;
+  M.track = L.marker(dot.getLatLng(), { interactive: false, keyboard: false, zIndexOffset: 1000, icon: L.divIcon({ className: "trk", iconSize: [0, 0],
+    html: `<svg width="34" height="34" viewBox="-17 -17 34 34" aria-hidden="true"><path d="M-14,-7V-14H-7M7,-14H14V-7M14,7V14H7M-7,14H-14V7"/></svg><span><b>${esc(id)}</b><small data-trk>${esc(life(lifeNow(id) ?? f.days_left))} left</small></span>` }) }).addTo(M.map);
+  const el = M.track.getElement();
+  if (el && moves()) {
+    gsap.fromTo(el.querySelector("svg"), { scale: 3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.55, ease: "power4.out" });
+    gsap.from(el.querySelector("span"), { x: -8, opacity: 0, duration: 0.4, delay: 0.25, ease: "power3.out" });
+  }
 }
 function pendingRow(cid) {
   for (const plan of S.r?.plans || []) {
@@ -1710,7 +1917,7 @@ function selectBox(cid) {
   M.sel = cid; M.row = null; M.rowPlan = null; M.sig = ""; M.fit = Boolean(cid); M.cls.clear();
   if (!cid) M.plan = undefined;  // back to the plan view: refit it
   if (cid) loadRow();
-  moveDots(); markRows(); mark("map");
+  moveDots(); markRows(); mark("map"); trackOn(cid);
 }
 function toggleLayer(name, btn) {
   const off = M.off.has(name);
@@ -1730,11 +1937,11 @@ function pickRoute(routeId) {
   S.plan = plan.plan_id; M.sig = ""; mark("plans");
 }
 function routeStyle(o, isChoice) {
-  if (isChoice) return { color: cssVar("--accent"), weight: 5, opacity: 0.95 };
-  if (o.compliance.status === "block") return { color: cssVar("--bad"), weight: 2.4, opacity: 0.85, dashArray: "5 7" };
-  if (!o.feasible) return { color: cssVar("--bad"), weight: 2, opacity: 0.45, dashArray: "2 7" };
-  if (o.compliance.status === "review") return { color: cssVar("--warn"), weight: 3, opacity: 0.9, dashArray: "8 6" };
-  return { color: cssVar("--faint"), weight: 2.5, opacity: 0.8 };
+  if (isChoice) return { color: cssVar("--map-plan"), weight: 5, opacity: 1 };
+  if (o.compliance.status === "block") return { color: cssVar("--map-block"), weight: 2.4, opacity: 0.9, dashArray: "5 7" };
+  if (!o.feasible) return { color: cssVar("--map-block"), weight: 2, opacity: 0.5, dashArray: "2 7" };
+  if (o.compliance.status === "review") return { color: cssVar("--map-review"), weight: 3, opacity: 0.95, dashArray: "8 6" };
+  return { color: cssVar("--map-other"), weight: 2.5, opacity: 0.9 };
 }
 const roadTime = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, "0")}` : `${Math.round(m)} min`);
 function liveText(id) {  // this route's road right now, from live traffic
@@ -1794,7 +2001,7 @@ function drawRoutes() {
   }
   for (const key of lanes) {
     const p = bookedPath(key);
-    if (p) L.polyline(p.pts, { color: cssVar("--muted"), weight: 1, opacity: 0.3, interactive: false }).addTo(g);
+    if (p) L.polyline(p.pts, { color: cssVar("--map-lane"), weight: 1, opacity: 0.55, interactive: false }).addTo(g);
   }
   const f = M.sel && S.fleet.get(M.sel);
   if (f) {
@@ -1802,7 +2009,7 @@ function drawRoutes() {
     const here = (p) => (pos ? fromHere(pos, p).pts : p.pts);
     const booked = bookedPath(f.path);
     if (booked) {
-      const line = L.polyline(here(booked), { color: cssVar(f.affected_by.length ? "--bad" : "--muted"), weight: 3, opacity: 0.8, dashArray: "1 6" }).bindTooltip(`Booked route to ${esc(f.destination_name)}${f.affected_by.length ? " (at risk)" : ""}`, { sticky: true }).addTo(g);
+      const line = L.polyline(here(booked), { color: cssVar(f.affected_by.length ? "--map-block" : "--map-other"), weight: 3, opacity: 0.85, dashArray: "1 6" }).bindTooltip(`Booked route to ${esc(f.destination_name)}${f.affected_by.length ? " (at risk)" : ""}`, { sticky: true }).addTo(g);
       if (!M.row?.options?.some((o) => o.feasible && M.geo.routes[o.route_id])) bounds.push(...line.getLatLngs());
     }
     const choice = currentChoice();
@@ -1820,7 +2027,7 @@ function drawRoutes() {
   } else {
     for (const key of risky) {
       const p = bookedPath(key);
-      if (p) L.polyline(p.pts, { color: cssVar("--bad"), weight: 2, opacity: 0.65, dashArray: "1 6" }).bindTooltip("Booked route at risk", { sticky: true }).addTo(g);
+      if (p) L.polyline(p.pts, { color: cssVar("--map-block"), weight: 2, opacity: 0.75, dashArray: "1 6" }).bindTooltip("Booked route at risk", { sticky: true }).addTo(g);
     }
     const plan = (S.r?.plans || []).find((x) => x.plan_id === S.plan);
     const counts = new Map();
@@ -1833,7 +2040,7 @@ function drawRoutes() {
     for (const [id, { n, c }] of counts) {
       const p = routePath(id);
       if (!p) continue;
-      const line = L.polyline(p.pts, { color: cssVar("--accent"), weight: Math.min(3 + n, 8), opacity: 0.9 }).bindTooltip(`<b>${boxCount(n)}:</b> ${esc(c.label)}<br>${esc(kmText(id))}`, { sticky: true }).addTo(g);
+      const line = L.polyline(p.pts, { color: cssVar("--map-plan"), weight: Math.min(3 + n, 8), opacity: 0.95 }).bindTooltip(`<b>${boxCount(n)}:</b> ${esc(c.label)}<br>${esc(kmText(id))}`, { sticky: true }).addTo(g);
       fresh(line, `p:${S.plan}:${id}`);
       bounds.push(...line.getLatLngs());
     }
@@ -1841,7 +2048,7 @@ function drawRoutes() {
     for (const [id, n] of moved) {
       const p = routePath(id);
       if (!p) continue;
-      const line = L.polyline(p.pts, { color: cssVar("--good"), weight: 3, opacity: 0.85 }).bindTooltip(`${n} booked: ${esc(kmText(id))}`, { sticky: true }).addTo(g);
+      const line = L.polyline(p.pts, { color: cssVar("--map-booked"), weight: 3, opacity: 0.95 }).bindTooltip(`${n} booked: ${esc(kmText(id))}`, { sticky: true }).addTo(g);
       flow(line);
       running.push(...line.getLatLngs());
     }
@@ -1877,9 +2084,9 @@ function drawEvents() {
   }
 }
 const INCIDENT = {
-  8: `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#C8452B" stroke="#fff"/><path d="M4.5 8h7" stroke="#fff" stroke-width="2"/></svg>`,
-  9: `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l7 7-7 7-7-7z" fill="#B26A00" stroke="#fff"/></svg>`,
-  other: `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1z" fill="#B26A00" stroke="#fff"/></svg>`,
+  8: `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#FF5A3C" stroke="#fff"/><path d="M4.5 8h7" stroke="#fff" stroke-width="2"/></svg>`,
+  9: `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l7 7-7 7-7-7z" fill="#FFC24B" stroke="#0A1130"/></svg>`,
+  other: `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1z" fill="#FFC24B" stroke="#0A1130"/></svg>`,
 };
 function drawLive() {
   M.groups.ships.clearLayers(); M.groups.alerts.clearLayers();
@@ -1893,15 +2100,15 @@ function drawLive() {
   M.roads.clearLayers();
   if (traffic?.ok) {
     if (!M.flow) {
-      M.flow = L.tileLayer("/api/traffic/tile/{z}/{x}/{y}.png?dark=false", { minZoom: 5, maxZoom: 12, zIndex: 5, attribution: "Traffic © TomTom",
+      M.flow = L.tileLayer("/api/traffic/tile/{z}/{x}/{y}.png?dark=true", { minZoom: 5, maxZoom: 12, zIndex: 5, attribution: "Traffic © TomTom",
         errorTileUrl: "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" }).addTo(g);
     }
     const roads = (traffic.roads || []).slice().sort((a, b) => b.alternative - a.alternative);
     for (const r of roads) {
       if (r.path.length < 2) continue;
       const share = r.delay_min / Math.max(r.clear_min, 1);
-      const style = r.alternative ? { color: cssVar("--accent-2"), weight: 2.5, opacity: 0.75, dashArray: "6 6" }
-        : { color: cssVar(share >= 0.3 ? "--bad" : share >= 0.1 ? "--warn" : "--good"), weight: 3, opacity: 0.85 };
+      const style = r.alternative ? { color: cssVar("--map-alt"), weight: 2.5, opacity: 0.8, dashArray: "6 6" }
+        : { color: cssVar(share >= 0.3 ? "--map-bad" : share >= 0.1 ? "--map-warn" : "--map-good"), weight: 3, opacity: 0.9 };
       L.polyline(r.path, style).bindTooltip(`<b>${r.alternative ? "Live alternative" : "Live now"}: ${esc(r.label)}</b><br>${roadTime(r.minutes)} now${r.delay_min >= 1 ? ` (+${roadTime(r.delay_min)} in traffic)` : ", no delay"}<br>${r.km.toLocaleString("en-IN")} km`, { sticky: true }).addTo(M.roads);
     }
     for (const m of traffic.markers || []) {
@@ -1909,13 +2116,13 @@ function drawLive() {
         .bindTooltip(`<b>Live road incident (TomTom)</b><br>${esc(m.title)}`).addTo(M.roads);
     }
   } else if (M.flow) { M.flow.remove(); M.flow = null; }
-  const color = { Red: "var(--bad)", Orange: "var(--warn)", Green: "var(--good)" };
+  const color = { Red: "var(--map-bad)", Orange: "var(--map-warn)", Green: "var(--map-good)" };
   for (const a of feeds.gdacs?.markers || []) {
     L.marker([a.lat, a.lon], { icon: L.divIcon({ className: "", html: `<span class="gd" style="color:${color[a.level] || "var(--muted)"};font-size:${a.near ? 16 : 11}px">▲</span>`, iconSize: [16, 16] }) })
       .bindTooltip(`<b>Real alert (GDACS)</b><br>${esc(a.title)}`).addTo(M.groups.alerts);
   }
   for (const w of feeds.weather?.markers || []) {
-    L.marker([w.lat, w.lon], { icon: L.divIcon({ className: "", html: `<svg width="16" height="12" viewBox="0 0 16 12" aria-hidden="true"><path d="M4 11a3 3 0 0 1-.4-6A4.5 4.5 0 0 1 12 4.2 3.4 3.4 0 0 1 12 11z" fill="#2F6DB5" stroke="#fff"/></svg>`, iconSize: [16, 12] }) })
+    L.marker([w.lat, w.lon], { icon: L.divIcon({ className: "", html: `<svg width="16" height="12" viewBox="0 0 16 12" aria-hidden="true"><path d="M4 11a3 3 0 0 1-.4-6A4.5 4.5 0 0 1 12 4.2 3.4 3.4 0 0 1 12 11z" fill="#7C96FF" stroke="#fff"/></svg>`, iconSize: [16, 12] }) })
       .bindTooltip(`<b>Real weather</b><br>${esc(w.title)}`).addTo(M.groups.alerts);
   }
 }
@@ -1984,7 +2191,7 @@ function focusItem(name, n) {
   const code = sig?.location && (REGION_NODE[sig.location] || sig.location);  // "the Gulf" reaches boxes through Hormuz
   if (code && M.geo.places[code]) { it.place = code; it.lat = M.geo.places[code].lat; it.lon = M.geo.places[code].lon; it.zoom = 5; }
   M.focus = { name, label: feed.label, it, sig, preview: null, loading: false };
-  M.lastFocus = null; M.sel = null; M.row = null; M.rowPlan = null; M.sig = ""; M.cls.clear();
+  M.lastFocus = null; M.sel = null; M.row = null; M.rowPlan = null; M.sig = ""; M.cls.clear(); trackOn(null);
   markRows(); drawFocus(true); mark("map"); toMap();
 }
 function showDisruption(id) {  // a disruption's plan if it has one on the table, otherwise the place itself
@@ -2007,17 +2214,17 @@ function drawFocus(move = false) {
   const { it, preview } = focus, bounds = [];
   if (it.road) {
     for (const r of (S.live?.feeds?.traffic?.roads || []).filter((x) => x.label === it.road)) {
-      const line = L.polyline(r.path, r.alternative ? { color: cssVar("--accent-2"), weight: 4, opacity: 0.9, dashArray: "8 6" } : { color: cssVar("--accent"), weight: 6, opacity: 0.95 })
+      const line = L.polyline(r.path, r.alternative ? { color: cssVar("--map-alt"), weight: 4, opacity: 0.9, dashArray: "8 6" } : { color: cssVar("--map-plan"), weight: 6, opacity: 0.95 })
         .bindTooltip(`<b>${r.alternative ? "Live alternative" : "Live now"}</b><br>${roadTime(r.minutes)} now, ${r.km.toLocaleString("en-IN")} km`, { sticky: true }).addTo(g);
       bounds.push(...line.getLatLngs());
     }
   } else if (it.lat != null) {
-    L.circleMarker([it.lat, it.lon], { radius: 16, weight: 3, color: cssVar("--accent"), fillColor: cssVar("--accent"), fillOpacity: 0.18, interactive: false }).addTo(g);
+    L.circleMarker([it.lat, it.lon], { radius: 16, weight: 3, color: cssVar("--map-plan"), fillColor: cssVar("--map-plan"), fillOpacity: 0.2, interactive: false }).addTo(g);
   }
   for (const route of new Set((preview?.routes || []).map((r) => r.route_id))) {
     const p = routePath(route);
     if (!p) continue;
-    const n = preview.routes.filter((r) => r.route_id === route), line = L.polyline(p.pts, { color: cssVar("--accent"), weight: Math.min(3 + n.length, 8), opacity: 0.9, dashArray: "10 6" })
+    const n = preview.routes.filter((r) => r.route_id === route), line = L.polyline(p.pts, { color: cssVar("--map-plan"), weight: Math.min(3 + n.length, 8), opacity: 0.95, dashArray: "10 6" })
       .bindTooltip(`<b>Preview: ${boxCount(n.length)}</b><br>${esc(n[0].label)}<br>Nothing has moved`, { sticky: true }).addTo(g);
     bounds.push(...line.getLatLngs());
   }
@@ -2033,7 +2240,7 @@ async function whatIf(place) {
   catch (e) { toast("Preview failed", e.message, "var(--bad)"); }
   focus.loading = false; M.sig = ""; drawFocus(true); mark("map");
 }
-const opsPerson = () => ($("#approver")?.value || load("routera.approver") || "Sunil P.").trim() || "Sunil P.";
+const opsPerson = () => ME.name;
 async function openDecision(place, btn) {
   btn.disabled = true;
   try {
@@ -2104,7 +2311,7 @@ function initMap() {
     for (const place of Object.values(M.geo.places)) {
       if (place.kind === "region") continue;
       const major = place.kind === "port" || place.kind === "chokepoint";
-      const mark_ = L.circleMarker([place.lat, place.lon], { renderer: M.canvas, radius: major ? 3.5 : 2.5, weight: 1.2, color: cssVar("--text"), fillColor: place.kind === "chokepoint" ? cssVar("--warn") : "#FFFFFF", fillOpacity: 1 });
+      const mark_ = L.circleMarker([place.lat, place.lon], { renderer: M.canvas, radius: major ? 3.5 : 2.5, weight: 1.2, color: "#FFFFFF", fillColor: place.kind === "chokepoint" ? cssVar("--map-review") : cssVar("--map-bg"), fillOpacity: 1 });
       mark_.bindTooltip(esc(place.name), major ? { permanent: true, direction: "right", className: "maplabel", offset: [4, 0] } : {}).addTo(M.groups.places);
     }
     M.map.on("zoomend", moveDots);
@@ -2139,7 +2346,8 @@ document.querySelector("#map-side").addEventListener("mouseout", (ev) => {
 });
 
 showMe();
-mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet", "realphone");
+whoAmI();
+mark("header", "pipeline", "sense", "plans", "phone", "chain", "fleet", "realphone", "tape");
 connect();
 </script>
 </body>

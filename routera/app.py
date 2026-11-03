@@ -3,7 +3,9 @@
     python -m routera            # http://localhost:8000, plays the India-inside scenario
 
 Everything from agents/sentinel/api.py (REST + the SSE stream) plus:
-    GET  /                            the ROUTERA control room
+    GET  /                            the intro and sign-in page (name, role, team access code)
+    GET  /room                        the ROUTERA control room, once signed in
+    GET|POST|DELETE /api/session      who's on duty; set ROUTERA_ACCESS_CODE to require the team's code
     GET  /sentinel                    the Sentinel's own console
     GET  /api/state                   snapshot incl. fleet, plans, KPIs and the audit chain
     POST /api/plans/{id}/approve      {"approver": "...", "overrides": {container: route_id}}
@@ -18,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import threading
 import time
 import webbrowser
@@ -25,13 +28,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Body, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, PlainTextResponse, Response
+from fastapi import Body, FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
 from agents.sentinel.api import STATIC_DIR as SENTINEL_STATIC
 from agents.sentinel.api import SentinelService, create_app
 from agents.sentinel.llm_client import LLM_MODES, build_llm_client
 from agents.sentinel.replay import SCENARIO_NAMES, Rig, Scenario, make_rig
+from routera.access import COOKIE, ROLES, SESSION_S, Access
 from routera.audit import HashChainAudit
 from routera.filing import build_zip, pdf_available, render_pdf
 from routera.geo import load_geo
@@ -45,6 +49,8 @@ OPTIONAL_BODY = Body(default={})
 LIVE = "live"
 LIVE_TICK_S = 60.0
 REFRESH_MIN_S = 30.0  # the fastest one feed can be refreshed by hand, to protect free API limits
+NO_STORE = {"Cache-Control": "no-store"}
+SIGN_IN_PATHS = {"/", "/api/session"}  # all a visitor without the team code can reach
 log = logging.getLogger("routera.live")
 
 
@@ -205,15 +211,68 @@ class RouteraService(SentinelService):
             return fn(*args)
 
 
-def create_routera_app(service: RouteraService | None = None) -> FastAPI:
+def create_routera_app(service: RouteraService | None = None, access: Access | None = None) -> FastAPI:
     service = service or RouteraService()
+    access = access or Access()
     app = create_app(service)
     app.title = "ROUTERA (SIMULATED FEEDS)"
     app.router.routes = [r for r in app.router.routes if getattr(r, "path", None) != "/"]
 
+    def session_of(request: Request) -> dict[str, str] | None:
+        return access.read(request.cookies.get(COOKIE))
+
+    def person(request: Request, body: dict[str, Any]) -> str:
+        """The signed-in person, as the audit log names them. Without a session (no code set), the body's."""
+        session = session_of(request)
+        return Access.person(session) if session else str(body.get("approver") or "Sunil P.")[:60]
+
+    @app.middleware("http")
+    async def sign_in_first(request: Request, call_next: Any) -> Any:
+        if not access.required or request.url.path in SIGN_IN_PATHS or session_of(request):
+            return await call_next(request)
+        if request.method == "GET" and "text/html" in request.headers.get("accept", ""):
+            return RedirectResponse("/", status_code=303)
+        return JSONResponse({"detail": "Sign in first, with your name and the team access code"}, status_code=401)
+
     @app.get("/", include_in_schema=False)
-    def index() -> FileResponse:
-        return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-store"})
+    def intro() -> FileResponse:
+        return FileResponse(STATIC / "intro.html", headers=NO_STORE)
+
+    @app.get("/room", include_in_schema=False, response_model=None)
+    def room(request: Request) -> Response:
+        if not session_of(request):
+            return RedirectResponse("/", status_code=303)
+        return FileResponse(STATIC / "index.html", headers=NO_STORE)
+
+    @app.get("/api/session")
+    def who(request: Request) -> dict[str, Any]:
+        session = session_of(request)
+        return {"signed_in": bool(session), **(session or {}), "code_required": access.required, "roles": ROLES}
+
+    @app.post("/api/session")
+    def sign_in(request: Request, response: Response, body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
+        name = Access.clean_name(body.get("name"))
+        if not name:
+            raise HTTPException(422, "Please add your name. It goes on the audit log.")
+        role = str(body.get("role") or "")
+        if role not in ROLES:
+            raise HTTPException(422, "Pick your role.")
+        if access.required and not session_of(request):  # someone already signed in may change name or role
+            client = request.client.host if request.client else "?"
+            if access.blocked(client):
+                raise HTTPException(429, "Too many wrong codes. Wait five minutes, then try again.")
+            if not access.code_ok(body.get("code")):
+                access.missed(client)
+                raise HTTPException(401, "That access code isn't right. Ask your team lead for it.")
+        secure = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+        response.set_cookie(COOKIE, access.issue(name, role), max_age=SESSION_S, httponly=True, samesite="lax",
+                            secure=secure)
+        return {"signed_in": True, "name": name, "role": role, "role_label": ROLES[role]}
+
+    @app.delete("/api/session")
+    def sign_out(response: Response) -> dict[str, bool]:
+        response.delete_cookie(COOKIE)
+        return {"signed_in": False}
 
     @app.get("/sentinel", include_in_schema=False)
     def sentinel_console() -> FileResponse:
@@ -224,8 +283,8 @@ def create_routera_app(service: RouteraService | None = None) -> FastAPI:
         return service.snapshot()
 
     @app.post("/api/plans/{plan_id}/approve")
-    def approve(plan_id: str, body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
-        approver = str(body.get("approver") or "Sunil P.")
+    def approve(plan_id: str, request: Request, body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
+        approver = person(request, body)
         try:
             plan = service.run(service.orchestrator.approve, plan_id, approver, body.get("overrides") or {})
         except KeyError as exc:
@@ -237,8 +296,8 @@ def create_routera_app(service: RouteraService | None = None) -> FastAPI:
         return {"plan_id": plan_id, "status": plan["status"], "saved_inr": plan["saved_inr"]}
 
     @app.post("/api/plans/{plan_id}/reject")
-    def reject(plan_id: str, body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
-        approver = str(body.get("approver") or "Sunil P.")
+    def reject(plan_id: str, request: Request, body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
+        approver = person(request, body)
         try:
             plan = service.run(service.orchestrator.reject, plan_id, approver, str(body.get("reason") or ""))
         except KeyError as exc:
@@ -303,15 +362,13 @@ def create_routera_app(service: RouteraService | None = None) -> FastAPI:
         return place
 
     @app.post("/api/decisions/open", status_code=201)
-    def open_decision(body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
-        person = str(body.get("approver") or "Sunil P.")[:60]
+    def open_decision(request: Request, body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
         reason = str(body.get("reason") or "reported closure")[:200]
-        return service.open_decision(known_place(str(body.get("place"))), person, reason)
+        return service.open_decision(known_place(str(body.get("place"))), person(request, body), reason)
 
     @app.post("/api/decisions/close")
-    def close_decision(body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
-        person = str(body.get("approver") or "Sunil P.")[:60]
-        return service.close_decision(known_place(str(body.get("place"))), person)
+    def close_decision(request: Request, body: dict[str, Any] = OPTIONAL_BODY) -> dict[str, Any]:
+        return service.close_decision(known_place(str(body.get("place"))), person(request, body))
 
     @app.post("/api/feeds/{name}/refresh", status_code=202)
     def refresh_feed(name: str) -> dict[str, Any]:
@@ -379,16 +436,19 @@ def main(argv: list[str] | None = None) -> int:
 
     llm = build_llm_client(args.llm)
     service = RouteraService(llm=llm.client, llm_label=llm.label)
+    access = Access(os.environ.get("ROUTERA_ACCESS_CODE"), os.environ.get("ROUTERA_SESSION_SECRET"))
     if args.live:
         service.autostart = (LIVE, 1)
     elif args.demo != "none":
         service.autostart = (args.demo, args.speed)
     url = f"http://localhost:{args.port}"
     print(f"ROUTERA · SIMULATED FEEDS · {url}   (LLM: {llm.label})")
+    print("Sign-in: the team access code is required." if access.required
+          else "Sign-in: name and role only. Set ROUTERA_ACCESS_CODE to require a team access code.")
     if service.bot:
         service.bot.start()
         print("Phone approvals are on: the control room shows how to connect (Sunil's phone panel).")
     if not args.no_browser:
         threading.Timer(1.5, webbrowser.open, args=(url,)).start()
-    uvicorn.run(create_routera_app(service), host=args.host, port=args.port, log_level="warning")
+    uvicorn.run(create_routera_app(service, access), host=args.host, port=args.port, log_level="warning")
     return 0
