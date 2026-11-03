@@ -20,6 +20,7 @@
   --phone: #0A1130;
   /* the map is dark, so the routes carry the colour */
   --map-bg: #0A1130; --map-plan: #7C96FF; --map-alt: #A6B8FF; --map-booked: #C8F751; --map-other: #6E7BB0; --map-lane: #4A5894;
+  --map-land: #141D4A; --map-coast: #2F3D80; --map-grid: #26336E;
   --map-block: #FF5A3C; --map-review: #FFC24B; --map-good: #C8F751; --map-warn: #FFC24B; --map-bad: #FF5A3C; --ship: #4FC3D9;
   --sans: "Hanken Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
@@ -277,7 +278,8 @@ button.chip:hover { background: var(--line-2); }
 #map { flex: 1; min-height: 0; background: var(--map-bg); z-index: 0; }
 #map.leaflet-container { background: var(--map-bg); }
 #map .mapfail { padding: 60px 20px; text-align: center; color: var(--ink-text); }
-.basetiles { filter: invert(1) grayscale(1) brightness(.55) contrast(1.35) sepia(1) hue-rotate(185deg) saturate(2.6) brightness(.8); }
+#map:not(.z5) .maplabel.mkt, #map:not(.z7) .maplabel.near { display: none; }
+.leaflet-tooltip.maplabel.mkt, .leaflet-tooltip.maplabel.near { color: var(--ink-text); font-weight: 500; }
 .maplegend { display: flex; flex-wrap: wrap; gap: 4px 13px; padding: 8px 14px; border-top: 1px solid var(--ink-3); color: var(--ink-text); font-size: 12px; }
 .maplegend span { display: inline-flex; align-items: center; gap: 5px; }
 .maplegend i { display: inline-block; width: 16px; height: 0; border-top: 3px solid; border-radius: 2px; }
@@ -1784,8 +1786,27 @@ const M = { map: null, geo: null, tiles: null, canvas: null, groups: {}, paths: 
             lines: new Map(), sel: null, row: null, rowPlan: null, sig: "", dataSig: "", plan: undefined, fit: false, off: new Set(),
             seen: new Set(), flows: [], sideKey: "" };
 const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-function baseTiles() {  // OpenStreetMap needs no key; a CSS filter calms the colours to sit with the page
-  return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 12, className: "basetiles", attribution: "© OpenStreetMap contributors" });
+// The map is drawn, not tiled, like the intro page: navy sea, land a shade lighter, thin coasts and borders, a dotted
+// grid. Natural Earth coastlines need no key, and our own places carry the labels.
+const TOPO = "https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js";
+const WORLD = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json";
+function drawLand() {
+  const js = document.createElement("script");
+  js.src = TOPO;
+  js.onload = async () => {
+    try {
+      const world = await (await fetch(WORLD)).json();
+      const coast = cssVar("--map-coast"), grid = [];
+      L.geoJSON(topojson.feature(world, world.objects.land), { pane: "land", interactive: false, style: { color: coast, weight: 0.8, fillColor: cssVar("--map-land"), fillOpacity: 1 } }).addTo(M.map);
+      L.geoJSON(topojson.mesh(world, world.objects.countries, (a, b) => a !== b), { pane: "land", interactive: false, style: { color: coast, weight: 0.7, dashArray: "4 3" } }).addTo(M.map);
+      for (let lat = -60; lat <= 70; lat += 10) grid.push([[lat, -180], [lat, 180]]);
+      for (let lon = -180; lon <= 180; lon += 10) grid.push([[-70, lon], [80, lon]]);
+      L.polyline(grid, { pane: "land", interactive: false, color: cssVar("--map-grid"), weight: 0.7, dashArray: "1 6" }).addTo(M.map);
+      if (moves()) gsap.from(M.map.getPane("land"), { opacity: 0, duration: 1.2, ease: "power1.out", clearProps: "opacity" });
+    } catch (e) { console.warn("coastlines", e); }
+  };
+  js.onerror = () => console.warn("coastlines: no topojson");
+  document.head.append(js);
 }
 function hav(a, b) {
   const r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
@@ -2096,7 +2117,7 @@ function drawLive() {
   }
   const traffic = feeds.traffic, g = M.groups.traffic;
   $('#map-layers [data-layer="traffic"]').hidden = !traffic?.ok;
-  $("#map-note").textContent = `Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute.${traffic?.ok ? " Live roads (TomTom): green clear, amber slow, red jammed, dashed is an alternative." : ""}`;
+  $("#map-note").textContent = `Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute. Coastlines: Natural Earth.${traffic?.ok ? " Live roads (TomTom): green clear, amber slow, red jammed, dashed is an alternative." : ""}`;
   M.roads.clearLayers();
   if (traffic?.ok) {
     if (!M.flow) {
@@ -2303,17 +2324,23 @@ RENDER.map = () => {
 };
 function initMap() {
   try {
-    M.map = L.map("map", { zoomControl: true, worldCopyJump: false, minZoom: 2 }).setView(HOME, HOME_ZOOM);
-    M.tiles = baseTiles().addTo(M.map);
+    M.map = L.map("map", { zoomControl: true, worldCopyJump: false, minZoom: 2, maxZoom: 10 }).setView(HOME, HOME_ZOOM);
+    M.map.createPane("land").style.zIndex = 150;  // under the traffic tiles and every line
+    M.map.attributionControl.addAttribution("Coastlines: Natural Earth · Roads © OpenStreetMap contributors");
+    drawLand();
     M.canvas = L.canvas({ padding: 0.3 });
     for (const name of ["traffic", "routes", "focus", "places", "events", "alerts", "ships", "boxes"]) M.groups[name] = L.layerGroup().addTo(M.map);
     M.roads = L.layerGroup().addTo(M.groups.traffic);
+    const tier = { port: "", chokepoint: "", market: " mkt", facility: " near", road: " near" };  // which labels show at which zoom
     for (const place of Object.values(M.geo.places)) {
       if (place.kind === "region") continue;
       const major = place.kind === "port" || place.kind === "chokepoint";
       const mark_ = L.circleMarker([place.lat, place.lon], { renderer: M.canvas, radius: major ? 3.5 : 2.5, weight: 1.2, color: "#FFFFFF", fillColor: place.kind === "chokepoint" ? cssVar("--map-review") : cssVar("--map-bg"), fillOpacity: 1 });
-      mark_.bindTooltip(esc(place.name), major ? { permanent: true, direction: "right", className: "maplabel", offset: [4, 0] } : {}).addTo(M.groups.places);
+      mark_.bindTooltip(esc(place.name), place.kind in tier ? { permanent: true, direction: "right", className: `maplabel${tier[place.kind]}`, offset: [4, 0] } : {}).addTo(M.groups.places);
     }
+    const zoomed = () => { const z = M.map.getZoom(); $("#map").classList.toggle("z5", z >= 5); $("#map").classList.toggle("z7", z >= 7); };
+    zoomed();
+    M.map.on("zoomend", zoomed);
     M.map.on("zoomend", moveDots);
     M.off.forEach((name) => M.groups[name]?.remove());
     setInterval(moveDots, 1000);
