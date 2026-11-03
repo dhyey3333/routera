@@ -60,18 +60,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .badge.on { background: var(--bad); }
 .where { border-top: 1px solid var(--ink-line); padding: 16px 8px 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
 .where > div { display: flex; align-items: center; gap: 8px; }
-.where .where-h, .books-h { color: var(--ink-dim); }
+.where .where-h { color: var(--ink-dim); }
 .pip { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: none; display: inline-block; }
 .pip.on { background: var(--good); animation: breathe 2.2s ease-in-out infinite; }
 .pip.bad { background: var(--bad); }
 .pip.off { background: transparent; border: 1.5px solid var(--ink-dim); }
 .rail .pip.on { background: var(--lime); }
 .rail .pip.bad { background: var(--coral); }
-.books { margin-top: auto; flex: none; border-top: 1px solid var(--ink-line); padding: 16px 8px 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
-.books-h { margin-bottom: 2px; }
-.book { display: flex; justify-content: space-between; gap: 8px; }
-.book span { color: var(--ink-text); }
-.book b { font-weight: 600; }
 
 /* --- the desk --------------------------------------------------------------------------------- */
 .main { flex: 1 1 0; min-width: 0; padding: 0 22px 28px; display: flex; flex-direction: column; gap: 14px; }
@@ -459,7 +454,6 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
   .rail { gap: 12px; padding: 12px 14px; }
   .nav { min-height: 36px; }
   .where { gap: 6px; padding-top: 10px; }
-  .books { gap: 3px; padding-top: 10px; }
 }
 @media (max-width: 1240px) {
   .desk { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: none; }
@@ -473,9 +467,6 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
   .rail nav { flex-direction: row; gap: 4px; width: 100%; overflow-x: auto; scrollbar-width: none; }
   .nav { min-height: 40px; }
   .where { display: none; }
-  .books { width: 100%; margin-top: 0; padding: 0; border-top: 0; flex-direction: row; flex-wrap: wrap; gap: 2px 14px; }
-  .books-h { width: 100%; margin: 0; }
-  .book { gap: 6px; }
   .main { padding: 0 16px 24px; }
   .tape { margin: 0 -16px; }
 }
@@ -518,10 +509,6 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
     <div><span class="pip" id="w-phone"></span><span id="w-phone-t">Phone: simulated</span></div>
     <div><span class="pip" id="w-llm"></span><span id="llm-who">Sentinel: rules only</span></div>
   </div>
-  <section class="books" aria-label="On the books (simulated)" data-in="nav">
-    <div class="books-h label">On the books (simulated)</div>
-    <div id="books"></div>
-  </section>
 </aside>
 
 <main class="main" id="top">
@@ -993,12 +980,6 @@ const RENDER = {
     $("#st-life").classList.toggle("alarm", (k.at_risk ?? 0) > 0);
     $("#st-decide").classList.toggle("ask", (k.pending_plans ?? 0) > 0);
     $("#st-approve").classList.toggle("won", (k.protected_inr ?? 0) > 0);
-    const crops = {};
-    for (const f of S.r?.fleet || []) crops[f.crop] = (crops[f.crop] || 0) + 1;
-    const books = Object.entries(crops).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-    const rows = books.map(([crop]) => `<div class="book" title="Simulated containers of ${esc(human(crop))}"><span>${esc(cap(human(crop)))}</span><b id="bk-${esc(crop)}">0</b></div>`).join("");
-    if (paint($("#books"), rows || `<div class="book"><span>Nothing on the books yet</span></div>`)) books.forEach(([crop]) => shown.delete(`#bk-${crop}`));
-    books.forEach(([crop, n]) => setNum(`#bk-${crop}`, n));
   },
   tape() {
     const items = S.signals.slice(-10).reverse().map((x) => [x.status !== "accepted" ? "#7A84B8" : x.disruption_id ? "var(--coral)" : "var(--amber)", `${SOURCE[x.source] || human(x.source)}: ${plainTitle(x.title || x.event_id)}`]);
@@ -1165,7 +1146,6 @@ function compChip(c) {
   return `<span class="chip good" title="${esc((c.note || "") + by)}">Clear</span>`;
 }
 const human = (s) => String(s).replaceAll("_", " ");
-const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const plainTitle = (t) => String(t).replace(/^⚠️?\s*/, "");
 const countOf = (n, noun = "container") => `${n} ${noun}${n === 1 ? "" : "s"}`;
 const boxCount = (n) => `${n} box${n === 1 ? "" : "es"}`;
