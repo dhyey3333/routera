@@ -155,7 +155,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 13px 15px; min-width: 0; transition: background-color .6s ease, border-color .6s ease, color .6s ease; }
 .kpi b { display: block; font-size: 23px; font-weight: 700; line-height: 1.12; letter-spacing: -.01em; transition: color .6s ease; }
 .kpi span { display: block; color: var(--muted); font-size: 12.5px; transition: color .6s ease; }
-.kpi.boxes { display: flex; align-items: center; gap: 12px; }
 .kpi b.risk { color: var(--bad-ink); }
 .kpi b.safe { color: var(--good-ink); }
 .kpi.alarm { background: var(--bad); border-color: var(--bad); }
@@ -547,13 +546,8 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
   </section>
 
   <section class="kpis" aria-label="Key numbers">
-    <div class="kpi boxes" data-in="kpi">
-      <svg width="38" height="30" viewBox="0 0 38 30" aria-hidden="true" style="flex:none"><rect x="1" y="4" width="36" height="22" rx="2" fill="#2F5BFF"/><path d="M7 8v14M12 8v14M17 8v14M22 8v14" stroke="#A6B8FF" stroke-width="1.6"/><rect x="27" y="7" width="7" height="16" rx="1" fill="#E8EDFF"/><path d="M30.500 10.500v9M27.800 12.500l5.400 5M33.200 12.500l-5.400 5" stroke="#2F5BFF" stroke-width="1" stroke-linecap="round"/></svg>
-      <div><b id="kv-watch">0</b><span>containers on watch</span></div>
-    </div>
     <div class="kpi" id="st-sense" data-in="kpi"><b id="kv-sense">0</b><span id="ks-sense">open disruptions</span></div>
     <div class="kpi" id="st-life" data-in="kpi"><b id="kv-life">0</b><span id="ks-life">at risk</span></div>
-    <div class="kpi" data-in="kpi"><b id="kv-low">–</b><span id="ks-low">least shelf life left</span></div>
     <div class="kpi" id="st-decide" data-in="kpi"><b id="kv-decide">₹0</b><span id="ks-decide">on the table</span></div>
     <div class="kpi" id="st-approve" data-in="kpi"><b id="kv-approve" class="safe">₹0</b><span id="ks-approve">protected</span></div>
   </section>
@@ -968,7 +962,6 @@ const RENDER = {
   pipeline() {
     const open = [...S.disruptions.values()].filter((d) => !d.ignored && OPEN.has(d.disruption.status));
     const k = S.r?.kpis || {};
-    setNum("#kv-watch", k.containers ?? 0);
     setNum("#kv-sense", open.length);
     set("#ks-sense", `open disruption${open.length === 1 ? "" : "s"} · ${countOf(S.signals.length, "signal")} read`);
     setNum("#kv-life", k.at_risk ?? 0);
@@ -1378,15 +1371,7 @@ function tick() {
     el.setAttribute("class", `ring ${lifeClass(v)}`);
   }
   if (S.r?.kpis) {
-    const fleet = S.r.fleet || [];
-    const risk = fleet.filter((f) => f.affected_by.length && !f.booking);
-    let low = null;
-    for (const f of risk.length ? risk : fleet) {
-      const v = lifeNow(f.container_id);
-      if (v != null && (!low || v < low.v)) low = { v, id: f.container_id };
-    }
-    set("#kv-low", low ? life(low.v) : "–");
-    set("#ks-low", low ? `least shelf life left · ${low.id}` : "least shelf life left");
+    const risk = (S.r.fleet || []).filter((f) => f.affected_by.length && !f.booking);
     set("#ks-life", risk.length ? `at risk · ${Math.round(risk.reduce((s, f) => s + f.weight_kg, 0) / 1000)} t` : "at risk");
   }
 }
