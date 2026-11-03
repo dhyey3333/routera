@@ -56,10 +56,10 @@ log = logging.getLogger("routera.live")
 
 def live_scenario(now: datetime) -> Scenario:
     return Scenario(
-        name=LIVE, title="LIVE: real weather, alerts, traffic, news and ships, on a simulated fleet",
+        name=LIVE, title="Live operations: real weather, alerts, traffic, news and ships",
         simulated=True, layer="india", start=now, container_ids=[], steps=[],
-        disclaimer="Feeds are REAL (Open-Meteo, GDACS, Google News; AIS and TomTom with free keys). The fleet is the "
-                   "SIMULATED book moved to today; bookings stay simulated.",
+        disclaimer="Feeds are live (Open-Meteo, GDACS, Google News; AIS and TomTom with free keys). The fleet is the "
+                   "sandbox book moved to today; bookings stay in the sandbox.",
     )
 
 
@@ -215,7 +215,7 @@ def create_routera_app(service: RouteraService | None = None, access: Access | N
     service = service or RouteraService()
     access = access or Access()
     app = create_app(service)
-    app.title = "ROUTERA (SIMULATED FEEDS)"
+    app.title = "ROUTERA"
     app.router.routes = [r for r in app.router.routes if getattr(r, "path", None) != "/"]
 
     def session_of(request: Request) -> dict[str, str] | None:
@@ -224,7 +224,7 @@ def create_routera_app(service: RouteraService | None = None, access: Access | N
     def person(request: Request, body: dict[str, Any]) -> str:
         """The signed-in person, as the audit log names them. Without a session (no code set), the body's."""
         session = session_of(request)
-        return Access.person(session) if session else str(body.get("approver") or "Sunil P.")[:60]
+        return Access.person(session) if session else str(body.get("approver") or "Control room")[:60]
 
     @app.middleware("http")
     async def sign_in_first(request: Request, call_next: Any) -> Any:
@@ -442,12 +442,12 @@ def main(argv: list[str] | None = None) -> int:
     elif args.demo != "none":
         service.autostart = (args.demo, args.speed)
     url = f"http://localhost:{args.port}"
-    print(f"ROUTERA · SIMULATED FEEDS · {url}   (LLM: {llm.label})")
+    print(f"ROUTERA · {url}   (LLM: {llm.label})")
     print("Sign-in: the team access code is required." if access.required
           else "Sign-in: name and role only. Set ROUTERA_ACCESS_CODE to require a team access code.")
     if service.bot:
         service.bot.start()
-        print("Phone approvals are on: the control room shows how to connect (Sunil's phone panel).")
+        print("Phone approvals are on: the Phone panel in the control room shows how to connect.")
     if not args.no_browser:
         threading.Timer(1.5, webbrowser.open, args=(url,)).start()
     uvicorn.run(create_routera_app(service, access), host=args.host, port=args.port, log_level="warning")

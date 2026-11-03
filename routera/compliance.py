@@ -19,7 +19,7 @@ from agents.sentinel.models import ContainerRef
 from routera.rulebook import RuleBook
 
 DATA_DIR = Path(__file__).parent / "data"
-FPO_BY_CROP = {"grapes": "Nashik Grape FPO (SIM)", "mangoes": "Konkan Mango FPO (SIM)"}
+FPO_BY_CROP = {"grapes": "Nashik Grape FPO", "mangoes": "Konkan Mango FPO"}
 PHYTO_DOC = "phytosanitary_certificate_application_data"
 KEY_LABEL = {"fsvp_agent_us": "US FSVP agent"}
 
@@ -123,7 +123,7 @@ class ComplianceRules:
         applied = tuple(r.rule_id for r in (mrl, phyto) if r)
         if not todo:
             return Check("ok", f"phyto for {country} held; residue within the {standard} MRL", rules=applied)
-        header = (f"Exporter: {FPO_BY_CROP.get(c.crop, 'Grower FPO (SIM)')}\nContainer: {c.container_id} · "
+        header = (f"Exporter: {FPO_BY_CROP.get(c.crop, 'Grower FPO')}\nContainer: {c.container_id} · "
                   f"{c.crop} · {c.weight_kg:g} kg\nReason: market switch after a disruption (ROUTERA plan)")
         return Check(
             "docs",

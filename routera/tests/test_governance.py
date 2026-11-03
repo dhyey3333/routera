@@ -47,7 +47,7 @@ def test_a_review_option_is_never_auto_picked_but_a_human_may_take_it_on_the_rec
     assert row["choice"] is None or row["choice"]["compliance"]["status"] != "review"
     assert option["human_only"] and "Human review" in " ".join(plan["guardrails"])
     assert f"{option['destination_name']} for {row['container_id']}" in " ".join(plan["guardrails"])
-    o.approve(plan["plan_id"], "Sunil P.", {row["container_id"]: option["route_id"]})
+    o.approve(plan["plan_id"], "Asha K.", {row["container_id"]: option["route_id"]})
     [approved] = [e for e in o.chain.entries if e["action"] == "plan.approved"]
     assert approved["details"]["reviewed_rules"] == {row["container_id"]: option["compliance"]["rules"]}
 
@@ -55,7 +55,7 @@ def test_a_review_option_is_never_auto_picked_but_a_human_may_take_it_on_the_rec
 def test_the_filing_pack_zip_has_a_cover_sheet_pdfs_and_a_manifest_and_is_reproducible() -> None:
     o = run("gulf_closure")
     plan = max(pending(o), key=lambda p: p["saved_inr"])
-    o.approve(plan["plan_id"], "Sunil P.")
+    o.approve(plan["plan_id"], "Asha K.")
     cid = moves(plan)[0]["container_id"]
     pack = o.paperwork(plan["plan_id"], cid)
     data = build_zip(pack)

@@ -58,7 +58,7 @@ def tap(data: str, who: int = MINE, chat: int | None = None) -> dict[str, Any]:
 
 
 def say(text: str, who: int = MINE, kind: str = "private") -> dict[str, Any]:
-    return {"message": {"text": text, "chat": {"id": who, "type": kind}}}
+    return {"message": {"text": text, "chat": {"id": who, "type": kind, "first_name": "Asha", "last_name": "K."}}}
 
 
 def test_a_new_plan_buzzes_the_phone_once_and_one_tap_approves_it_on_the_record(rig: Any) -> None:
@@ -68,13 +68,13 @@ def test_a_new_plan_buzzes_the_phone_once_and_one_tap_approves_it_on_the_record(
     to_decide = [p for p in service.orchestrator.plans.values() if p["needs_approval"]]
     assert len([p for p in telegram.sent() if "reply_markup" in p]) == len(to_decide)  # no repeats
     data, plan_id = button_plan(telegram)
-    assert "Saves" in telegram.sent()[0]["text"] and "simulated" in telegram.sent()[0]["text"]
+    assert "Saves" in telegram.sent()[0]["text"] and "sandbox" in telegram.sent()[0]["text"]
     bot.handle_update(tap(data))
     plan = service.orchestrator.plans[plan_id]
-    assert plan["status"] == "approved" and plan["approved_by"] == "Sunil P. via Telegram"
+    assert plan["status"] == "approved" and plan["approved_by"] == "Phone approver via Telegram"
     assert [b for b in service.orchestrator.bookings if b["plan_id"] == plan_id]
     entries = [e for e in service.chain.entries if e["action"] == "plan.approved"]
-    assert entries[-1]["actor"] == "Sunil P. via Telegram" and service.chain.verify()["ok"]
+    assert entries[-1]["actor"] == "Phone approver via Telegram" and service.chain.verify()["ok"]
     assert "Approved by" in telegram.sent("editMessageText")[-1]["text"]
     assert "reply_markup" not in telegram.sent("editMessageText")[-1]  # no buttons left to tap
 
@@ -104,7 +104,8 @@ def test_pairing_needs_the_code_and_wrong_guesses_change_it(rig: Any) -> None:
     bot.handle_update(say(f"/pair {first}"))
     assert bot.chat_id is None  # the old code is dead
     bot.handle_update(say(f"/pair {bot.code}"))
-    assert bot.chat_id == MINE and bot.status() == {"state": "on", "bot": "", "code": None, "error": ""}
+    assert bot.chat_id == MINE and bot.status() == {"state": "on", "bot": "", "code": None, "error": "",
+                                                    "approver": "Asha K. via Telegram"}  # named as Telegram knows them
     assert any("reply_markup" in p for p in telegram.sent())  # waiting plans arrive straight away
 
 
@@ -139,12 +140,12 @@ def test_approving_on_the_screen_first_clears_the_phone_and_blocks_a_second_appr
     service, bot, telegram = rig
     bot.sync()
     data, plan_id = button_plan(telegram)
-    service.run(service.orchestrator.approve, plan_id, "Sunil P.")
+    service.run(service.orchestrator.approve, plan_id, "Asha K.")
     bot.sync()
-    assert "Approved by Sunil P." in telegram.sent("editMessageText")[-1]["text"]
+    assert "Approved by Asha K." in telegram.sent("editMessageText")[-1]["text"]
     bot.handle_update(tap(data))
     assert "Already approved" in telegram.alerts()[-1]
-    assert [e["actor"] for e in service.chain.entries if e["action"] == "plan.approved"] == ["Sunil P."]
+    assert [e["actor"] for e in service.chain.entries if e["action"] == "plan.approved"] == ["Asha K."]
 
 
 def test_reject_and_why_work_from_the_phone(rig: Any) -> None:
@@ -156,7 +157,7 @@ def test_reject_and_why_work_from_the_phone(rig: Any) -> None:
     assert service.orchestrator.plans[plan_id]["status"] == "pending"
     bot.handle_update(tap("r" + data[1:]))
     plan = service.orchestrator.plans[plan_id]
-    assert plan["status"] == "rejected" and plan["rejected_by"] == "Sunil P. via Telegram"
+    assert plan["status"] == "rejected" and plan["rejected_by"] == "Phone approver via Telegram"
     assert not [b for b in service.orchestrator.bookings if b["plan_id"] == plan_id]
 
 

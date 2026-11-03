@@ -92,7 +92,7 @@ def render_pdf(doc: dict[str, Any], pack: dict[str, Any]) -> bytes:
     story = [
         Paragraph(_plain(f"ROUTERA: {doc['title'].upper()}"), title),
         Paragraph("DRAFT FOR HUMAN REVIEW. To be checked, signed and filed by an authorised person on the "
-                  "official channel. Simulated data.", stamp),
+                  "official channel. Sandbox data.", stamp),
         Table(meta, colWidths=[85, 175, 70, 175], style=TableStyle(
             [*grid, ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F7FAFC"))])),
         Spacer(1, 8),
@@ -120,7 +120,7 @@ def cover_sheet(pack: dict[str, Any], files: list[str]) -> str:
         f"**Prepared** {pack['prepared_at']} · **Status** DRAFT, ready for human filing",
         "",
         "> ROUTERA never files with a government system. An authorised person reviews, signs and lodges",
-        "> these documents on the official channels. All data is simulated.",
+        "> these documents on the official channels. All data is sandbox data.",
         "",
         f"- Route: {pack['route']}",
         f"- Ready in about {change['hours']:g} h (slowest document; all prepared in parallel)",

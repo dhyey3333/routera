@@ -131,7 +131,7 @@ def test_news_alone_opens_no_decision_but_a_named_person_can_and_it_is_on_the_re
         state = client.get("/api/state").json()
         assert state["routera"]["kpis"]["pending_plans"] == 0  # the rule still holds
         assert [d["disruption"]["status"] for d in state["disruptions"]] == ["candidate"]
-        opened = client.post("/api/decisions/open", json={"place": "HORMUZ", "approver": "Sunil P.",
+        opened = client.post("/api/decisions/open", json={"place": "HORMUZ", "approver": "Asha K.",
                                                           "reason": "Tanker on fire in Strait of Hormuz"})
         assert opened.status_code == 201
         pid = opened.json()["plan_id"]
@@ -139,8 +139,8 @@ def test_news_alone_opens_no_decision_but_a_named_person_can_and_it_is_on_the_re
         state = client.get("/api/state").json()
         assert state["routera"]["kpis"]["pending_plans"] == 1 and state["routera"]["bookings"] == []
         [entry] = [e for e in client.get("/api/audit").json()["entries"] if e["action"] == "decision.opened"]
-        assert entry["actor"] == "Sunil P." and "Tanker on fire" in entry["rationale"]
-        assert client.post(f"/api/plans/{pid}/approve", json={"approver": "Sunil P."}).status_code == 200
+        assert entry["actor"] == "Asha K." and "Tanker on fire" in entry["rationale"]
+        assert client.post(f"/api/plans/{pid}/approve", json={"approver": "Asha K."}).status_code == 200
         audit = client.get("/api/audit").json()
         assert audit["ok"] and client.get("/api/state").json()["routera"]["bookings"]
         assert client.post("/api/decisions/open", json={"place": "ATLANTIS"}).status_code == 404

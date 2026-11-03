@@ -44,8 +44,10 @@ class TelegramError(Exception):
 
 class TelegramBot:
     def __init__(self, service: Any, token: str, chat_id: str | int | None = None,
-                 approver: str = "Sunil P. via Telegram", call: Call | None = None) -> None:
-        self.service, self.token, self.approver = service, token, approver
+                 approver: str | None = None, call: Call | None = None) -> None:
+        self.service, self.token = service, token
+        self.fixed_approver = approver  # TELEGRAM_APPROVER, if set, names every phone decision; else whoever pairs
+        self.approver = approver or "Phone approver via Telegram"
         self.call = call or self._http_call
         self.chat_id = int(chat_id) if chat_id else None
         self.code = self._new_code()
@@ -67,7 +69,7 @@ class TelegramBot:
         if not token:
             return None
         return cls(service, token, source.get("TELEGRAM_CHAT_ID", "").strip() or None,
-                   source.get("TELEGRAM_APPROVER", "").strip() or "Sunil P. via Telegram")
+                   source.get("TELEGRAM_APPROVER", "").strip() or None)
 
     @staticmethod
     def _new_code() -> str:
@@ -112,7 +114,7 @@ class TelegramBot:
         else:
             state = "pairing"
         return {"state": state, "bot": self.username, "code": self.code if state == "pairing" else None,
-                "error": self.error if state == "error" else ""}
+                "error": self.error if state == "error" else "", "approver": self.approver if state == "on" else ""}
 
     def _announce(self) -> None:
         now = self.status()
@@ -138,7 +140,7 @@ class TelegramBot:
         if wait:
             lines.append(f"⏳ Waiting on {html.escape(wait['role'])}. Silence is never consent.")
         lines += [f"• {html.escape(g)}" for g in plan.get("guardrails", [])[:3]]
-        lines.append(f"<i>{html.escape(plan['plan_id'])} v{plan['version']} · simulated fleet and bookings</i>")
+        lines.append(f"<i>{html.escape(plan['plan_id'])} v{plan['version']} · sandbox fleet and bookings</i>")
         return "\n".join(lines)[:3900]
 
     @staticmethod
@@ -147,7 +149,7 @@ class TelegramBot:
         if plan["status"] == "approved":
             moved = count(len(plan.get("packs") or {}), "move")
             return (f"✅ {title}\nApproved by {html.escape(str(plan.get('approved_by')))}. {moved} booked in "
-                    f"SAP TM (simulated). Saves {fmt_inr(plan['saved_inr'])}. Logged on the audit chain.")
+                    f"SAP TM (sandbox). Saves {fmt_inr(plan['saved_inr'])}. Logged on the audit chain.")
         if plan["status"] == "rejected":
             return (f"❌ {title}\nRejected by {html.escape(str(plan.get('rejected_by')))}. "
                     "The containers stay on their bookings. Logged on the audit chain.")
@@ -230,6 +232,9 @@ class TelegramBot:
             self._say(chat["id"], "Pair from a private chat, so only you can approve.")
         elif secrets.compare_digest(code, self.code):
             self.chat_id, self.wrong_codes = chat["id"], 0
+            if not self.fixed_approver:  # the audit log names the person on the phone, as Telegram knows them
+                who = " ".join(filter(None, (chat.get("first_name"), chat.get("last_name")))) or chat.get("username")
+                self.approver = f"{who or 'Phone approver'} via Telegram"[:60]
             self._say(chat["id"], "✅ <b>Connected.</b> New ROUTERA plans will arrive here. "
                                   "Only this chat can approve.")
             self.sync()

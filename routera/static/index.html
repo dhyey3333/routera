@@ -502,10 +502,10 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
     <a data-in="nav" class="nav" href="#phone-card" data-go="phone"><span><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg>Phone</span></a>
   </nav>
   <div class="where" data-in="nav">
-    <div class="where-h label">What's live right now</div>
+    <div class="where-h label">Integrations</div>
     <div><span class="pip" id="w-feeds"></span><span id="w-feeds-t">Connecting…</span></div>
-    <div><span class="pip off"></span>SAP TM bookings: simulated</div>
-    <div><span class="pip" id="w-phone"></span><span id="w-phone-t">Phone: simulated</span></div>
+    <div><span class="pip off"></span>SAP TM: sandbox</div>
+    <div><span class="pip" id="w-phone"></span><span id="w-phone-t">Phone approvals: off</span></div>
     <div><span class="pip" id="w-llm"></span><span id="llm-who">Sentinel: rules only</span></div>
   </div>
 </aside>
@@ -522,15 +522,16 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
       <div class="hits" id="search-hits" hidden></div>
     </div>
     <div class="who-box">
-      <span class="sim" id="sim-box" title="Fleet, prices, capacities and SAP TM bookings are always simulated"><span class="pip"></span><span id="sim">Simulated feeds</span></span>
-      <div class="me-i" id="me-i" aria-hidden="true">SP</div>
-      <div class="me-t"><b id="me-n">Sunil P.</b><small id="me-r">Operations lead</small></div>
+      <span class="sim" id="sim-box" title="Weather, alerts, traffic, news and ships are live. The fleet, prices, capacities and SAP TM bookings are sandbox data."><span class="pip"></span><span id="sim">Sandbox</span></span>
+      <button type="button" class="btn small ghost" id="tools-open" aria-expanded="false" aria-controls="runbar" title="Replays, speed and simulated events">Sandbox tools</button>
+      <div class="me-i" id="me-i" aria-hidden="true"></div>
+      <div class="me-t"><b id="me-n"></b><small id="me-r">Operations lead</small></div>
       <button type="button" class="btn small ghost" id="signout" title="Sign out of the control room">Sign out</button>
       <span class="dot" id="conn" title="Connecting…"></span>
     </div>
   </header>
 
-  <section class="card runbar" data-in="card" aria-label="Scenario and replay">
+  <section class="card runbar" id="runbar" data-in="card" aria-label="Sandbox tools" hidden>
     <select id="scenario" aria-label="Scenario"></select>
     <div class="seg" id="speed" role="group" aria-label="Replay speed">
       <span class="glider" aria-hidden="true"></span>
@@ -539,7 +540,7 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
       <button type="button" data-speed="0" aria-pressed="false" title="No waiting">Instant</button>
     </div>
     <button type="button" class="btn primary" id="replay">Replay</button>
-    <button type="button" class="btn" id="inject-open" title="Send a live event to the Sentinel">Feed the Sentinel</button>
+    <button type="button" class="btn" id="inject-open" title="Send an event to the Sentinel, as a feed would">Simulate an event</button>
     <a class="btn ghost hide-sm" href="/sentinel" target="_blank" rel="noopener" title="The Sentinel's own console">Sentinel ↗</a>
     <div class="ticker" id="ticker"></div>
     <div class="progress"><i id="progress"></i></div>
@@ -627,13 +628,13 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
     </article>
 
     <aside class="card phonecard" id="phone-card" data-in="later" aria-label="Phone approval">
-      <header class="card-h"><h3>Sunil's phone</h3></header>
+      <header class="card-h"><h3>Phone approvals</h3></header>
       <div class="pad" style="padding-top:0">
         <div class="realphone" id="realphone"></div>
         <div class="phone" id="phone">
           <div class="notch"></div>
           <div class="screen">
-            <div class="appbar"><div class="avatar">R</div><div><b>ROUTERA</b><small>to Sunil P., operations lead</small></div></div>
+            <div class="appbar"><div class="avatar">R</div><div><b>ROUTERA</b><small id="phone-to">to the operations lead</small></div></div>
             <div class="thread" id="thread"></div>
           </div>
         </div>
@@ -642,7 +643,7 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
   </section>
 
   <footer class="foot">
-    Fleet, prices, capacities and SAP TM bookings are simulated. In live mode the weather, alerts, traffic, news and ships are real.
+    © 2026 ROUTERA · Sandbox: the fleet, prices, capacities and SAP TM bookings are sample data; weather, alerts, traffic, news and ships are live.
     The Sentinel is the only LLM agent; planning, compliance and audit are deterministic. ·
     <a href="/docs" target="_blank" rel="noopener">API</a> ·
     <a href="/api/rules/to-verify" target="_blank" rel="noopener">Rules to verify</a>
@@ -652,7 +653,7 @@ footer.foot { color: var(--muted); font-size: 12px; text-align: center; padding-
 
 <dialog id="inject">
   <form method="dialog">
-    <header><b>Feed the Sentinel a live event</b><p>It is classified, merged and scored like any feed. The planner re-plans if containers are hit.</p></header>
+    <header><b>Simulate an event</b><p>The Sentinel classifies, merges and scores it like any feed. The planner re-plans if containers are hit.</p></header>
     <div class="body">
       <div class="presets" id="presets"></div>
       <textarea id="headline" placeholder="Or type a news headline, e.g. “JNPT berthing delays of 3 days after crane breakdown”"></textarea>
@@ -939,12 +940,12 @@ const RENDER = {
     const live = S.live.on, india = !sc || sc.name.startsWith("nashik");
     $("#layer").className = `layer ${live ? "live" : india ? "india" : "global"}`;
     $("#layer").textContent = live ? "Live" : sc ? (india ? "India-inside" : "Global shock, same engine") : "Idle";
-    $("#sim").textContent = live ? "Real feeds, simulated fleet" : "Simulated feeds";
+    $("#sim").textContent = live ? "Live data · Sandbox" : "Sandbox replay";
     $("#sim-box").classList.toggle("real", live);
     $("#w-feeds").className = `pip ${live ? "on" : "off"}`;
-    $("#w-feeds-t").textContent = live ? "Real feeds coming in" : "Feeds: simulated replay";
+    $("#w-feeds-t").textContent = live ? "Live data feeds: on" : "Data feeds: replay";
     $("#feeds").hidden = !live;
-    $("#title").textContent = sc ? sc.title : "Idle: pick a scenario and press Replay";
+    $("#title").textContent = sc ? sc.title : "Idle: open Sandbox tools to start live mode or a replay";
     const r = S.replay;
     $("#ticker").innerHTML = S.note ? S.note : (sc ? esc(sc.disclaimer || "") : "Both container books are loaded; POSTed events match either layer.");
     $("#ticker").title = $("#ticker").textContent;
@@ -977,7 +978,7 @@ const RENDER = {
   tape() {
     const items = S.signals.slice(-10).reverse().map((x) => [x.status !== "accepted" ? "#7A84B8" : x.disruption_id ? "var(--coral)" : "var(--amber)", `${SOURCE[x.source] || human(x.source)}: ${plainTitle(x.title || x.event_id)}`]);
     for (const f of Object.values(S.live?.feeds || {})) items.push([f.ok ? "var(--lime)" : "var(--coral)", `${f.label}: ${f.summary}`]);
-    if (!items.length) items.push(["var(--lime)", `Watching ${countOf(S.r?.kpis?.containers ?? 0)}`], ["#7A84B8", "Fleet, prices and SAP TM bookings are simulated"]);
+    if (!items.length) items.push(["var(--lime)", `Watching ${countOf(S.r?.kpis?.containers ?? 0)}`], ["#7A84B8", "Sandbox fleet, prices and SAP TM bookings"]);
     const run = items.map(([c, t]) => `<span class="it" style="--c:${c}"><i></i>${esc(String(t).toUpperCase())}</span>`).join("");
     if (paint($("#tape-track"), `<span class="run">${run}</span><span class="run" aria-hidden="true">${run}</span>`)) runTape();
   },
@@ -1022,12 +1023,12 @@ const RENDER = {
   realphone() {
     const p = S.phoneBot || { state: "off" }, el = $("#realphone"), bot = p.bot ? `@${esc(p.bot)}` : "your bot";
     el.className = `realphone ${p.state === "on" ? "on" : p.state === "error" ? "bad" : ""}`;
-    el.innerHTML = p.state === "on" ? `<b>Your phone is connected</b> to ${bot}. New plans arrive there with Approve and Reject buttons.`
+    el.innerHTML = p.state === "on" ? `<b>Phone connected</b> to ${bot}. New plans arrive there with Approve and Reject buttons; decisions are logged as ${esc(p.approver || "the phone approver")}.`
       : p.state === "pairing" ? `<b>Connect your phone:</b> in Telegram, open ${bot} and send <code>/pair ${esc(p.code || "")}</code>`
       : p.state === "error" ? `<b>Telegram problem:</b> ${esc(p.error || "can't reach it")}. Approve here on the screen instead.`
-      : `This is a simulated phone. Add a <b>TELEGRAM_BOT_TOKEN</b> to get plans on your real phone.`;
+      : `<b>Preview.</b> Set <b>TELEGRAM_BOT_TOKEN</b> on the server to send plans to a phone.`;
     $("#w-phone").className = `pip ${p.state === "on" ? "on" : p.state === "error" ? "bad" : "off"}`;
-    $("#w-phone-t").textContent = p.state === "on" ? "Phone on Telegram" : p.state === "pairing" ? "Phone waiting to pair" : p.state === "error" ? "Telegram problem" : "Phone: simulated";
+    $("#w-phone-t").textContent = p.state === "on" ? "Phone approvals: Telegram" : p.state === "pairing" ? "Phone approvals: pairing" : p.state === "error" ? "Phone approvals: problem" : "Phone approvals: off";
   },
   feeds() {
     const feeds = Object.values(S.live.feeds || {});
@@ -1199,7 +1200,7 @@ function planHTML(plan) {
       ${t.edited ? `<div class="edited-by"><span class="chip warn">${countOf(t.edited, "change")} by you</span><button type="button" class="btn small ghost" data-reset>Undo</button></div>` : ""}
       <div class="planbtns"><button type="button" class="btn primary big sheen" data-approve><span class="fill" aria-hidden="true"></span><span>${plan.needs_approval || t.edited ? `Approve ${countOf(t.moves, "move")}` : "Acknowledge and log"}</span></button><button type="button" class="btn big" data-reject>Reject</button></div>`;
   } else if (plan.status === "approved") {
-    foot = `<div class="done"><b class="head-line">${ICON.tick}Approved by ${esc(plan.approved_by)}</b><span>At ${hm(plan.approved_at)} IST. ${countOf(bookings.length, "move")} booked in SAP TM (simulated), paperwork drafted, ${inr(plan.saved_inr)} credited to the grower FPOs (simulated).</span></div>`;
+    foot = `<div class="done"><b class="head-line">${ICON.tick}Approved by ${esc(plan.approved_by)}</b><span>At ${hm(plan.approved_at)} IST. ${countOf(bookings.length, "move")} booked in SAP TM (sandbox), paperwork drafted, ${inr(plan.saved_inr)} credited to the grower FPOs.</span></div>`;
   } else if (plan.status === "rejected") {
     foot = `<div class="notice bad"><b>Rejected by ${esc(plan.rejected_by)}</b>${plan.reject_reason ? `: ${esc(plan.reject_reason)}` : ""}. It's on the audit log, and the containers stay on their bookings.</div>`;
   } else {
@@ -1321,18 +1322,18 @@ function boxHTML(f) {
 function phoneHTML() {
   const plans = (S.r?.plans || []).slice().sort((a, b) => a.plan_id.localeCompare(b.plan_id)).slice(-4);
   const n = S.r?.kpis?.containers ?? 0;
-  const out = [`<div class="msg">Morning Sunil. I'm watching <b>${n}</b> containers across pack house, road, port and sea. I'll only message you when a decision is needed.<span class="t">ROUTERA</span></div>`];
+  const out = [`<div class="msg">Good morning${ME.name ? `, ${esc(ME.name.split(/\s+/)[0])}` : ""}. I'm watching <b>${n}</b> containers across pack house, road, port and sea. I'll only message you when a decision is needed.<span class="t">ROUTERA</span></div>`];
   for (const p of plans) {
     const top = p.rows.slice().sort((a, b) => b.value_saved_inr - a.value_saved_inr)[0];
     out.push(`<div class="msg"><b>${esc(p.title)}</b><br>${esc(p.headline)}${p.saved_inr > 0 ? `<b class="big num">${inr(p.saved_inr)}</b><span class="sub">saved vs doing nothing</span>` : ""}
       ${p.status === "pending" ? `<div class="btns"><button type="button" class="go" data-papprove="${esc(p.plan_id)}">${p.needs_approval ? "Approve" : "Acknowledge"}</button><button type="button" data-pwhy="${esc(p.plan_id)}|${esc(top ? top.container_id : "")}">Ask why</button><button type="button" data-open="${esc(p.plan_id)}">Review</button></div>` : ""}
       <span class="t">${hm(p.updated_at || p.created_at)} · ${esc(p.plan_id)} v${p.version}</span></div>`);
     const w = S.phoneWhy[p.plan_id];
-    if (w) out.push(`<div class="msg me">Why?<span class="t">Sunil</span></div><div class="msg">${esc(w)}<span class="t">explained from plan data</span></div>`);
+    if (w) out.push(`<div class="msg me">Why?<span class="t">You</span></div><div class="msg">${esc(w)}<span class="t">explained from plan data</span></div>`);
     if (p.status === "approved") {
       const b = (S.r?.bookings || []).filter((x) => x.plan_id === p.plan_id).length;
       out.push(`<div class="msg me">Approve<span class="t">${esc(p.approved_by)} · ${hm(p.approved_at)}</span></div>`);
-      out.push(`<div class="msg">Done. ${countOf(b, "move")} booked in SAP TM (simulated), paperwork drafted, <b>${inr(p.saved_inr)}</b> logged to the FPO payout. Every step is on the audit log.<span class="t">${hm(p.approved_at)}</span></div>`);
+      out.push(`<div class="msg">Done. ${countOf(b, "move")} booked in SAP TM (sandbox), paperwork drafted, <b>${inr(p.saved_inr)}</b> logged to the FPO payout. Every step is on the audit log.<span class="t">${hm(p.approved_at)}</span></div>`);
     } else if (p.status === "rejected") {
       out.push(`<div class="msg me">Reject<span class="t">${esc(p.rejected_by)}</span></div><div class="msg">Logged. Bookings stay as they are; I'll keep watching.<span class="t">audit</span></div>`);
     } else if (p.status === "closed") {
@@ -1494,11 +1495,12 @@ async function api(path, body) {
   return data;
 }
 // Who's on duty: set at sign-in, and on the audit log next to every decision.
-const ME = { name: load("routera.approver") || "Sunil P.", role: "Operations lead" };
+const ME = { name: load("routera.approver") || "", role: "Operations lead" };
 function showMe() {
   $("#me-n").textContent = ME.name;
   $("#me-r").textContent = ME.role;
-  $("#me-i").textContent = ME.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  $("#me-i").textContent = ME.name.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  $("#phone-to").textContent = `to ${ME.name || "you"}, ${ME.role.toLowerCase()}`;
 }
 async function whoAmI() {
   try {
@@ -1702,14 +1704,14 @@ $("#replay").addEventListener("click", async () => {
   catch (e) { toast("Replay failed", e.message, "var(--bad)"); }
 });
 
-// Feed the Sentinel: structured feeds (as the real adapters would send) and free-text news.
+// Simulate an event: structured feeds (as the real adapters would send) and free-text news.
 const simIso = () => new Date(simNow() || Date.now()).toISOString();
 const PRESETS = [
   ["Kasara ghat closed", () => ({ source: "road_authority", kind_hint: "ROAD_STATUS", payload: { segment: "Kasara ghat", status: "closed", reason: "landslide (control room)", effective_from: simIso(), expected_reopen: null } })],
   ["Nashik transporters strike", () => ({ source: "transport_union", kind_hint: "STRIKE_NOTICE", payload: { union: "NSK-TRANSPORTERS", region: "Nashik", action: "strike", effective_from: simIso(), expected_end: null, carrier_ids: [] } })],
   ["Vashi grape price crash", () => ({ source: "mandi_prices", kind_hint: "PRICE", payload: { market_id: "Vashi", commodity: "grapes", modal_price_inr_per_kg: 36, baseline_price_inr_per_kg: 62, arrivals_t: 1100 } })],
   ["Reefer alarm on a truck", () => ({ source: "reefer_telemetry", kind_hint: "TEMP_LOG", payload: { truck_id: "TRK-MH15-2201", setpoint_c: 2, temp_c: 11, minutes_above: 150, status: "excursion" } })],
-  ["Jebel Ali shut (news)", () => ({ source: "news", kind_hint: null, payload: { headline: "Jebel Ali port closed to all shipping after Gulf strikes", body: "Port operator suspends berthing until further notice.", outlet: "Control room (SIM)" } })],
+  ["Jebel Ali shut (news)", () => ({ source: "news", kind_hint: null, payload: { headline: "Jebel Ali port closed to all shipping after Gulf strikes", body: "Port operator suspends berthing until further notice.", outlet: "Control room" } })],
 ];
 $("#presets").innerHTML = PRESETS.map(([label], i) => `<button type="button" data-preset="${i}">${esc(label)}</button>`).join("");
 async function feed(event, label) {
@@ -1725,10 +1727,16 @@ $("#presets").addEventListener("click", (e) => {
   feed(make(), label); $("#inject").close();
 });
 $("#inject-open").addEventListener("click", () => openDialog($("#inject")));
+$("#tools-open").addEventListener("click", (e) => {  // replays, speed and simulated events live here, out of the way
+  const open = $("#runbar").hidden;
+  $("#runbar").hidden = !open;
+  e.currentTarget.setAttribute("aria-expanded", String(open));
+  if (open) mark("header");
+});
 $("#send-news").addEventListener("click", (e) => {
   const text = $("#headline").value.trim();
   if (!text) { e.preventDefault(); $("#headline").focus(); return; }
-  feed({ source: "news", kind_hint: null, payload: { headline: text, body: "", outlet: "Control room (SIM)" } }, "news");
+  feed({ source: "news", kind_hint: null, payload: { headline: text, body: "", outlet: "Control room" } }, "news");
   $("#headline").value = "";
 });
 
@@ -2053,7 +2061,7 @@ function drawLive() {
   }
   const traffic = feeds.traffic, g = M.groups.traffic;
   $('#map-layers [data-layer="traffic"]').hidden = !traffic?.ok;
-  $("#map-note").textContent = `Fleet is simulated, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute.${traffic?.ok ? " Live roads (TomTom): green clear, amber slow, red jammed, dashed is an alternative." : ""}`;
+  $("#map-note").textContent = `Sandbox fleet, placed from its ETAs. Roads: OSRM/OpenStreetMap. Sea lanes: searoute.${traffic?.ok ? " Live roads (TomTom): green clear, amber slow, red jammed, dashed is an alternative." : ""}`;
   M.roads.clearLayers();
   if (traffic?.ok) {
     if (!M.flow) {

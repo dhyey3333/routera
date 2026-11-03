@@ -42,7 +42,7 @@ TYPE_LABEL = {
 }
 # Who a pending plan waits on, and for how many hours, before it escalates to the next person. From the
 # team's approval policy: silence or a timeout is never consent, so a plan only ever escalates.
-ESCALATION = (("Operations lead (Sunil P.)", 2.0), ("Export manager", 2.0), ("FPO director", 4.0))
+ESCALATION = (("Operations lead", 2.0), ("Export manager", 2.0), ("FPO director", 4.0))
 Emit = Callable[[str, dict[str, Any]], None]
 
 
@@ -233,8 +233,8 @@ class Orchestrator:
                        "overrides": overrides or {}, "reviewed_rules": reviewed},
                        f"{approver} approved {plan_id}: {moves}; saves {fmt_inr(plan['saved_inr'])}{checked}")
         self.chain.log("reroute", "booking.created", {"plan_id": plan_id, "bookings": created,
-                       "system": "SAP TM (simulated)"},
-                       f"{count(len(created), 'move')} booked in SAP TM (simulated) for {plan_id}")
+                       "system": "SAP TM (sandbox)"},
+                       f"{count(len(created), 'move')} booked in SAP TM (sandbox) for {plan_id}")
         packs = {r["container_id"]: self.paperwork(plan_id, r["container_id"]) for r in plan["rows"]
                  if r["choice"] and r["choice"]["route_id"] != "STAY"}
         plan["packs"] = {cid: p["sha256"] for cid, p in packs.items()}
@@ -251,7 +251,7 @@ class Orchestrator:
                            f"({papers['regenerate']} regenerated, "
                            f"{papers['new']} new, {papers['obsolete']} superseded), ready in about "
                            f"{papers['hours']:g} h; {to_fill} field(s) left for a human; pack hashes logged")
-        fpos = ", ".join(sorted({FPO_BY_CROP.get(r["crop"], "Grower FPO (SIM)") for r in plan["rows"]}))
+        fpos = ", ".join(sorted({FPO_BY_CROP.get(r["crop"], "Grower FPO") for r in plan["rows"]}))
         self.chain.log("approval_audit", "payout.logged",
                        {"plan_id": plan_id, "fpo": fpos, "value_saved_inr": plan["saved_inr"]},
                        f"{fmt_inr(plan['saved_inr'])} value saved credited to {fpos} growers")

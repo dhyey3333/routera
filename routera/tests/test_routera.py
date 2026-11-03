@@ -153,7 +153,7 @@ def test_one_box_reads_as_one_box_everywhere() -> None:
     o = run("nashik_corridor_strike")  # includes a reefer failure, which hits a single truck
     reefer = next(p for p in pending(o) if p["title"].startswith("Reefer failure"))
     assert reefer["headline"].startswith("1 container at risk.")
-    o.approve(reefer["plan_id"], "Sunil P.")
+    o.approve(reefer["plan_id"], "Asha K.")
     said = json.dumps({"state": o.snapshot(), "disruptions": [i.disruption.summary for i in o._incidents()]},
                       default=str, ensure_ascii=False)
     assert not re.search(r"(?<![\d,.])1 (containers|moves|documents)\b", said)
@@ -171,7 +171,7 @@ def test_a_box_hit_by_two_disruptions_moves_once_and_counts_once() -> None:
     assert o.snapshot()["kpis"]["on_table_inr"] < naive  # not double-counted
     plan = next(p for p in pending(o) if moves(p) and {r["container_id"] for r in moves(p)} & set(shared))
     moved = {r["container_id"] for r in moves(plan)}
-    o.approve(plan["plan_id"], "Sunil P.")
+    o.approve(plan["plan_id"], "Asha K.")
     for other in pending(o):
         assert not moved & set(other["container_ids"])  # gone from every other plan
     assert len(o.bookings) == len(moved)
@@ -182,7 +182,7 @@ def test_a_plan_whose_boxes_were_all_moved_elsewhere_closes_with_the_true_reason
     o = run("gulf_ripple")
     for plan in sorted(pending(o), key=lambda p: -len(p["rows"])):
         if plan["status"] == "pending" and moves(plan):
-            o.approve(plan["plan_id"], "Sunil P.")
+            o.approve(plan["plan_id"], "Asha K.")
     reasons = {p["closed_reason"] for p in o.plans.values() if p["status"] == "closed"}
     assert "the disruption cleared before anyone had to act" not in reasons
 
@@ -201,21 +201,21 @@ def test_compliance_block_cannot_be_overridden(gulf: Orchestrator) -> None:
         (r, o) for r in plan["rows"] for o in r["options"] if o["compliance"]["status"] == "block"
     )
     with pytest.raises(PermissionError, match="cannot be overridden"):
-        gulf.approve(plan["plan_id"], "Sunil P.", {row["container_id"]: option["route_id"]})
+        gulf.approve(plan["plan_id"], "Asha K.", {row["container_id"]: option["route_id"]})
     assert plan["status"] == "pending"
 
 
 def test_approve_books_moves_drafts_docs_and_logs_a_valid_chain(gulf: Orchestrator) -> None:
     plan = max(pending(gulf), key=lambda p: p["saved_inr"])
     n = len(moves(plan))
-    gulf.approve(plan["plan_id"], "Sunil P.")
+    gulf.approve(plan["plan_id"], "Asha K.")
     assert plan["status"] == "approved"
     assert len([b for b in gulf.bookings if b["plan_id"] == plan["plan_id"]]) == n
     actions = [e["action"] for e in gulf.chain.entries]
     assert {"plan.approved", "booking.created", "payout.logged"} <= set(actions)
     assert gulf.chain.verify()["ok"]
     with pytest.raises(ValueError, match="not pending"):
-        gulf.approve(plan["plan_id"], "Sunil P.")
+        gulf.approve(plan["plan_id"], "Asha K.")
     [drafted] = [e for e in gulf.chain.entries if e["action"] == "documents.drafted"]
     cid = moves(plan)[0]["container_id"]
     pack = gulf.paperwork(plan["plan_id"], cid)
@@ -277,7 +277,7 @@ def test_api_end_to_end(client: TestClient) -> None:
     rules = client.get("/api/rules").json()
     assert rules["to_verify"] > 0 and rules["warnings"]
     assert "MY-PERMIT-001" in client.get("/api/rules/to-verify").text
-    ok = client.post(f"/api/plans/{pid}/approve", json={"approver": "Sunil P."})
+    ok = client.post(f"/api/plans/{pid}/approve", json={"approver": "Asha K."})
     assert ok.status_code == 200 and ok.json()["status"] == "approved"
     assert client.post(f"/api/plans/{pid}/approve", json={}).status_code == 409
     assert client.post("/api/plans/PLN-9999/reject", json={}).status_code == 404

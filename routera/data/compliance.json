@@ -119,26 +119,26 @@
         "name": "hot water treatment",
         "days": 1,
         "cost_inr": 15000,
-        "facility": "MSAMB facility, Vashi (SIM)"
+        "facility": "MSAMB facility, Vashi"
       },
       "US": {
         "name": "irradiation",
         "days": 2,
         "cost_inr": 30000,
-        "facility": "irradiation facility, Vashi (SIM)"
+        "facility": "irradiation facility, Vashi"
       }
     }
   },
   "exporters": {
     "grapes": {
       "iec": "SIM-IEC-0301",
-      "packhouse_code": "GrapeNet PH-NSK-014 (SIM)",
-      "orchard_code": "GrapeNet farm NSK-F-2231 (SIM)"
+      "packhouse_code": "GrapeNet PH-NSK-014",
+      "orchard_code": "GrapeNet farm NSK-F-2231"
     },
     "mangoes": {
       "iec": "SIM-IEC-0412",
-      "packhouse_code": "MangoNet PH-RTN-007 (SIM)",
-      "orchard_code": "MangoNet farm RTN-F-0918 (SIM)"
+      "packhouse_code": "MangoNet PH-RTN-007",
+      "orchard_code": "MangoNet farm RTN-F-0918"
     }
   }
 }

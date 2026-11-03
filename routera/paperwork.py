@@ -196,7 +196,7 @@ def draft_pack(
         "booking_reference": f"BKG-{ref}", "port_of_loading": port, "place_of_delivery": market.name,
         "carrier": route.carrier or c.vessel_id, "cargo_description": f"{c.weight_kg:g} kg {goods.lower()}",
         "request_id": f"REQ-{ref}", "inspection_location": f"{port} plant quarantine station", "grade": "Class I",
-        "lab_name": "NABL-accredited residue lab (SIM)", "report_reference": f"MRL-{lot_id}",
+        "lab_name": "NABL-accredited residue lab", "report_reference": f"MRL-{lot_id}",
         "mrl_standard": mrl_standard, "result": f"within the {mrl_standard} MRL" if mrl_standard else None,
         "notice_id": f"NOTE-{ref}", "revised_destination": market.name,
         "revised_eta": (at + timedelta(days=route.days + route.hold_days)).date().isoformat(),
@@ -252,7 +252,7 @@ def render(pack: dict[str, Any]) -> str:
     change = pack["change"]
     lines = [
         f"ROUTERA FILING PACK (DRAFT) · {pack['plan_id']} · {pack['container_id']} → {pack['to']}",
-        "Simulated data. Drafts for human review and filing; ROUTERA submits nothing itself.",
+        "Sandbox data. Drafts for human review and filing; ROUTERA submits nothing itself.",
         f"Route: {pack['route']} · prepared {pack['prepared_at']}",
         f"Keep: {', '.join(DOCS[d].title for d in change['keep']) or 'none'}",
         f"Superseded: {', '.join(DOCS[d].title for d in change['obsolete']) or 'none'}",

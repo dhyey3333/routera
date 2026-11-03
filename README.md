@@ -25,8 +25,8 @@ python -m routera
 
 This opens http://localhost:8000: the sign-in page, with the map rerouting a broken route behind it.
 Give your name and role and press **Sign in**. It plays the India-inside Nashik corridor
-scenario live at 60× (one simulated hour per real minute). Use the dropdown to pick another scenario and
-press **Replay**, or press **Feed the Sentinel** to inject your own event. The engine and every button work
+scenario live at 60× (one simulated hour per real minute). Open **Sandbox tools** in the header to pick another
+scenario and press **Replay**, or press **Simulate an event** to inject your own. The engine and every button work
 offline; the map tiles, fonts and GSAP motion come from the internet, and the page runs without them.
 
 ### Signing in
@@ -73,9 +73,9 @@ and the summaries come from templates. See `agents/sentinel/README.md` to switch
 
 ### Approvals on your real phone
 
-Optional. A plan buzzes your phone in Telegram, with Approve, Reject and Why? buttons, and the big screen updates when you tap. Create a bot with @BotFather, set `TELEGRAM_BOT_TOKEN`, start the app, then send the `/pair` code shown in the Sunil's phone panel. The bot only makes outbound calls, so the app needs no public address.
+Optional. A plan buzzes your phone in Telegram, with Approve, Reject and Why? buttons, and the big screen updates when you tap. Create a bot with @BotFather, set `TELEGRAM_BOT_TOKEN`, start the app, then send the `/pair` code shown in the Phone approvals panel. The bot only makes outbound calls, so the app needs no public address.
 
-Only the paired private chat can decide, and only the plan version it was shown. Every decision is on the audit chain, as "Sunil P. via Telegram" (change it with `TELEGRAM_APPROVER`). Set `TELEGRAM_CHAT_ID` to skip pairing after a restart. The on-screen buttons keep working, whichever comes first counts, and route changes stay on the big screen.
+Only the paired private chat can decide, and only the plan version it was shown. Every decision is on the audit chain under the name of the Telegram account that paired, as "Asha K. via Telegram" (set `TELEGRAM_APPROVER` to fix one name). Set `TELEGRAM_CHAT_ID` to skip pairing after a restart. The on-screen buttons keep working, whichever comes first counts, and route changes stay on the big screen.
 
 ## What is an agent and what is an algorithm
 
@@ -115,7 +115,7 @@ and explainable.
 | `GET /api/map` | Places and real route geometry for the map |
 | `GET /api/whatif?place=HORMUZ` | The plan if a place shut today. A preview: nothing is booked or logged |
 | `POST /api/feeds/{name}/refresh` | Fetch one feed now (at most every 30 s) |
-| `POST /api/decisions/open` | Body `{"place": "HORMUZ", "approver": "Sunil P.", "reason": "..."}`. A named person treats a report as a real closure: a real plan opens, on the audit chain, and is approved like any other |
+| `POST /api/decisions/open` | Body `{"place": "HORMUZ", "approver": "Asha K.", "reason": "..."}`. A named person treats a report as a real closure: a real plan opens, on the audit chain, and is approved like any other |
 | `POST /api/decisions/close` | The undo: the place is open again, and a plan nobody approved closes by itself |
 | `GET /api/traffic/tile/{z}/{x}/{y}.png` | Live traffic-flow tile, fetched by the server so the key stays private |
 | `GET /api/containers/{id}/options` | Every route for one container right now, on the live closures |
