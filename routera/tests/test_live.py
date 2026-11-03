@@ -205,6 +205,28 @@ def test_traffic_reports_live_times_alternatives_and_slows_the_planner_only_for_
     assert calm.poll(NOW)[1]["slow"] == {}  # 20 minutes doesn't change a perishable decision
 
 
+def test_a_line_that_cuts_long_answers_still_gets_every_road_time_on_the_last_shape_seen() -> None:
+    good = tomtom(delay_s=600, incidents=[])
+
+    def cutting(url: str) -> bytes:  # the long answer with road shapes never arrives whole; the times-only one does
+        if "traffic=true" in url and "routeRepresentation=polyline" in url:
+            raise OSError("IncompleteRead")
+        if "summaryOnly" in url:
+            routes = json.loads(good(url))["routes"]
+            return json.dumps({"routes": [{"summary": route["summary"]} for route in routes]}).encode()
+        return good(url)
+
+    feed = TrafficFeed(env={"TOMTOM_API_KEY": "k"}, fetch=good)
+    shapes = [r["path"] for r in feed.poll(NOW)[1]["roads"]]
+    feed.fetch = cutting
+    _, state = feed.poll(NOW)
+    assert state["ok"] and state["error"] == "" and len(state["live_roads"]) == len(feed.poll(NOW)[1]["live_roads"])
+    assert state["live_roads"]["N-JNPT-LK"] == {"minutes": 160, "delay_min": 10}
+    assert [r["path"] for r in state["roads"]] == shapes  # drawn where the road was last seen
+    _, fresh = TrafficFeed(env={"TOMTOM_API_KEY": "k"}, fetch=cutting).poll(NOW)
+    assert fresh["ok"] and fresh["live_roads"] and all(r["path"] == [] for r in fresh["roads"])  # times, no shapes yet
+
+
 def test_a_closed_side_street_never_shuts_the_corridor() -> None:
     # what real TomTom data looks like: closed streets next to the highway, with no highway number
     side_street = closure(roads=())

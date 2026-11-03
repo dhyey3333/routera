@@ -17,7 +17,9 @@ its timings start today.
 from __future__ import annotations
 
 import contextlib
+import gzip
 import hashlib
+import http.client
 import json
 import math
 import os
@@ -27,7 +29,9 @@ import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+import zlib
 from collections.abc import Callable, Iterable, Iterator, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from itertools import pairwise
@@ -45,10 +49,27 @@ BOOK_EPOCH = datetime(2026, 3, 2, 6, tzinfo=UTC)  # every simulated book starts 
 Fetch = Callable[[str], bytes]
 
 
-def http_get(url: str, timeout: float = 12.0) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read()
+def http_get(url: str, timeout: float = 12.0, tries: int = 2) -> bytes:
+    """Asks for gzip: a TomTom route is 454 KB plain and 61 KB compressed, which matters on a slow line.
+
+    Some lines drop the last chunk marker after the whole body has arrived. gzip carries its own length and
+    checksum, so a body that unpacks cleanly is complete and is kept; a body that was really cut is fetched again."""
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "gzip"})
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                packed = response.headers.get("Content-Encoding") == "gzip"
+                try:
+                    body = response.read()
+                except http.client.IncompleteRead as exc:
+                    if not packed:
+                        raise
+                    body = exc.partial
+                return gzip.decompress(body) if packed else body
+        except (http.client.IncompleteRead, EOFError, gzip.BadGzipFile, zlib.error):
+            if attempt == tries - 1:
+                raise
+    raise AssertionError("unreachable")
 
 
 def status(name: str, label: str, ok: bool, summary: str, items: list[dict[str, Any]] | None = None,
@@ -154,6 +175,8 @@ GDACS_PLACES = (  # (label, lat, lon, region, port or chokepoint code): every no
 GDACS_RADIUS_KM = {"TC": 500, "FL": 300, "EQ": 200, "VO": 100, "WF": 100}  # ASSUMPTION: how far each hazard reaches
 GDACS_DAYS = {"TC": 3, "FL": 3, "EQ": 1, "VO": 2, "WF": 2}  # ASSUMPTION: how long an alert stays open
 GDACS_TIMEOUT_S = 40.0
+TOMTOM_TIMEOUT_S = 30.0  # a slow line streams a route for longer than the default 12 s allows
+TOMTOM_AT_ONCE = 3  # routes fetched side by side
 GDACS_LEVEL = {"Red": "red", "Orange": "orange", "Green": "yellow"}  # the Sentinel acts on orange and red only
 
 
@@ -462,15 +485,17 @@ class TrafficFeed:
     (plus one per run for the road's own path).
 
     The key stays on the server: it never reaches the browser, and map tiles come through tile() below.
-    Only the Nashik to JNPT road is checked for closures; TomTom's data for an Indian road may be thin."""
+    Only the Nashik to JNPT road is checked for closures; TomTom's data for an Indian road may be thin.
+    Routes come compressed, three at a time, with a long timeout, so a slow line still gets through."""
 
     name, label, interval_s = "traffic", "TomTom live traffic", 600.0
 
-    def __init__(self, env: Mapping[str, str] | None = None, fetch: Fetch = http_get) -> None:
+    def __init__(self, env: Mapping[str, str] | None = None, fetch: Fetch | None = None) -> None:
         self.key = (os.environ if env is None else env).get("TOMTOM_API_KEY", "")
-        self.fetch = fetch
+        self.fetch = fetch or (lambda url: http_get(url, timeout=TOMTOM_TIMEOUT_S))
         self.closed: dict[str, str] = {}  # segment -> what closed it
         self.corridor: list[list[float]] | None = None  # the Nashik to JNPT road when nothing is closed
+        self.shapes: dict[tuple[str, int], list[list[float]]] = {}  # (road, route number) -> last shape seen
         self._tiles: dict[tuple[int, int, int, bool], tuple[float, bytes]] = {}
         self._lock = threading.Lock()
 
@@ -482,11 +507,28 @@ class TrafficFeed:
     def _clean(self, exc: Exception) -> str:
         return repr(exc).replace(self.key, "***")[:200] if self.key else repr(exc)[:200]
 
-    def _route_url(self, a: dict[str, Any], b: dict[str, Any]) -> str:
+    def _route_url(self, a: dict[str, Any], b: dict[str, Any], shapes: bool = True) -> str:
         return (f"{TOMTOM}/routing/1/calculateRoute/{a['lat']},{a['lon']}:{b['lat']},{b['lon']}/json?"
                 + urllib.parse.urlencode({"key": self.key, "traffic": "true", "travelMode": "truck",
                                           "vehicleCommercial": "true", "computeTravelTimeFor": "all",
-                                          "maxAlternatives": 2, "routeRepresentation": "polyline"}))
+                                          "maxAlternatives": 2,
+                                          "routeRepresentation": "polyline" if shapes else "summaryOnly"}))
+
+    def _routes(self, label: str, a: dict[str, Any],
+                b: dict[str, Any]) -> list[tuple[dict[str, Any], list[list[float]]]]:
+        """Each route's summary and road shape. The shapes make an answer about 60 KB, the times alone about 3 KB:
+        if a slow line cuts the long answer, the times still come, drawn on the last shape seen for that road."""
+        try:
+            routes = json.loads(self.fetch(self._route_url(a, b))).get("routes") or []
+        except Exception:
+            routes = json.loads(self.fetch(self._route_url(a, b, shapes=False))).get("routes") or []
+        out = []
+        for i, route in enumerate(routes):
+            points = [[p["latitude"], p["longitude"]] for leg in route.get("legs", []) for p in leg.get("points", [])]
+            if points:
+                self.shapes[(label, i)] = points
+            out.append((route, points or self.shapes.get((label, i), [])))
+        return out
 
     def _corridor(self, geo: dict[str, Any]) -> list[list[float]]:
         """The road itself, in full detail: via Kasara, ignoring live traffic. Fetched once per run."""
@@ -517,25 +559,29 @@ class TrafficFeed:
         live_path: list[list[float]] | None = None  # where TomTom sends a truck from Nashik to JNPT right now
         live_roads: dict[str, dict[str, float]] = {}
         slow: dict[str, float] = {}
-        for label, a, b, route_ids, place in TRAFFIC_CORRIDORS:
+
+        def routes_for(label: str, a: str, b: str) -> list[tuple[dict[str, Any], list[list[float]]]]:
+            start, end = (TRAFFIC_POINTS.get(code) or geo["places"][code] for code in (a, b))
+            return self._routes(label, start, end)
+
+        with ThreadPoolExecutor(max_workers=TOMTOM_AT_ONCE) as pool:
+            jobs = [pool.submit(routes_for, label, a, b) for label, a, b, _, _ in TRAFFIC_CORRIDORS]
+        for (label, _, b, route_ids, place), job in zip(TRAFFIC_CORRIDORS, jobs, strict=True):
             try:
-                start, end = (TRAFFIC_POINTS.get(code) or geo["places"][code] for code in (a, b))
-                routes = json.loads(self.fetch(self._route_url(start, end))).get("routes") or []
+                routes = job.result()
             except Exception as exc:
                 errors.append(self._clean(exc))
                 continue
-            for i, route in enumerate(routes):
+            for i, (route, points) in enumerate(routes):
                 s = route["summary"]
                 minutes, delay = s["travelTimeInSeconds"] / 60, s.get("trafficDelayInSeconds", 0) / 60
                 clear = s.get("noTrafficTravelTimeInSeconds", s["travelTimeInSeconds"]) / 60
-                points = [[p["latitude"], p["longitude"]]
-                          for leg in route.get("legs", []) for p in leg.get("points", [])]
                 roads.append({"label": label, "alternative": i > 0, "km": round(s["lengthInMeters"] / 1000),
                               "minutes": round(minutes), "delay_min": round(delay), "clear_min": round(clear),
                               "path": points[:: max(1, len(points) // 150)] + points[-1:]})
                 if i:
                     continue
-                if place == "KASARA_GHAT":
+                if place == "KASARA_GHAT" and points:
                     live_path = points
                 late = f"+{clock_time(delay)} in traffic" if delay >= 1 else "no delay"
                 km = s["lengthInMeters"] / 1000
