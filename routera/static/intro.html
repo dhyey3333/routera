@@ -26,7 +26,7 @@ a:focus-visible, button:focus-visible { outline: 3px solid #fff; outline-offset:
 
 .page { position: relative; display: flex; flex-wrap: wrap; min-height: 100vh; overflow: hidden; }
 
-/* --- the story: a real plan from the engine, told on the map ------------------------------------ */
+/* --- the hero: the product in one line, with the map working behind it ------------------------- */
 .story { flex: 999 1 560px; min-width: 0; min-height: 640px; position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 28px 40px; }
 .map { position: absolute; top: 0; left: 14%; width: 100%; height: 100%; display: block; }
 .map .lbl { font-family: var(--mono); font-weight: 500; paint-order: stroke; stroke: var(--ink); stroke-width: 2.4px; }
@@ -35,27 +35,22 @@ a:focus-visible, button:focus-visible { outline: 3px solid #fff; outline-offset:
 .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px; letter-spacing: .1em; }
 .tagline { font-size: 11.5px; color: var(--soft); }
 .grow { flex: 1; min-height: 150px; }
-.words { position: relative; display: grid; max-width: 500px; pointer-events: none; }
-.block { grid-area: 1 / 1; }
-.kicker { font-size: 12px; letter-spacing: .1em; margin-bottom: 10px; }
-.block h1 { margin: 0; font-size: clamp(34px, 3.7vw, 54px); line-height: 1.04; font-weight: 700; letter-spacing: -.025em; }
-.block h1 > span { display: block; overflow: hidden; }
-.block h1 > span > span { display: block; }
-.read { display: flex; align-items: baseline; gap: 14px; margin-top: 16px; }
-.read b { font-size: 40px; font-weight: 300; letter-spacing: -.02em; white-space: nowrap; }
-.read span { color: var(--soft-2); font-size: 14.5px; line-height: 1.35; }
-.steps { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 26px; max-width: 620px; }
-.steps button { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--soft); text-align: left; font-weight: 600; font-size: 13px; cursor: pointer; }
-.steps button:hover, .steps button.on { color: #fff; }
-.steps i { display: block; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
-.steps i b { display: block; height: 100%; background: var(--c); transform-origin: left center; }
-.small { position: relative; margin-top: 10px; font-size: 10.5px; letter-spacing: .05em; color: #9AA6D2; }
+.hero { position: relative; isolation: isolate; max-width: 560px; pointer-events: none; }
+.hero::before { content: ""; position: absolute; inset: -60px -90px -40px -60px; z-index: -1; background: radial-gradient(closest-side, rgba(10, 17, 48, .88), rgba(10, 17, 48, 0)); }
+.hero h1 { margin: 0; font-size: clamp(38px, 4.2vw, 62px); line-height: 1.02; font-weight: 700; letter-spacing: -.03em; }
+.hero h1 > span { display: block; overflow: hidden; padding-bottom: .06em; }
+.hero h1 > span > span { display: block; }
+.lede { margin: 18px 0 0; max-width: 480px; color: var(--soft-2); font-size: 16.5px; line-height: 1.5; }
+.caps { display: grid; grid-template-columns: repeat(2, max-content); gap: 12px 30px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 14px; font-weight: 600; }
+.caps li { display: flex; align-items: center; gap: 10px; }
+.caps li::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent); }
 
 /* --- signing in --------------------------------------------------------------------------------- */
 .panel { flex: 1 1 400px; min-width: 0; position: relative; background: var(--blue); display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding: 32px 36px; }
-.event { font-size: 11.5px; color: var(--on-blue); }
+.ask { align-self: flex-end; color: var(--on-blue); font-size: 13.5px; }
+.ask b { color: #fff; }
 form { display: flex; flex-direction: column; gap: 18px; }
-form h2 { margin: 0 0 8px; font-size: 42px; line-height: 1.04; font-weight: 700; letter-spacing: -.025em; }
+form h2 { margin: 0 0 8px; font-size: 40px; line-height: 1.04; font-weight: 700; letter-spacing: -.025em; }
 form p { margin: 0; color: var(--on-blue); font-size: 15.5px; }
 .field { display: flex; flex-direction: column; gap: 7px; font-weight: 600; font-size: 14px; }
 .field input { height: 52px; padding: 0 14px; border: 2px solid transparent; border-radius: 12px; background: #fff; color: var(--ink); font-size: 16px; font-weight: 500; outline: none; }
@@ -75,12 +70,13 @@ form p { margin: 0; color: var(--on-blue); font-size: 15.5px; }
 .go .fill { position: absolute; inset: 0; background: #fff; transform: scaleX(0); transform-origin: left center; }
 .go > span:not(.fill), .go svg { position: relative; }
 .go svg { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.foot { margin: 0; color: var(--on-blue); font-size: 13px; line-height: 1.4; }
+.foot { margin: 0; color: var(--on-blue); font-size: 12.5px; line-height: 1.5; }
+.foot .dim { opacity: .8; }
+.hint { margin: -6px 0 0; color: var(--on-blue); font-size: 13.5px; }
 .wipe { position: fixed; inset: 0; z-index: 50; background: var(--ground); visibility: hidden; pointer-events: none; }
 
-/* No motion: the last step of the story, standing still. */
+/* No motion: the map at the end of its loop, standing still. */
 .still [data-sig], .still [data-ring], .still [data-pulse], .still [data-tag], .still [data-tag2], .still [data-bracket] { visibility: hidden; }
-.still .block:not([data-block="3"]) { visibility: hidden; }
 .still [data-route] { stroke: var(--lime); }
 
 @media (max-width: 900px) {
@@ -90,10 +86,9 @@ form p { margin: 0; color: var(--on-blue); font-size: 15.5px; }
   .story { padding: 20px 16px; min-height: 580px; }
   .map { left: 24%; }
   .panel { padding: 24px 16px; }
-  .steps { gap: 8px; }
-  .steps button { font-size: 12px; }
+  .caps { grid-template-columns: 1fr; gap: 10px; }
   form h2 { font-size: 34px; }
-  .read b { font-size: 32px; }
+  .ask { align-self: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -165,53 +160,33 @@ form p { margin: 0; color: var(--on-blue); font-size: 15.5px; }
 
     <div class="grow"></div>
 
-    <div class="words">
-      <div class="block" data-block="0">
-        <div class="kicker mono" data-rest style="color:#FF8C74">01 SENSE</div>
-        <h1><span><span data-line>A route or market</span></span><span><span data-line>breaks mid-season.</span></span></h1>
-        <div class="read" data-rest><b data-read="feeds" style="color:#FF8C74">5 live feeds</b><span>weather, disaster alerts, traffic, news and ships. Only an official source can confirm.</span></div>
-      </div>
-      <div class="block" data-block="1" aria-hidden="true">
-        <div class="kicker mono" data-rest style="color:#FFC24B">02 SHELF-LIFE CLOCK</div>
-        <h1><span><span data-line>Every container gets</span></span><span><span data-line>its own clock.</span></span></h1>
-        <div class="read" data-rest><b style="color:#FFC24B">Days left</b><span>on every box, ticking down at its own temperature.</span></div>
-      </div>
-      <div class="block" data-block="2" aria-hidden="true">
-        <div class="kicker mono" data-rest style="color:#A6B8FF">03 DECIDE</div>
-        <h1><span><span data-line>Every way out,</span></span><span><span data-line>priced in a second.</span></span></h1>
-        <div class="read" data-rest><b style="color:#A6B8FF">Every route</b><span>for every box, spread across markets so no single one crashes.</span></div>
-      </div>
-      <div class="block" data-block="3" aria-hidden="true">
-        <div class="kicker mono" data-rest style="color:#C8F751">04 APPROVE AND LOG</div>
-        <h1><span><span data-line>Nothing moves until</span></span><span><span data-line>a person says yes.</span></span></h1>
-        <div class="read" data-rest><b style="color:#C8F751">Every step</b><span>goes on a log under the approver’s name, so any tampering shows.</span></div>
-      </div>
+    <div class="hero">
+      <h1><span><span data-line>Every container sold</span></span><span><span data-line>before it spoils.</span></span></h1>
+      <p class="lede" data-hero>ROUTERA watches roads, ports, weather and markets, prices every way out for each container, and moves nothing until your team says yes.</p>
+      <ul class="caps" data-hero>
+        <li style="--c:#FF5A3C">Live disruption alerts</li>
+        <li style="--c:#FFC24B">Shelf life per container</li>
+        <li style="--c:#7C96FF">Every route priced</li>
+        <li style="--c:#C8F751">Approvals with an audit trail</li>
+      </ul>
     </div>
-
-    <div class="steps" role="group" aria-label="Story steps" data-steps>
-      <button type="button" data-step="0" style="--c:#FF5A3C"><i><b data-prog></b></i>Sense</button>
-      <button type="button" data-step="1" style="--c:#FFC24B"><i><b data-prog></b></i>Shelf-life clock</button>
-      <button type="button" data-step="2" style="--c:#7C96FF"><i><b data-prog></b></i>Decide</button>
-      <button type="button" data-step="3" style="--c:#C8F751"><i><b data-prog></b></i>Approve and log</button>
-    </div>
-    <div class="small mono" data-small>WHAT ROUTERA DOES WHEN A ROUTE BREAKS, IN FOUR STEPS</div>
   </section>
 
   <aside class="panel" id="panel">
-    <div class="event mono" data-in>SAP HACKFEST 2026 · TEAM CODE CATALYST</div>
+    <div class="ask" data-in>No access yet? <b>Ask your team lead for the code.</b></div>
 
     <form id="signin" novalidate>
       <div data-in>
-        <h2>Who's on duty?</h2>
-        <p>Your name goes on the audit log, next to every decision you make.</p>
+        <h2>Sign in</h2>
+        <p>Welcome back. Your name goes on the audit log next to every decision you make.</p>
       </div>
 
-      <label class="field" data-in data-field="name">Your name
+      <label class="field" data-in data-field="name">Full name
         <input id="name" type="text" autocomplete="name" placeholder="Sunil P." maxlength="40" required>
       </label>
 
       <div class="field" data-in>
-        <span id="role-label">Your role</span>
+        <span id="role-label">Role</span>
         <div class="roles" id="roles" role="group" aria-labelledby="role-label">
           <span class="pill" id="rolepill"></span>
           <button type="button" data-role="ops" aria-pressed="true">Operations lead</button>
@@ -230,12 +205,12 @@ form p { margin: 0; color: var(--on-blue); font-size: 15.5px; }
 
       <button type="submit" class="go" id="go" data-in>
         <span class="fill" aria-hidden="true"></span>
-        <span>Enter the control room</span>
+        <span>Sign in</span>
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
       </button>
     </form>
 
-    <p class="foot" data-in>Real feeds, simulated fleet: containers, prices and SAP TM bookings in this prototype are simulated.<span id="open-note" hidden> This server has no team access code set, so signing in only records who's at the desk.</span></p>
+    <p class="foot" data-in>© 2026 ROUTERA · Team Code Catalyst, RV University · SAP Hackfest 2026<br><span class="dim">Live data from five public feeds. Containers, prices and SAP TM bookings in this prototype are simulated.</span><span class="dim" id="open-note" hidden> This server has no team access code set, so signing in only records who's at the desk.</span></p>
   </aside>
 
   <div class="wipe" id="wipe" aria-hidden="true"></div>
@@ -252,7 +227,7 @@ const moves = () => Boolean(window.gsap) && !calm.matches;
 function store(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* storage off */ } }
 function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 const nameIn = $("#name"), codeIn = $("#code"), err = $("#err"), go = $("#go");
-let role = "ops", me = { signed_in: false, code_required: true }, leaving = false, story = null, at = [0];
+let role = "ops", me = { signed_in: false, code_required: true }, leaving = false, story = null;
 
 // --- who's at the desk --------------------------------------------------------------------------
 function pickRole(id, duration = 0) {
@@ -329,7 +304,7 @@ function leave() {
     .to(go, { scale: 1, duration: 0.3, ease: "back.out(3)" }, 0.12)
     .to($$("#panel > *"), { y: -14, autoAlpha: 0, duration: 0.35, stagger: 0.05, ease: "power2.in" }, 0.2)
     .to("#panel", { xPercent: 100, duration: 0.7, ease: "power4.in" }, 0.4)
-    .to($$(".block, [data-steps], [data-small], [data-top]"), { autoAlpha: 0, duration: 0.35 }, 0.25)
+    .to($$(".hero, [data-top]"), { autoAlpha: 0, duration: 0.35 }, 0.25)
     .to(view, { x: 322, y: 188, w: 72, h: 63, duration: 1.2, ease: "power3.inOut", onUpdate: () => svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`) }, 0.35)
     .set("#wipe", { visibility: "visible", yPercent: 100 }, 0.95)
     .to("#wipe", { yPercent: 0, duration: 0.6, ease: "power4.inOut" }, 0.95);
@@ -345,7 +320,7 @@ function hoverGo(on) {
   gsap.to(".go svg", { x: on ? 6 : 0, duration: 0.35, ease: "back.out(2.2)", overwrite: true });
 }
 
-// --- the story: four steps on a loop, what ROUTERA does when a route breaks ----------------------
+// --- the map behind the hero: a route breaks, boxes start their clocks, new routes, a yes; on a loop --
 function enter() {
   const logo = $("#logo"), length = logo.getTotalLength();
   gsap.timeline({ defaults: { ease: "power4.out" } })
@@ -355,32 +330,13 @@ function enter() {
     .from("#logodot", { scale: 0, transformOrigin: "center", duration: 0.5, ease: "back.out(3)" }, 0.95)
     .from("[data-land]", { autoAlpha: 0, duration: 1.4, ease: "power1.out" }, 0)
     .from("[data-grid]", { autoAlpha: 0, duration: 1.6, ease: "power1.out" }, 0.3)
-    .from($$("[data-steps], [data-small]"), { autoAlpha: 0, y: 12, duration: 0.7, stagger: 0.1 }, 0.5);
+    .from($$(".hero [data-line]"), { yPercent: 115, duration: 1, stagger: 0.12 }, 0.4)
+    .from($$("[data-hero]"), { autoAlpha: 0, y: 14, duration: 0.8, stagger: 0.12 }, 0.75);
 }
 function tell() {
   const NX = 356.9, NY = 218.7, KX = 352.2, KY = 224.5;
-  const blocks = $$("[data-block]"), prog = $$("[data-prog]");
-  const D = [4.6, 3.9, 4.6, 5];
-  at = [0, 4.6, 8.5, 13.1];
+  const D = [4.6, 3.9, 4.6, 5], at = [0, 4.6, 8.5, 13.1];
   const tl = story = gsap.timeline({ repeat: -1, repeatDelay: 0.3, defaults: { ease: "power3.out" }, delay: 0.9 });
-  gsap.set(blocks, { autoAlpha: 0 });
-  gsap.set(prog, { scaleX: 0 });
-  const count = (el, from, to, fmt, when, duration, opens) => {
-    const box = { v: from };
-    tl.call(() => { el.textContent = fmt(from); }, null, opens);  // starts low, every telling
-    tl.fromTo(box, { v: from }, { v: to, duration, ease: "power2.out", onUpdate: () => { el.textContent = fmt(box.v); } }, when);
-  };
-  blocks.forEach((block, i) => {
-    const lines = $$("[data-line]", block), rest = $$("[data-rest]", block);
-    tl.set(block, { autoAlpha: 1 }, at[i]);
-    tl.call(showStep, [i], at[i]);
-    tl.fromTo(lines, { yPercent: 115 }, { yPercent: 0, duration: 0.9, ease: "power4.out", stagger: 0.1 }, at[i] + 0.05);
-    tl.fromTo(rest, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.12 }, at[i] + 0.3);
-    tl.to(lines, { yPercent: -115, duration: 0.42, ease: "power3.in", stagger: 0.05 }, at[i] + D[i] - 0.52);
-    tl.to(rest, { autoAlpha: 0, duration: 0.28 }, at[i] + D[i] - 0.45);
-    tl.set(block, { autoAlpha: 0 }, at[i] + D[i] - 0.02);
-    tl.fromTo(prog[i], { scaleX: 0 }, { scaleX: 1, duration: D[i], ease: "none" }, at[i]);
-  });
 
   // 1. Sense: the noise fades on the way in, one official signal lands, and the road goes red
   const sigs = $$("[data-sig]");
@@ -392,7 +348,6 @@ function tell() {
     tl.to(sig, { autoAlpha: 0, duration: 0.2 }, when + (real ? 0.8 : 0.42));
   });
   const hit = 0.25 + (sigs.length - 1) * 0.2 + 0.82, pin = { svgOrigin: `${KX} ${KY}` };
-  count($('[data-read="feeds"]'), 0, 5, (v) => `${Math.round(v)} live feeds`, hit - 0.5, 0.9, at[0]);
   tl.fromTo("[data-break]", { ...pin, scale: 0 }, { scale: 1, duration: 0.5, ease: "back.out(3)" }, hit);
   gsap.set("[data-pulse]", { autoAlpha: 0 });
   tl.set("[data-pulse]", { autoAlpha: 0 }, 0);
@@ -447,24 +402,12 @@ function tell() {
   // and clear the board for the next telling
   tl.to([...order, ...$$("[data-dest]"), ...dots, "[data-approved]", "[data-break]", "[data-blocked]"], { autoAlpha: 0, duration: 0.35, ease: "power1.in" }, at[3] + D[3] - 0.35);
 }
-function showStep(i) {  // which words are read out, and which step is lit
-  $$("[data-block]").forEach((b, j) => b.setAttribute("aria-hidden", String(j !== i)));
-  $$("[data-step]").forEach((b, j) => b.classList.toggle("on", j === i));
-}
-$("[data-steps]").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-step]");
-  if (!b || !story) return;
-  showStep(Number(b.dataset.step));  // a seek skips the timeline's own calls
-  story.seek(at[Number(b.dataset.step)] + 0.001).play();
-});
 document.addEventListener("visibilitychange", () => { if (story && !leaving) (document.hidden ? story.pause() : story.play()); });
 
 function start() {
   movePill(0);
   if (!moves()) {
     $("#page").classList.add("still");
-    showStep(3);
-    $$("[data-prog]").forEach((p) => { p.style.transform = "scaleX(1)"; });
     return;
   }
   gsap.config({ nullTargetWarn: false });

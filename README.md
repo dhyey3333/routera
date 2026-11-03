@@ -23,8 +23,8 @@ python -m pip install -r requirements.txt
 python -m routera
 ```
 
-This opens http://localhost:8000: a short intro that tells one real plan on the map, and the sign-in.
-Give your name and role and press **Enter the control room**. It plays the India-inside Nashik corridor
+This opens http://localhost:8000: the sign-in page, with the map rerouting a broken route behind it.
+Give your name and role and press **Sign in**. It plays the India-inside Nashik corridor
 scenario live at 60× (one simulated hour per real minute). Use the dropdown to pick another scenario and
 press **Replay**, or press **Feed the Sentinel** to inject your own event. The engine and every button work
 offline; the map tiles, fonts and GSAP motion come from the internet, and the page runs without them.
