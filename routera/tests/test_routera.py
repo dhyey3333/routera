@@ -19,6 +19,7 @@ from routera.audit import HashChainAudit
 from routera.compliance import ComplianceRules
 from routera.market import load_markets, realised_price
 from routera.orchestrator import Orchestrator
+from routera.planner import Context, Planner
 from routera.reroute import Route, load_routes, unavailable
 from routera.shelf_life import CROPS, ShelfLifeTracker, rate
 
@@ -80,6 +81,30 @@ def test_saturation_lowers_price_down_to_the_floor_and_crash_cuts_it() -> None:
     assert 1 > sat_first > sat_later > sat_flooded == m.floor_ratio
     crashed, _ = realised_price(m, added_t=0, load_t=18, crash_pct=40)
     assert crashed == pytest.approx(first * 0.6)
+
+
+def test_every_fresh_crop_has_its_own_price_and_shrimp_still_uses_the_grape_price() -> None:
+    markets = load_markets()
+    for m in markets.values():
+        assert {"mangoes", "pomegranate", "banana", "onion"} <= m.prices.keys(), m.id
+        assert m.price("shrimp") == m.price("grapes") == m.price_inr_per_kg  # shrimp is not priced yet
+    sg, delhi = markets["SGSIN"], markets["MKT-AZADPUR"]
+    assert sg.price("pomegranate") > sg.price("grapes") > sg.price("banana") > sg.price("onion")
+    assert all(sg.price(crop) > delhi.price(crop) for crop in ("pomegranate", "banana", "onion"))
+
+
+def test_the_planner_prices_each_box_at_its_own_crop() -> None:
+    markets = load_markets()
+    for cid in ("POM-01", "BAN-01", "ONI-01"):
+        c = box(cid)
+        now = c.eta - timedelta(days=3)
+        tracker = ShelfLifeTracker(now)
+        planner = Planner(markets, list(ROUTES.values()), ComplianceRules(), tracker, {})
+        option = planner.evaluate(c, ROUTES["J-SG"], tracker.estimate(c, now).days_left, Context(now=now), {}, {})
+        assert option["feasible"], (cid, option.get("reason"))
+        list_price = option["price_inr_per_kg"] / option["saturation"]
+        assert list_price == pytest.approx(markets["SGSIN"].price(c.crop), abs=0.5), cid
+        assert list_price != pytest.approx(markets["SGSIN"].price("grapes"), abs=0.5), cid
 
 
 def test_only_verified_law_blocks_unverified_rules_go_to_a_human_and_paperwork_is_drafted() -> None:
