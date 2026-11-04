@@ -7,8 +7,10 @@ import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import pytest
+
 from agents.sentinel.fakes import JsonContainerRepo
-from routera.app import RouteraService
+from routera.app import AskedAhead, RouteraService
 from routera.compliance import ComplianceRules
 from routera.live_feeds import (
     AT_ANCHOR,
@@ -363,3 +365,73 @@ def test_live_mode_feeds_the_same_sentinel_planner_and_chain() -> None:
         assert state["routera"]["chain"]["ok"]
     finally:
         service.stop_replay()
+
+
+class HeadlineFeed:
+    """Three new headlines, padded the way RSS titles sometimes are."""
+
+    name, label, interval_s = "news", "Google News (test)", 3600.0
+
+    def poll(self, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        events = [{"event_id": f"GN-{i}", "source": "news", "kind_hint": None,
+                   "payload": {"headline": f"  Jebel Ali port closed, day {i} ", "body": "", "outlet": "Test"}}
+                  for i in range(3)]
+        return events, status(self.name, self.label, True, "3 headlines")
+
+
+class LockWatchingLLM:
+    """Says whether the service's lock was free each time it was asked."""
+
+    def __init__(self) -> None:
+        self.service: RouteraService | None = None
+        self.asked: list[tuple[str, bool]] = []
+
+    def classify_news(self, headline: str, body: str) -> dict[str, Any]:
+        assert self.service is not None
+        free = self.service._lock.acquire(blocking=False)
+        if free:
+            self.service._lock.release()
+        self.asked.append((headline, free))
+        return {"type": "PORT_CLOSURE", "location": "Jebel Ali", "confidence": 0.9}
+
+    def summarise(self, disruption: dict[str, Any]) -> str:
+        return ""
+
+
+def test_live_headlines_go_to_the_llm_before_the_lock_and_only_once() -> None:
+    llm = LockWatchingLLM()
+    service = RouteraService(feeds=[HeadlineFeed()], llm=llm, llm_label="genai_hub:gpt-4o-mini")
+    llm.service = service
+    try:
+        service.start_live()
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline and not service.live["feeds"]:
+            time.sleep(0.1)
+        state = service.snapshot()
+        assert sorted(llm.asked) == [(f"Jebel Ali port closed, day {i}", True) for i in range(3)]
+        assert state["llm"] == "genai_hub:gpt-4o-mini"
+        assert {s["classified_by"] for s in state["signals"] if s["source"] == "news"} == {"llm"}
+    finally:
+        service.stop_replay()
+
+
+def test_an_llm_failure_asked_ahead_falls_back_once_then_asks_again() -> None:
+    asked: list[str] = []
+
+    class Slow:
+        def classify_news(self, headline: str, body: str) -> dict[str, Any]:
+            asked.append(headline)
+            raise TimeoutError("no reply within 8 s")
+
+        def summarise(self, disruption: dict[str, Any]) -> str:
+            return ""
+
+    llm = AskedAhead(Slow())
+    llm.ahead([{"source": "news", "payload": {"headline": "Port shut", "body": ""}},
+               {"source": "road_authority", "payload": {"segment": "Kasara ghat"}}])
+    with pytest.raises(TimeoutError):
+        llm.classify_news("Port shut", "")  # the answer given ahead: no second wait
+    assert asked == ["Port shut"]
+    with pytest.raises(TimeoutError):
+        llm.classify_news("Port shut", "")  # used up, so a later copy asks again
+    assert asked == ["Port shut", "Port shut"]

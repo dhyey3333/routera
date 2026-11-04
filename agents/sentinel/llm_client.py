@@ -11,18 +11,26 @@ reply simply falls back to keyword rules or the template.
 Environment:
     SENTINEL_LLM                off (default) | genai_hub | anthropic | openai
     SENTINEL_LLM_TIMEOUT        seconds per call (default 8)
-    SENTINEL_GENAI_HUB_MODEL    default gpt-4o-mini   credentials: AICORE_* or ~/.aicore/config.json
+    SENTINEL_GENAI_HUB_MODEL    default gpt-4o-mini   credentials: AICORE_SERVICE_KEY (the whole
+                                                      service key JSON), AICORE_* or
+                                                      ~/.aicore/config.json; AICORE_RESOURCE_GROUP
+                                                      defaults to "default"
     SENTINEL_ANTHROPIC_MODEL    default claude-opus-5-5   credentials: ANTHROPIC_API_KEY or
                                                           an `ant auth login` profile
     SENTINEL_OPENAI_MODEL       default gpt-4o-mini   credentials: OPENAI_API_KEY
+
+Check the LLM before a demo with one test call:
+    python -m agents.sentinel.llm_client --llm genai_hub
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import os
 import re
+import time
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
@@ -153,6 +161,8 @@ class ChatLLM:
 
 
 def _aicore_configured(env: Mapping[str, str]) -> bool:
+    if env.get("AICORE_SERVICE_KEY"):
+        return True
     if env.get("AICORE_CLIENT_ID") and env.get("AICORE_CLIENT_SECRET"):
         return True
     home = Path(env.get("AICORE_HOME") or Path.home() / ".aicore")
@@ -161,19 +171,29 @@ def _aicore_configured(env: Mapping[str, str]) -> bool:
 
 def genai_hub_backend(model: str, timeout: float, env: Mapping[str, str]) -> Complete:
     """SAP Generative AI Hub through its native OpenAI proxy (package sap-ai-sdk-gen, which
-    replaces the deprecated generative-ai-hub-sdk; both import as gen_ai_hub)."""
+    replaces the deprecated generative-ai-hub-sdk; both import as gen_ai_hub). The SDK reads the
+    credentials itself and finds the running deployment of `model` in the resource group."""
     if not _aicore_configured(env):
         raise LLMUnavailable(
-            "no AICORE_CLIENT_ID/AICORE_CLIENT_SECRET and no ~/.aicore/config.json"
+            "no AICORE_SERVICE_KEY, no AICORE_CLIENT_ID/AICORE_CLIENT_SECRET"
+            " and no ~/.aicore/config.json"
         )
     try:
-        from gen_ai_hub.proxy.native.openai import chat
+        from gen_ai_hub.proxy.core.proxy_clients import get_proxy_client
+        from gen_ai_hub.proxy.native.openai import OpenAI
     except ImportError as exc:
         raise LLMUnavailable("install sap-ai-sdk-gen (imports as gen_ai_hub)") from exc
+    try:
+        proxy = get_proxy_client(
+            "gen-ai-hub", resource_group=env.get("AICORE_RESOURCE_GROUP") or "default"
+        )
+    except (KeyError, ValueError) as exc:  # an incomplete or unreadable service key
+        raise LLMUnavailable(f"SAP AI Core credentials: {exc}") from exc
+    client = OpenAI(proxy_client=proxy, timeout=timeout, max_retries=0)
 
     def complete(system: str, user: str, schema: dict[str, Any] | None, max_tokens: int) -> str:
         extra = {"response_format": {"type": "json_object"}} if schema else {}
-        response = chat.completions.create(
+        response = client.chat.completions.create(
             model_name=model,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             max_tokens=max_tokens,
@@ -290,3 +310,55 @@ def build_llm_client(
         client = ChatLLM(provider, model, complete, timeout)
         return LLMSelection(client, client.label, notes)
     return LLMSelection(None, "off (no LLM provider available)", notes)
+
+
+# --- check before a demo --------------------------------------------------------------------------
+
+CHECK_HEADLINE = "Kasara ghat closed after a landslide on the Mumbai-Nashik highway"
+CHECK_BODY = "Trucks bound for JNPT are being turned back at Igatpuri."
+
+
+def _running_models(env: Mapping[str, str]) -> list[str]:
+    """The models with a running deployment in the AI Core resource group, for the error hint."""
+    try:
+        from gen_ai_hub.proxy.core.proxy_clients import get_proxy_client
+
+        proxy = get_proxy_client(
+            "gen-ai-hub", resource_group=env.get("AICORE_RESOURCE_GROUP") or "default"
+        )
+        return sorted({d.model_name for d in proxy.deployments if d.model_name})
+    except Exception:  # only a hint; the error itself is already printed
+        return []
+
+
+def main(argv: list[str] | None = None) -> int:
+    """One test call, so a bad key or a missing deployment shows up before the demo."""
+    parser = argparse.ArgumentParser(
+        prog="python -m agents.sentinel.llm_client", description=main.__doc__
+    )
+    parser.add_argument("--llm", choices=CHAIN, help="override SENTINEL_LLM")
+    args = parser.parse_args(argv)
+    selection = build_llm_client(args.llm)
+    print(f"LLM: {selection.label}" + "".join(f"\n  {note}" for note in selection.notes))
+    if selection.client is None:
+        return 1
+    started = time.monotonic()
+    try:
+        reply = selection.client.classify_news(CHECK_HEADLINE, CHECK_BODY)
+    except Exception as exc:
+        first = (str(exc).splitlines() or [""])[0][:300]
+        print(f"Test call failed: {type(exc).__name__}: {first}")
+        if "No deployment found" in str(exc):
+            running = _running_models(os.environ)
+            print(
+                "  Deploy that model in SAP AI Launchpad (Generative AI Hub), or set "
+                "SENTINEL_GENAI_HUB_MODEL to one that is running: "
+                + (", ".join(running) or "none found")
+            )
+        return 1
+    print(f"Test call OK in {time.monotonic() - started:.1f} s: {json.dumps(reply)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

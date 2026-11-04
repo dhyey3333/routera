@@ -24,16 +24,19 @@ import os
 import threading
 import time
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
+from pydantic import ValidationError
 
 from agents.sentinel.api import STATIC_DIR as SENTINEL_STATIC
 from agents.sentinel.api import SentinelService, create_app
 from agents.sentinel.llm_client import LLM_MODES, build_llm_client
+from agents.sentinel.models import NewsPayload
 from agents.sentinel.replay import SCENARIO_NAMES, Rig, Scenario, make_rig
 from routera.access import COOKIE, ROLES, SESSION_S, Access
 from routera.audit import HashChainAudit
@@ -63,10 +66,60 @@ def live_scenario(now: datetime) -> Scenario:
     )
 
 
+class AskedAhead:
+    """The LLM, asked about new live headlines before the service takes its lock, so the control room
+    never waits on it: the first news poll alone sends about 30. Anything else goes straight through."""
+
+    def __init__(self, llm: Any, workers: int = 4) -> None:
+        self.llm, self.workers = llm, workers
+        self._answers: dict[tuple[str, str], Any] = {}  # (headline, body) -> reply or the exception
+        self._guard = threading.Lock()
+
+    def ahead(self, events: list[dict[str, Any]]) -> None:
+        asks = []
+        for event in events:
+            if event.get("source") != "news":
+                continue
+            try:  # the text exactly as the Sentinel will see it (stripped)
+                p = NewsPayload.model_validate(event.get("payload"))
+            except ValidationError:
+                continue
+            asks.append((p.headline, p.body))
+        if not asks:
+            return
+
+        def ask(key: tuple[str, str]) -> None:
+            try:
+                answer: Any = self.llm.classify_news(*key)
+            except Exception as exc:  # the Sentinel falls back to keywords, without asking again
+                answer = exc
+            with self._guard:
+                if len(self._answers) > 500:  # headlines a restarted run never ingested
+                    self._answers.clear()
+                self._answers[key] = answer
+
+        with ThreadPoolExecutor(self.workers, thread_name_prefix="llm-ahead") as pool:
+            list(pool.map(ask, asks))
+
+    def classify_news(self, headline: str, body: str) -> dict[str, Any]:
+        with self._guard:
+            answer = self._answers.pop((headline, body), None)
+        if answer is None:
+            return self.llm.classify_news(headline, body)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    def summarise(self, disruption: dict[str, Any]) -> str:
+        return self.llm.summarise(disruption)
+
+
 class RouteraService(SentinelService):
     """The Sentinel service, with the orchestrator and a hash-chained audit on every rig."""
 
     def __init__(self, *args: Any, feeds: list[Any] | None = None, **kwargs: Any) -> None:
+        if kwargs.get("llm") is not None:
+            kwargs["llm"] = AskedAhead(kwargs["llm"])
         self.feeds = feeds if feeds is not None else default_feeds()
         self._wake = threading.Event()
         self._due: dict[str, float] = {}
@@ -129,6 +182,8 @@ class RouteraService(SentinelService):
                     continue
                 due[feed.name] = time.monotonic() + feed.interval_s
                 events, state = feed.poll(datetime.now(UTC))  # network: outside the lock
+                if isinstance(self.llm, AskedAhead):
+                    self.llm.ahead(events)  # the LLM too
                 with self._lock:
                     if rig is not self.rig:
                         return

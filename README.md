@@ -66,10 +66,25 @@ You can also pick **LIVE** in the scenario dropdown. The same Sentinel, planner 
 | Headlines on the corridor, JNPT, grapes, Red Sea / Hormuz | Google News RSS | none | news the Sentinel classifies (rules, or the LLM) |
 | Ships off Rotterdam, JNPT, Mundra and Jebel Ali | AIS via aisstream.io (`pip install websockets`) | `AISSTREAM_API_KEY` (free, GitHub sign-up) | `PORT_CONGESTION` when ships at anchor pass a threshold (source `ais_port`, reliability 0.80: an estimate, not an official notice). aisstream.io is crowd-sourced and barely covers Indian and Gulf waters, so those ports usually show 0 ships; Rotterdam, where the mangoes go, is well covered |
 
-Click any item on a feed card to see it on the map, which containers it touches, and what a closure there would mean. Only the feeds are real. The fleet is still the simulated container book (grapes, shrimp, pomegranate, banana and onion, plus Konkan mangoes in `routera/data/containers_mango.json`), moved so its ETAs and cut-offs start today, and bookings stay simulated. Mangoes age at their own reefer setpoint (12 °C; colder means chilling injury, not longer life). They also need hot water treatment for the EU and irradiation for the US, which ROUTERA drafts as a booking request. All mango prices and treatment rules are illustrative. On a quiet day, live mode correctly shows "no decision needed". Use **Feed the Sentinel** to add an event on top.
+Click any item on a feed card to see it on the map, which containers it touches, and what a closure there would mean. Only the feeds are real. The fleet is still the simulated container book (grapes, shrimp, pomegranate, banana and onion, plus Konkan mangoes in `routera/data/containers_mango.json`), moved so its ETAs and cut-offs start today, and bookings stay simulated. Mangoes age at their own reefer setpoint (12 °C; colder means chilling injury, not longer life). They also need hot water treatment for the EU and irradiation for the US, which ROUTERA drafts as a booking request. All mango prices and treatment rules are illustrative. On a quiet day, live mode correctly shows "no decision needed". Use **Sandbox tools → Simulate an event** to add an event on top.
 
 The LLM is off by default (`SENTINEL_LLM=off`). With it off, the keyword rules classify the news
-and the summaries come from templates. See `agents/sentinel/README.md` to switch it on.
+and the summaries come from templates. See `agents/sentinel/README.md` for every provider.
+
+### News read on SAP AI Core
+
+Optional. With SAP AI Core's generative AI hub, the Sentinel classifies each headline with a model you deploy in SAP AI Launchpad, and the control room's Integrations list shows **Sentinel: SAP AI Core**. A news event's message then reads "Classified … by SAP AI Core".
+
+1. In SAP AI Launchpad, connect your AI Core instance (Workspaces → Add, then upload its service key), then deploy `gpt-4o-mini` from the Generative AI Hub model library in the `default` resource group.
+2. Where the app runs, with the key file outside the project folder:
+   ```bash
+   python -m pip install sap-ai-sdk-gen
+   export AICORE_SERVICE_KEY="$(cat ~/aicore-key.json)"
+   export SENTINEL_LLM=genai_hub
+   python -m agents.sentinel.llm_client
+   ```
+   The last line makes one test call. It prints `Test call OK` with the model's answer, or what went wrong and which models are running. Set `AICORE_RESOURCE_GROUP` for another resource group, or `SENTINEL_GENAI_HUB_MODEL` for another model.
+3. Start ROUTERA as usual. New headlines go to the model before the control room takes its lock, so the screen never waits on it. A slow or failed reply falls back to the keyword rules, and news alone still never confirms a disruption.
 
 ### Approvals on your real phone
 

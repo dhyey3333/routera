@@ -188,12 +188,14 @@ credentials are missing is skipped (printed at start-up).
 | `SENTINEL_LLM` | Provider | Model (override) | Credentials |
 |---|---|---|---|
 | `off` (default) | none | n/a | n/a |
-| `genai_hub` | SAP Generative AI Hub, native OpenAI proxy (`chat.completions.create(model_name=...)`) | `gpt-4o-mini` (`SENTINEL_GENAI_HUB_MODEL`) | SAP AI Core service key (`AICORE_CLIENT_ID`, `AICORE_CLIENT_SECRET`, ...) or `~/.aicore/config.json` |
+| `genai_hub` | SAP Generative AI Hub, native OpenAI proxy (`chat.completions.create(model_name=...)`) | `gpt-4o-mini` (`SENTINEL_GENAI_HUB_MODEL`) | SAP AI Core service key: the whole JSON in `AICORE_SERVICE_KEY`, or `AICORE_CLIENT_ID`, `AICORE_CLIENT_SECRET`, ..., or `~/.aicore/config.json`. Resource group `AICORE_RESOURCE_GROUP`, default `default` |
 | `anthropic` | Claude via the Anthropic SDK | `claude-opus-5-5` (`SENTINEL_ANTHROPIC_MODEL`) | `ANTHROPIC_API_KEY` or an `ant auth login` profile |
 | `openai` | OpenAI SDK | `gpt-4o-mini` (`SENTINEL_OPENAI_MODEL`) | `OPENAI_API_KEY` |
 
 `SENTINEL_LLM_TIMEOUT` (seconds, default 8) bounds every call. Install providers with
-`python -m pip install -r agents/sentinel/requirements-llm.txt`.
+`python -m pip install -r agents/sentinel/requirements-llm.txt`. Check one before a demo with
+`python -m agents.sentinel.llm_client`: it makes one test call and says what failed, including
+which models are running when the one asked for has no deployment.
 
 - **SAP package.** `generative-ai-hub-sdk` is deprecated and archived on PyPI. Its successor
   `sap-ai-sdk-gen` keeps the `gen_ai_hub` import the code uses. The Sentinel only checks that AICORE

@@ -886,6 +886,11 @@ const S = {
   live: { on: false, feeds: {} }, senseTab: "dis", listTab: "rows", fleetTab: "risk", speed: 60, note: "", fresh: new Set(), planKey: "",
   planSig: "", savedShown: null, bars: {}, q: "", showAll: false, navGo: "top",
 };
+// The Sentinel's LLM in words: S.llm is "off" or "provider:model".
+const LLM_NAMES = { genai_hub: "SAP AI Core", anthropic: "Claude", openai: "OpenAI" };
+const llmOn = () => !S.llm.startsWith("off");
+const llmName = () => LLM_NAMES[S.llm.split(":")[0]] || S.llm;
+const byName = (by) => (by === "llm" ? llmName() : by);
 
 // Sim clock: anchored to server times, interpolated at the replay speed between events.
 let anchorSim = 0, anchorReal = performance.now();
@@ -957,8 +962,9 @@ const RENDER = {
     }
     if (sc && document.activeElement !== sel) sel.value = sc.name;
     $("#replay").textContent = live ? "Restart live" : r.running ? `Restart (${r.step}/${r.steps})` : "Replay";
-    $("#llm-who").textContent = S.llm === "off" ? "Sentinel: rules only" : `Sentinel: ${S.llm}`;
-    $("#w-llm").className = `pip ${S.llm === "off" ? "off" : "on"}`;
+    $("#llm-who").textContent = llmOn() ? `Sentinel: ${llmName()}` : "Sentinel: rules only";
+    $("#llm-who").title = llmOn() ? `News is classified and summarised by ${S.llm.split(":").slice(1).join(":")} through ${llmName()}${S.llm.startsWith("genai_hub:") ? " (generative AI hub)" : ""}. Rules and math still decide.` : "Keyword rules classify the news.";
+    $("#w-llm").className = `pip ${llmOn() ? "on" : "off"}`;
   },
   pipeline() {
     const open = [...S.disruptions.values()].filter((d) => !d.ignored && OPEN.has(d.disruption.status));
@@ -1117,13 +1123,13 @@ function disHTML(item) {
     <h2><span>${esc(title)}</span></h2>
     <p>${waiting ? `${item.reports} news report${item.reports === 1 ? "" : "s"}. News never confirms on its own, so nothing moves until an official source agrees.` : esc(disStory(item))}</p>
     <div class="dis-pills">${n ? `<span class="pill">Hits ${countOf(n)}</span><span class="pill">${Math.round(d.affected_weight_kg / 1000)} tonnes</span>` : ""}${d.expected_delay_days && !waiting ? `<span class="pill">+${d.expected_delay_days} days</span>` : ""}</div>
-    <div class="dis-foot">${sevHTML(d.severity)}<span>${item.layer === "india" ? "India" : "Global"}</span><span class="mono">${esc(d.disruption_id)}</span>${item.summary_by && item.summary_by !== "template" ? `<span>Summary: ${esc(item.summary_by)}</span>` : ""}<button type="button" class="btn small ghost" data-dis="${esc(d.disruption_id)}">Show on map</button></div>
+    <div class="dis-foot">${sevHTML(d.severity)}<span>${item.layer === "india" ? "India" : "Global"}</span><span class="mono">${esc(d.disruption_id)}</span>${item.summary_by && item.summary_by !== "template" ? `<span>Summary: ${esc(byName(item.summary_by))}</span>` : ""}<button type="button" class="btn small ghost" data-dis="${esc(d.disruption_id)}">Show on map</button></div>
   </article>`;
 }
 function sigHTML(s) {
   const st = s.status === "accepted" ? "good" : s.status === "ignored" ? "" : "bad";
   return `<div class="sig"><span class="t mono">${hm(s.received_at)}</span><div><b>${esc(s.title || s.event_id)}</b>
-    <div class="src">${esc(s.source)} → ${esc(s.type || "?")} ${s.location ? "@ " + esc(s.location) : ""} · by ${esc(s.classified_by || "rules")}
+    <div class="src">${esc(s.source)} → ${esc(s.type || "?")} ${s.location ? "@ " + esc(s.location) : ""} · by ${esc(byName(s.classified_by || "rules"))}
     <span class="chip ${st}">${esc(s.status)}${s.disruption_id ? " → " + esc(s.disruption_id) : ""}</span></div></div></div>`;
 }
 
@@ -1244,7 +1250,7 @@ function rowsHTML(plan) {
       <td class="r ${s > 0 ? "pos" : s < 0 ? "neg" : ""}">${s > 0 ? "+" : ""}${inr(s)}</td>
       <td><div class="chips">${state}${compChip(c && c.compliance)}${paperChip(id, c)}${c && c.human_only ? `<span class="chip warn" title="Below the floor price: a human must choose">Person only</span>` : ""}</div></td>
       <td class="r"><button type="button" class="btn small ghost" data-why="${esc(id)}">${why ? "Hide" : "Why?"}</button></td></tr>
-      ${why ? `<tr class="whyrow"><td colspan="8">${esc(why.text)}<span class="by">${why.by === "template" ? "Explained from plan data" : "Phrased by " + esc(why.by)}</span></td></tr>` : ""}`;
+      ${why ? `<tr class="whyrow"><td colspan="8">${esc(why.text)}<span class="by">${why.by === "template" ? "Explained from plan data" : "Phrased by " + esc(byName(why.by))}</span></td></tr>` : ""}`;
   }).join("");
   const more = !S.q && found.length > ROWS_SHOWN ? `<div class="showall"><button type="button" class="btn small" data-showall>${S.showAll ? "Show fewer" : `Show all ${found.length}`}</button></div>` : "";
   return `<div class="tablewrap"><div class="rowhl" aria-hidden="true"></div><table>
@@ -1718,7 +1724,7 @@ async function feed(event, label) {
   try {
     const r = await api("/sentinel/events", { event_id: `CR-${Date.now().toString(36).toUpperCase()}`, ...event });
     const s = r.signal || {};
-    toast(`Sentinel: ${label}`, s.status === "accepted" ? `Classified ${s.type || "?"} by ${s.classified_by || "rules"}${s.disruption_id ? ", " + s.disruption_id : ""}` : `${s.status}: ${s.status_reason || s.reason || ""}`, "var(--accent-2)");
+    toast(`Sentinel: ${label}`, s.status === "accepted" ? `Classified ${s.type || "?"} by ${byName(s.classified_by || "rules")}${s.disruption_id ? ", " + s.disruption_id : ""}` : `${s.status}: ${s.status_reason || s.reason || ""}`, "var(--accent-2)");
   } catch (e) { toast("Event rejected", e.message, "var(--bad)"); }
 }
 $("#presets").addEventListener("click", (e) => {

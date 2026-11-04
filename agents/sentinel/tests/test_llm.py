@@ -190,23 +190,97 @@ def test_openai_request_shape(monkeypatch: pytest.MonkeyPatch) -> None:
     assert call["messages"][0] == {"role": "system", "content": NEWS_SYSTEM}
 
 
-def test_genai_hub_request_shape(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[dict[str, Any]] = []
+@pytest.fixture
+def fake_gen_ai_hub(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[dict[str, Any]]]:
+    """sap-ai-sdk-gen's proxy client and OpenAI wrapper, recording what they were given."""
+    seen: dict[str, list[dict[str, Any]]] = {"proxy": [], "client": [], "calls": []}
+
+    def get_proxy_client(version: str, **kwargs: Any) -> Any:
+        if kwargs.get("resource_group") == "broken":
+            raise ValueError("Missing required credentials: {'base_url'}")
+        seen["proxy"].append({"version": version, **kwargs})
+        return "proxy"
 
     def create(**kwargs: Any) -> Any:
-        calls.append(kwargs)
+        seen["calls"].append(kwargs)
         return ns(choices=[ns(finish_reason="stop", message=ns(content=CLOSURE_JSON))])
 
-    proxy = types.ModuleType("gen_ai_hub.proxy.native.openai")
-    proxy.chat = ns(completions=ns(create=create))  # type: ignore[attr-defined]
-    for name in ("gen_ai_hub", "gen_ai_hub.proxy", "gen_ai_hub.proxy.native"):
+    class OpenAI:
+        def __init__(self, **kwargs: Any) -> None:
+            seen["client"].append(kwargs)
+            self.chat = ns(completions=ns(create=create))
+
+    clients = types.ModuleType("gen_ai_hub.proxy.core.proxy_clients")
+    clients.get_proxy_client = get_proxy_client  # type: ignore[attr-defined]
+    openai = types.ModuleType("gen_ai_hub.proxy.native.openai")
+    openai.OpenAI = OpenAI  # type: ignore[attr-defined]
+    packages = ("gen_ai_hub", "gen_ai_hub.proxy", "gen_ai_hub.proxy.core",
+                "gen_ai_hub.proxy.native")
+    for name in packages:
         monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
-    monkeypatch.setitem(sys.modules, "gen_ai_hub.proxy.native.openai", proxy)
+    monkeypatch.setitem(sys.modules, "gen_ai_hub.proxy.core.proxy_clients", clients)
+    monkeypatch.setitem(sys.modules, "gen_ai_hub.proxy.native.openai", openai)
+    return seen
+
+
+def test_genai_hub_request_shape(fake_gen_ai_hub: dict[str, list[dict[str, Any]]]) -> None:
     env = {"AICORE_CLIENT_ID": "id", "AICORE_CLIENT_SECRET": "secret"}
     complete = llm_client.genai_hub_backend("gpt-4o-mini", 8, env)
     complete(NEWS_SYSTEM, "u", NEWS_SCHEMA, 100)
-    assert calls[0]["model_name"] == "gpt-4o-mini"  # the proxy's keyword, not `model`
-    assert calls[0]["response_format"] == {"type": "json_object"}
+    assert fake_gen_ai_hub["proxy"] == [{"version": "gen-ai-hub", "resource_group": "default"}]
+    assert fake_gen_ai_hub["client"] == [{"proxy_client": "proxy", "timeout": 8, "max_retries": 0}]
+    call = fake_gen_ai_hub["calls"][0]
+    assert call["model_name"] == "gpt-4o-mini"  # the proxy's keyword, not `model`
+    assert call["response_format"] == {"type": "json_object"}
+
+
+Seen = dict[str, list[dict[str, Any]]]
+
+
+def test_genai_hub_takes_the_whole_service_key(fake_gen_ai_hub: Seen) -> None:
+    env = {"AICORE_SERVICE_KEY": '{"clientid": "id"}', "AICORE_RESOURCE_GROUP": "routera"}
+    llm_client.genai_hub_backend("gpt-4o-mini", 8, env)  # the SDK itself reads the key
+    assert fake_gen_ai_hub["proxy"][0]["resource_group"] == "routera"
+
+
+def test_genai_hub_bad_key_is_unavailable(fake_gen_ai_hub: Seen) -> None:
+    env = {"AICORE_SERVICE_KEY": "{}", "AICORE_RESOURCE_GROUP": "broken"}
+    with pytest.raises(LLMUnavailable, match="SAP AI Core credentials: Missing"):
+        llm_client.genai_hub_backend("gpt-4o-mini", 8, env)
+
+
+def selected(llm: ChatLLM | None) -> llm_client.LLMSelection:
+    return llm_client.LLMSelection(llm, llm.label if llm else "off")
+
+
+def test_check_command_makes_one_test_call(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    llm = ChatLLM("genai_hub", "gpt-4o-mini", fixed(CLOSURE_JSON), 1)
+    monkeypatch.setattr(llm_client, "build_llm_client", lambda mode: selected(llm))
+    assert llm_client.main(["--llm", "genai_hub"]) == 0
+    out = capsys.readouterr().out
+    assert "LLM: genai_hub:gpt-4o-mini" in out and "Test call OK" in out and "PORT_CLOSURE" in out
+
+
+def test_check_command_names_the_running_models(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def missing(system: str, user: str, schema: Any, max_tokens: int) -> str:
+        raise ValueError("No deployment found with: model_name == gpt-4o-mini")
+
+    llm = ChatLLM("genai_hub", "gpt-4o-mini", missing, 1)
+    monkeypatch.setattr(llm_client, "build_llm_client", lambda mode: selected(llm))
+    monkeypatch.setattr(llm_client, "_running_models", lambda env: ["gpt-4.1-mini"])
+    assert llm_client.main([]) == 1
+    out = capsys.readouterr().out
+    assert "Test call failed: ValueError: No deployment found" in out
+    assert "SENTINEL_GENAI_HUB_MODEL to one that is running: gpt-4.1-mini" in out
+
+
+def test_check_command_without_an_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(llm_client, "build_llm_client", lambda mode: selected(None))
+    assert llm_client.main([]) == 1
 
 
 # --- ChatLLM --------------------------------------------------------------------------------------
